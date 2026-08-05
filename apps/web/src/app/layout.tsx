@@ -1,7 +1,5 @@
-"use client";
-
-import { AmplifyProvider } from "@/components/AmplifyProvider";
-import { Authenticator } from "@aws-amplify/ui-react";
+import AuthenticatorWrapper from "./AuthenticatorWrapper";
+import "@aws-amplify/ui-react/styles.css";
 
 export const metadata = {
   title: "Bookmark Digest",
@@ -16,12 +14,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AmplifyProvider>
-          <Authenticator
-            content={() => children}
-            hideSignUp={true}
-          />
-        </AmplifyProvider>
+        <AuthenticatorWrapper>{children}</AuthenticatorWrapper>
       </body>
     </html>
   );

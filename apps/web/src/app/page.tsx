@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAuthenticator } from "@aws-amplify/ui-react";
 import type { SubmitUrlResponse } from "@bookmark-digest/schemas";
 import { fetchAuthSession } from "aws-amplify/auth";
 
@@ -10,6 +11,8 @@ import { fetchAuthSession } from "aws-amplify/auth";
  * @aws-amplify/ui-react's <Authenticator> in layout.tsx.
  */
 export default function Home() {
+  const { user, signOut } = useAuthenticator((context) => [context.user]);
+
   const [url, setUrl] = useState("");
   const [result, setResult] = useState<SubmitUrlResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +54,10 @@ export default function Home() {
   return (
     <main style={{ maxWidth: 480, margin: "4rem auto", fontFamily: "sans-serif" }}>
       <h1>Bookmark Digest — Phase-0</h1>
+      <p style={{ color: "#666" }}>Signed in as: {user?.username || "unknown"}</p>
+      <button onClick={() => signOut()} style={{ marginBottom: 16 }}>
+        Sign out
+      </button>
       <form onSubmit={handleSubmit}>
         <input
           type="url"

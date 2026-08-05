@@ -26,7 +26,7 @@ import * as cognito from "aws-cdk-lib/aws-cognito";
  * Cognito ID token; wiring actual sign-in in the Next.js app (Amplify or
  * NextAuth's Cognito provider) is the next step once this deploys.
  */
-export class Phase0Stack extends cdk.Stack {
+export class BookmarkDigest extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 

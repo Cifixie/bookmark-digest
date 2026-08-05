@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import * as cdk from "aws-cdk-lib";
-import { Phase0Stack } from "../lib/phase0-stack";
+import { BookmarkDigest } from "../lib/bookmark-digest-stack";
 
 const app = new cdk.App();
 const account = process.env.CDK_DEFAULT_ACCOUNT;
@@ -12,5 +12,4 @@ if (!account || !region) {
   );
 }
 
-const props = { env: { account, region } };
-new Phase0Stack(app, "BookmarkDigestPhase0", props);
+new BookmarkDigest(app, "BookmarkDigest", { env: { account, region } });

@@ -96,7 +96,13 @@ export class Phase0Stack extends cdk.Stack {
       deployOptions: { stageName: "dev" },
     });
 
-    const bookmarks = api.root.addResource("bookmarks");
+    const bookmarks = api.root.addResource("bookmarks", {
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigw.Cors.ALL_ORIGINS, // tighten to your actual frontend domain(s) once deployed
+        allowMethods: ["POST"],
+        allowHeaders: ["Content-Type", "Authorization"],
+      },
+    });
     bookmarks.addMethod("POST", new apigw.LambdaIntegration(ingestFn), {
       authorizer,
       authorizationType: apigw.AuthorizationType.COGNITO,

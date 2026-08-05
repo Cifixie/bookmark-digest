@@ -1,3 +1,5 @@
+import { AmplifyProvider } from "@/components/AmplifyProvider";
+
 export const metadata = {
   title: "Bookmark Digest",
   description: "Phase-0 skeleton",
@@ -10,7 +12,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AmplifyProvider>{children}</AmplifyProvider>
+      </body>
     </html>
   );
 }

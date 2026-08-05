@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { SubmitUrlResponse } from "@bookmark-digest/schemas";
+import { useAuth } from "@/lib/use-auth";
 
 /**
  * Phase-0 exit-criteria page: paste a URL, hit submit, see it move through
@@ -9,19 +11,39 @@ import type { SubmitUrlResponse } from "@bookmark-digest/schemas";
  * the plumbing (API Gateway -> Lambda -> Step Functions -> Postgres) works.
  */
 export default function Home() {
+  const router = useRouter();
+  const { loading, signedIn, getIdToken, logout } = useAuth();
+
   const [url, setUrl] = useState("");
   const [result, setResult] = useState<SubmitUrlResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!loading && !signedIn) {
+      router.push("/sign-in");
+    }
+  }, [loading, signedIn, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setResult(null);
 
+    const idToken = await getIdToken();
+    if (!idToken) {
+      setError("Not signed in");
+      router.push("/sign-in");
+      return;
+    }
+
     try {
-      const res = await fetch("/api/bookmarks", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const res = await fetch(`${apiUrl}bookmarks`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: idToken,
+        },
         body: JSON.stringify({ url }),
       });
 
@@ -36,9 +58,16 @@ export default function Home() {
     }
   }
 
+  if (loading || !signedIn) {
+    return <main style={{ maxWidth: 480, margin: "4rem auto" }}>Loading...</main>;
+  }
+
   return (
     <main style={{ maxWidth: 480, margin: "4rem auto", fontFamily: "sans-serif" }}>
-      <h1>Bookmark Digest — Phase-0</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h1>Bookmark Digest — Phase-0</h1>
+        <button onClick={logout}>Sign out</button>
+      </div>
       <form onSubmit={handleSubmit}>
         <input
           type="url"

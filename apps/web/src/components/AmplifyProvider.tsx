@@ -7,9 +7,8 @@ import { amplifyConfig } from "@/lib/amplify-config";
 let configured = false;
 
 /**
- * Configures Amplify once when the app mounts. Mount this near the root
- * (in layout.tsx) so every page/component can use aws-amplify/auth
- * functions without configuring it themselves.
+ * Configures Amplify once on mount. <Authenticator> from @aws-amplify/ui-react
+ * needs Amplify configured before it renders — it does NOT configure itself.
  */
 export function AmplifyProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {

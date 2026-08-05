@@ -1,42 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import type { SubmitUrlResponse } from "@bookmark-digest/schemas";
-import { useAuth } from "@/lib/use-auth";
+import { fetchAuthSession } from "aws-amplify/auth";
 
 /**
  * Phase-0 exit-criteria page: paste a URL, hit submit, see it move through
- * the async pipeline. No real scraping/generation yet - this just proves
- * the plumbing (API Gateway -> Lambda -> Step Functions -> Postgres) works.
+ * the async pipeline. Auth flow (sign-in, sign-out) is provided by
+ * @aws-amplify/ui-react's <Authenticator> in layout.tsx.
  */
 export default function Home() {
-  const router = useRouter();
-  const { loading, signedIn, getIdToken, logout } = useAuth();
-
   const [url, setUrl] = useState("");
   const [result, setResult] = useState<SubmitUrlResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!loading && !signedIn) {
-      router.push("/sign-in");
-    }
-  }, [loading, signedIn, router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setResult(null);
 
-    const idToken = await getIdToken();
-    if (!idToken) {
-      setError("Not signed in");
-      router.push("/sign-in");
-      return;
-    }
-
     try {
+      const session = await fetchAuthSession();
+      const idToken = session.tokens?.idToken?.toString();
+      if (!idToken) {
+        setError("Not signed in");
+        return;
+      }
+
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       const res = await fetch(`${apiUrl}bookmarks`, {
         method: "POST",
@@ -58,16 +48,9 @@ export default function Home() {
     }
   }
 
-  if (loading || !signedIn) {
-    return <main style={{ maxWidth: 480, margin: "4rem auto" }}>Loading...</main>;
-  }
-
   return (
     <main style={{ maxWidth: 480, margin: "4rem auto", fontFamily: "sans-serif" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1>Bookmark Digest — Phase-0</h1>
-        <button onClick={logout}>Sign out</button>
-      </div>
+      <h1>Bookmark Digest — Phase-0</h1>
       <form onSubmit={handleSubmit}>
         <input
           type="url"

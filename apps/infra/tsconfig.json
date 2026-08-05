@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "outDir": "./dist",
+    "rootDir": "."
+  },
+  "include": ["bin", "lib", "lambdas"],
+  "exclude": ["node_modules", "cdk.out"],
+  "references": [
+    { "path": "../../packages/schemas" },
+    { "path": "../../packages/shared" }
+  ]
+}

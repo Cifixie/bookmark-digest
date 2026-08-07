@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { useAuthenticator } from "@aws-amplify/ui-react";
 import type { SubmitUrlResponse } from "@bookmark-digest/schemas";
-import { fetchAuthSession } from "aws-amplify/auth";
+import { fetchWithAuth } from "@/utils/fetchApi";
 
 /**
  * Phase-0 exit-criteria page: paste a URL, hit submit, see it move through
  * the async pipeline. Auth flow (sign-in, sign-out) is provided by
  * @aws-amplify/ui-react's <Authenticator> in layout.tsx.
  */
+
 export default function Home() {
   const { user, signOut } = useAuthenticator((context) => [context.user]);
 
@@ -23,22 +24,7 @@ export default function Home() {
     setResult(null);
 
     try {
-      const session = await fetchAuthSession();
-      const idToken = session.tokens?.idToken?.toString();
-      if (!idToken) {
-        setError("Not signed in");
-        return;
-      }
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      const res = await fetch(`${apiUrl}bookmarks`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: idToken,
-        },
-        body: JSON.stringify({ url }),
-      });
+      const res = await fetchWithAuth("POST", "/bookmarks", { url });
 
       if (!res.ok) {
         throw new Error(`Request failed: ${res.status}`);
@@ -52,9 +38,13 @@ export default function Home() {
   }
 
   return (
-    <main style={{ maxWidth: 480, margin: "4rem auto", fontFamily: "sans-serif" }}>
+    <main
+      style={{ maxWidth: 480, margin: "4rem auto", fontFamily: "sans-serif" }}
+    >
       <h1>Bookmark Digest — Phase-0</h1>
-      <p style={{ color: "#666" }}>Signed in as: {user?.username || "unknown"}</p>
+      <p style={{ color: "#666" }}>
+        Signed in as: {user?.username || "unknown"}
+      </p>
       <button onClick={() => signOut()} style={{ marginBottom: 16 }}>
         Sign out
       </button>

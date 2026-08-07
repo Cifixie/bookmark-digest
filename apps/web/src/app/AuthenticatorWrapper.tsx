@@ -3,6 +3,7 @@
 import { Amplify } from "aws-amplify";
 import { Authenticator } from "@aws-amplify/ui-react";
 import { amplifyConfig } from "@/lib/amplify-config";
+import { PropsWithChildren } from "react";
 
 let configured = false;
 
@@ -25,18 +26,10 @@ const formFields = {
   },
 };
 
-export default function AuthenticatorWrapper({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AuthenticatorWrapper({ children }: PropsWithChildren) {
   return (
     <Authenticator formFields={formFields} hideSignUp={true}>
-      {({ signOut, user }) => (
-        <>
-          {children}
-        </>
-      )}
+      {({ signOut, user }) => <>{children}</>}
     </Authenticator>
   );
 }

@@ -103,7 +103,10 @@ export class BookmarkDigest extends cdk.Stack {
         allowHeaders: ["Content-Type", "Authorization"],
       },
     });
-    bookmarks.addMethod("POST", new apigw.LambdaIntegration(ingestFn), {
+
+    bookmarks.addMethod("POST", new apigw.LambdaIntegration(ingestFn, {
+      proxy: true, // pass headers through from Lambda response
+    }), {
       authorizer,
       authorizationType: apigw.AuthorizationType.COGNITO,
     });

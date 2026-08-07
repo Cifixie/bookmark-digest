@@ -11,6 +11,12 @@ import {
  * just validates and echoes back a fake job so the async shape can be
  * proven before real logic goes in.
  */
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type,Authorization",
+  "Access-Control-Allow-Methods": "POST",
+};
+
 export async function handler(event: { body: string }) {
   const body = JSON.parse(event.body ?? "{}");
   const parsed = submitUrlRequestSchema.safeParse(body);
@@ -18,6 +24,7 @@ export async function handler(event: { body: string }) {
   if (!parsed.success) {
     return {
       statusCode: 400,
+      headers: corsHeaders,
       body: JSON.stringify({ error: parsed.error.flatten() }),
     };
   }
@@ -31,6 +38,7 @@ export async function handler(event: { body: string }) {
 
   return {
     statusCode: 202,
+    headers: corsHeaders,
     body: JSON.stringify(response),
   };
 }

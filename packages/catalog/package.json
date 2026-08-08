@@ -7,15 +7,19 @@
   "types": "./src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "build": "tsc --emitDeclarationOnly",
     "lint": "echo \"no lint configured yet\"",
-    "test": "echo \"no tests yet\"",
+    "test": "vitest run",
     "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
   },
   "dependencies": {
     "@bookmark-digest/schemas": "workspace:*",
+    "@json-render/core": "latest",
+    "@json-render/react": "latest",
     "zod": "^4.4.3"
-  },
-  "devDependencies": {
-    "typescript": "^7.0.2"
   }
 }

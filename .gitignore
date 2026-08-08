@@ -9,3 +9,5 @@ out
 cdk.out
 *.tsbuildinfo
 apps/infra/outputs.json
+*storybook.log
+storybook-static

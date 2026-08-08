@@ -12,7 +12,9 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf .next dist *.tsbuildinfo"
+    "clean": "rm -rf .next dist *.tsbuildinfo",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@bookmark-digest/catalog": "workspace:*",
@@ -32,6 +34,18 @@
     "@types/node": "26",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "storybook": "^10.5.7",
+    "@storybook/nextjs-vite": "^10.5.7",
+    "@chromatic-com/storybook": "latest",
+    "@storybook/addon-vitest": "^10.5.7",
+    "@storybook/addon-a11y": "^10.5.7",
+    "@storybook/addon-docs": "^10.5.7",
+    "@storybook/addon-mcp": "latest",
+    "vite": "latest",
+    "vitest": "4.1.10",
+    "@vitest/browser-playwright": "4.1.10",
+    "@vitest/coverage-v8": "4.1.10",
+    "playwright": "latest"
   }
 }

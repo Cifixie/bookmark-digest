@@ -10,25 +10,25 @@
 import { z } from "zod";
 
 // --- Content block schemas (used to derive the DigestBlock union) ---
-import * as Callout from "./digestBlocks/Callout/Callout.catalog";
-import * as Card from "./digestBlocks/Card/Card.catalog";
-import * as ChecklistItem from "./digestBlocks/ChecklistItem/ChecklistItem.catalog";
-import * as CodeBlock from "./digestBlocks/CodeBlock/CodeBlock.catalog";
-import * as FaqItem from "./digestBlocks/FaqItem/FaqItem.catalog";
-import * as Figure from "./digestBlocks/Figure/Figure.catalog";
-import * as GlossaryTerm from "./digestBlocks/GlossaryTerm/GlossaryTerm.catalog";
-import * as Grid from "./digestBlocks/Grid/Grid.catalog";
-import * as LinkItem from "./digestBlocks/LinkItem/LinkItem.catalog";
-import * as List from "./digestBlocks/List/List.catalog";
-import * as NextSteps from "./digestBlocks/NextSteps/NextSteps.catalog";
-import * as Prerequisites from "./digestBlocks/Prerequisites/Prerequisites.catalog";
-import * as Prose from "./digestBlocks/Prose/Prose.catalog";
-import * as ProsCons from "./digestBlocks/ProsCons/ProsCons.catalog";
-import * as QuoteBlock from "./digestBlocks/QuoteBlock/QuoteBlock.catalog";
-import * as StatCard from "./digestBlocks/StatCard/StatCard.catalog";
-import * as Step from "./digestBlocks/Step/Step.catalog";
-import * as Terminal from "./digestBlocks/Terminal/Terminal.catalog";
-import * as TLDR from "./digestBlocks/TLDR/TLDR.catalog";
+import * as Callout from "./digestBlocks/Callout.catalog";
+import * as Card from "./digestBlocks/Card.catalog";
+import * as ChecklistItem from "./digestBlocks/ChecklistItem.catalog";
+import * as CodeBlock from "./digestBlocks/CodeBlock.catalog";
+import * as FaqItem from "./digestBlocks/FaqItem.catalog";
+import * as Figure from "./digestBlocks/Figure.catalog";
+import * as GlossaryTerm from "./digestBlocks/GlossaryTerm.catalog";
+import * as Grid from "./digestBlocks/Grid.catalog";
+import * as LinkItem from "./digestBlocks/LinkItem.catalog";
+import * as List from "./digestBlocks/List.catalog";
+import * as NextSteps from "./digestBlocks/NextSteps.catalog";
+import * as Prerequisites from "./digestBlocks/Prerequisites.catalog";
+import * as Prose from "./digestBlocks/Prose.catalog";
+import * as ProsCons from "./digestBlocks/ProsCons.catalog";
+import * as QuoteBlock from "./digestBlocks/QuoteBlock.catalog";
+import * as StatCard from "./digestBlocks/StatCard.catalog";
+import * as Step from "./digestBlocks/Step.catalog";
+import * as Terminal from "./digestBlocks/Terminal.catalog";
+import * as TLDR from "./digestBlocks/TLDR.catalog";
 
 // --- Source variants ---
 export * from "./enums";
@@ -46,7 +46,7 @@ export { default as catalog } from "./catalog";
 
 // --- Inline type refs ---
 import type { SourceVariant } from "./sourceVariants";
-import type { DigestMeta } from "./page/DigestMeta/DigestMeta.schema";
+import type { DigestMeta } from "./page/DigestMeta.schema";
 
 // ---------------------------------------------------------------------------
 // DigestBlock union — derived from the block prop schemas
@@ -145,22 +145,22 @@ export interface DigestPage {
 // Export all component prop types for renderer use
 // ---------------------------------------------------------------------------
 
-export type { CalloutProps } from "./digestBlocks/Callout/Callout.catalog";
-export type { CardProps } from "./digestBlocks/Card/Card.catalog";
-export type { ChecklistItemProps } from "./digestBlocks/ChecklistItem/ChecklistItem.catalog";
-export type { CodeBlockProps } from "./digestBlocks/CodeBlock/CodeBlock.catalog";
-export type { FaqItemProps } from "./digestBlocks/FaqItem/FaqItem.catalog";
-export type { FigureProps } from "./digestBlocks/Figure/Figure.catalog";
-export type { GlossaryTermProps } from "./digestBlocks/GlossaryTerm/GlossaryTerm.catalog";
-export type { GridProps } from "./digestBlocks/Grid/Grid.catalog";
-export type { LinkItemProps } from "./digestBlocks/LinkItem/LinkItem.catalog";
-export type { ListProps } from "./digestBlocks/List/List.catalog";
-export type { NextStepsProps } from "./digestBlocks/NextSteps/NextSteps.catalog";
-export type { PrerequisitesProps } from "./digestBlocks/Prerequisites/Prerequisites.catalog";
-export type { ProseProps } from "./digestBlocks/Prose/Prose.catalog";
-export type { ProsConsProps } from "./digestBlocks/ProsCons/ProsCons.catalog";
-export type { QuoteBlockProps } from "./digestBlocks/QuoteBlock/QuoteBlock.catalog";
-export type { StatCardProps } from "./digestBlocks/StatCard/StatCard.catalog";
-export type { StepProps } from "./digestBlocks/Step/Step.catalog";
-export type { TerminalProps } from "./digestBlocks/Terminal/Terminal.catalog";
-export type { TLDRProps } from "./digestBlocks/TLDR/TLDR.catalog";
+export type { CalloutProps } from "./digestBlocks/Callout.catalog";
+export type { CardProps } from "./digestBlocks/Card.catalog";
+export type { ChecklistItemProps } from "./digestBlocks/ChecklistItem.catalog";
+export type { CodeBlockProps } from "./digestBlocks/CodeBlock.catalog";
+export type { FaqItemProps } from "./digestBlocks/FaqItem.catalog";
+export type { FigureProps } from "./digestBlocks/Figure.catalog";
+export type { GlossaryTermProps } from "./digestBlocks/GlossaryTerm.catalog";
+export type { GridProps } from "./digestBlocks/Grid.catalog";
+export type { LinkItemProps } from "./digestBlocks/LinkItem.catalog";
+export type { ListProps } from "./digestBlocks/List.catalog";
+export type { NextStepsProps } from "./digestBlocks/NextSteps.catalog";
+export type { PrerequisitesProps } from "./digestBlocks/Prerequisites.catalog";
+export type { ProseProps } from "./digestBlocks/Prose.catalog";
+export type { ProsConsProps } from "./digestBlocks/ProsCons.catalog";
+export type { QuoteBlockProps } from "./digestBlocks/QuoteBlock.catalog";
+export type { StatCardProps } from "./digestBlocks/StatCard.catalog";
+export type { StepProps } from "./digestBlocks/Step.catalog";
+export type { TerminalProps } from "./digestBlocks/Terminal.catalog";
+export type { TLDRProps } from "./digestBlocks/TLDR.catalog";

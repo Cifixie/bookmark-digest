@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { chapterSchema } from "../Chapter/Chapter.schema";
-import { speakerSchema as speakerType } from "../Speaker/Speaker.schema";
+import { chapterSchema } from "./Chapter.schema";
+import { speakerSchema as speakerType } from "./Speaker.schema";
 
 /**
  * The source variant for temporal content (videos, podcasts).

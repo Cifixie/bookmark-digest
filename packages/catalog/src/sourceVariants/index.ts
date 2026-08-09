@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { writtenSchema, type Written } from "./Written/Written.schema";
-import { temporalSchema, type Temporal } from "./Temporal/Temporal.schema";
-import { chapterSchema, type Chapter } from "./Chapter/Chapter.schema";
-import { speakerSchema, type Speaker } from "./Speaker/Speaker.schema";
+import { writtenSchema, type Written } from "./Written.schema";
+import { temporalSchema, type Temporal } from "./Temporal.schema";
+import { chapterSchema, type Chapter } from "./Chapter.schema";
+import { speakerSchema, type Speaker } from "./Speaker.schema";
 
 // Re-export nested types
 export { chapterSchema, speakerSchema };

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { sourceHealthStatus } from "../../enums";
+import { sourceHealthStatus } from "../enums";
 
 /**
  * SourceMeta — metadata about the original source.

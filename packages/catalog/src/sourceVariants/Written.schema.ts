@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { difficulty, sourceHealthStatus } from "../../enums";
+import { difficulty, sourceHealthStatus } from "../enums";
 
 /**
  * The source variant for written content (articles, blog posts, newsletters).

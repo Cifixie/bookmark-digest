@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { tone, length, difficulty, digestType } from "../../enums";
+import { tone, length, difficulty, digestType } from "../enums";
 
 /**
  * DigestMeta — AI-generated metadata about the digest itself.

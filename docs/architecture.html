@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bookmark Digest — Current Architecture</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg-card: #1a1d27;
+    --bg-card-hover: #222633;
+    --border: #2a2e3d;
+    --text: #e2e4ea;
+    --text-dim: #8b8fa3;
+    --accent: #6c8cff;
+    --accent-glow: rgba(108, 140, 255, 0.15);
+    --green: #4ade80;
+    --green-bg: rgba(74, 222, 128, 0.08);
+    --orange: #fb923c;
+    --orange-bg: rgba(251, 146, 60, 0.08);
+    --purple: #c084fc;
+    --purple-bg: rgba(192, 132, 252, 0.08);
+    --cyan: #22d3ee;
+    --cyan-bg: rgba(34, 211, 238, 0.08);
+    --pink: #f472b6;
+    --pink-bg: rgba(244, 114, 182, 0.08);
+    --yellow: #facc15;
+    --yellow-bg: rgba(250, 204, 21, 0.08);
+    --red: #f87171;
+    --red-bg: rgba(248, 113, 113, 0.08);
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  body > .container > * { color: var(--text); }
+
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  /* ─── Header ─── */
+  .header {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 {
+    font-size: 2.25rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, var(--accent), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header p {
+    color: #9a9eb8;
+    font-size: 1.05rem;
+  }
+  .header .badge {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.3em 0.9em;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--accent);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--accent-glow);
+  }
+
+  /* ─── Section titles ─── */
+  .section-title {
+    font-size: 1.35rem;
+    font-weight: 600;
+    margin: 2.5rem 0 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .section-title .icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px; height: 28px;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* ─── Architecture Diagram (CSS-only) ─── */
+  .arch-diagram {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: auto auto auto auto;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .arch-zone {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    background: var(--bg-card);
+    position: relative;
+    transition: background 0.2s;
+  }
+  .arch-zone:hover { background: var(--bg-card-hover); }
+  .arch-zone .zone-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6b6f85;
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .arch-zone .zone-label::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+  }
+
+  /* Zone color accents */
+  .zone-gateway .zone-label::before { background: var(--accent); }
+  .zone-compute .zone-label::before { background: var(--green); }
+  .zone-data .zone-label::before { background: var(--orange); }
+  .zone-external .zone-label::before { background: var(--pink); }
+  .zone-stream .zone-label::before { background: var(--purple); }
+
+  /* Component chips */
+  .comp {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-bottom: 0.4rem;
+    transition: transform 0.15s, box-shadow 0.15s;
+    cursor: default;
+  }
+  .comp:last-child { margin-bottom: 0; }
+  .comp:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .comp .comp-icon {
+    width: 22px; height: 22px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .comp .comp-detail {
+    font-size: 0.72rem;
+    color: #9a9eb8;
+    font-weight: 400;
+  }
+
+  /* Component color themes */
+  .comp-gw { background: var(--accent-glow); color: var(--accent); }
+  .comp-gw .comp-icon { background: var(--accent); color: #fff; }
+
+  .comp-lambda { background: var(--green-bg); color: var(--green); }
+  .comp-lambda .comp-icon { background: var(--green); color: #000; }
+
+  .comp-dynamo { background: var(--orange-bg); color: var(--orange); }
+  .comp-dynamo .comp-icon { background: var(--orange); color: #000; }
+
+  .comp-bedrock { background: var(--purple-bg); color: var(--purple); }
+  .comp-bedrock .comp-icon { background: var(--purple); color: #fff; }
+
+  .comp-firecrawl { background: var(--pink-bg); color: var(--pink); }
+  .comp-firecrawl .comp-icon { background: var(--pink); color: #fff; }
+
+  .comp-cognito { background: var(--cyan-bg); color: var(--cyan); }
+  .comp-cognito .comp-icon { background: var(--cyan); color: #000; }
+
+  .comp-s3 { background: var(--yellow-bg); color: var(--yellow); }
+  .comp-s3 .comp-icon { background: var(--yellow); color: #000; }
+
+  .comp-stream { background: var(--purple-bg); color: var(--purple); }
+  .comp-stream .comp-icon { background: var(--purple); color: #fff; }
+
+  /* Column spans */
+  .col-gateway  { grid-column: 1 / 3; grid-row: 1; }
+  .col-compute  { grid-column: 1 / 3; grid-row: 2; }
+  .col-data     { grid-column: 3 / 5; grid-row: 2; }
+  .col-stream   { grid-column: 3 / 5; grid-row: 3; }
+  .col-external { grid-column: 1 / 5; grid-row: 4; }
+
+  /* ─── Data Flow ─── */
+  .flow-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .flow-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    transition: border-color 0.2s;
+  }
+  .flow-card:hover { border-color: var(--accent); }
+  .flow-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .flow-card h3 .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .flow-card ol {
+    padding-left: 1.4rem;
+    font-size: 0.88rem;
+  }
+  .flow-card ol li {
+    margin-bottom: 0.35rem;
+    color: #b0b4c8;
+  }
+  .flow-card ol li strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* ─── Table Schema ─── */
+  .table-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .table-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .table-card-header {
+    padding: 0.85rem 1.1rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .table-card-header .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .table-card-header .pk-badge {
+    margin-left: auto;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.15em 0.6em;
+    border-radius: 999px;
+    background: rgba(251, 146, 60, 0.15);
+    color: var(--orange);
+    text-transform: uppercase;
+  }
+  .table-attrs {
+    padding: 0.5rem 0;
+  }
+  .table-attr {
+    display: grid;
+    grid-template-columns: 110px 100px 1fr;
+    gap: 0.75rem;
+    padding: 0.45rem 1.1rem;
+    font-size: 0.82rem;
+    align-items: baseline;
+  }
+  .table-attr:hover { background: rgba(255,255,255,0.02); }
+  .table-attr .attr-name { font-weight: 500; color: var(--text); }
+  .table-attr .attr-type {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.75rem;
+    color: #6b6f85;
+    background: rgba(255,255,255,0.04);
+    padding: 0.1em 0.45em;
+    border-radius: 3px;
+    display: inline;
+  }
+  .table-attr .attr-role { color: #9a9eb8; font-size: 0.78rem; }
+  .table-gsi {
+    margin: 0.3rem 1.1rem 0.6rem;
+    padding: 0.45rem 0.7rem;
+    border-radius: var(--radius-sm);
+    background: rgba(192, 132, 252, 0.06);
+    border: 1px dashed rgba(192, 132, 252, 0.2);
+    font-size: 0.75rem;
+    color: var(--purple);
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .table-gsi::before { content: 'GSI → '; font-weight: 600; }
+
+  /* ─── Lambda Registry ─── */
+  .lambda-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+  .lambda-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.9rem 1.1rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    transition: border-color 0.2s;
+  }
+  .lambda-card:hover { border-color: var(--green); }
+  .lambda-card .lc-icon {
+    width: 32px; height: 32px;
+    border-radius: var(--radius-sm);
+    background: var(--green-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--green);
+    flex-shrink: 0;
+  }
+  .lambda-card .lc-info h4 {
+    font-size: 0.88rem;
+    font-weight: 600;
+    margin-bottom: 0.15rem;
+  }
+  .lambda-card .lc-info p {
+    font-size: 0.78rem;
+    color: #9a9eb8;
+    line-height: 1.45;
+  }
+  .lambda-card .lc-info .lc-trig {
+    display: inline-block;
+    margin-top: 0.3rem;
+    font-size: 0.68rem;
+    font-weight: 500;
+    padding: 0.15em 0.55em;
+    border-radius: 999px;
+    background: var(--accent-glow);
+    color: var(--accent);
+  }
+
+  /* ─── Legend ─── */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    color: #9a9eb8;
+  }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  /* ─── Footer ─── */
+  .footer {
+    text-align: center;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+    color: #6b6f85;
+    font-size: 0.8rem;
+  }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 768px) {
+    .arch-diagram {
+      grid-template-columns: 1fr;
+    }
+    .col-gateway, .col-compute, .col-data, .col-stream, .col-external {
+      grid-column: 1;
+      grid-row: auto;
+    }
+    .table-attr {
+      grid-template-columns: 90px 80px 1fr;
+      gap: 0.5rem;
+    }
+    .header h1 { font-size: 1.6rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ════════ HEADER ════════ -->
+  <header class="header">
+    <h1>Bookmark Digest</h1>
+    <p>Serverless architecture — DynamoDB-backed ingestion, embedding &amp; digest pipeline</p>
+    <span class="badge">Phase 1 · DynamoDB · No Aurora</span>
+  </header>
+
+  <!-- ════════ ARCHITECTURE DIAGRAM ════════ -->
+  <h2 class="section-title">
+    <span class="icon" style="background:var(--accent-glow);color:var(--accent);">⬡</span>
+    System Overview
+  </h2>
+
+  <div class="legend">
+    <div class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span>Gateway / Auth</div>
+    <div class="legend-item"><span class="legend-dot" style="background:var(--green)"></span>Lambda Functions</div>
+    <div class="legend-item"><span class="legend-dot" style="background:var(--orange)"></span>DynamoDB Tables</div>
+    <div class="legend-item"><span class="legend-dot" style="background:var(--purple)"></span>Bedrock AI</div>
+    <div class="legend-item"><span class="legend-dot" style="background:var(--pink)"></span>External Service</div>
+    <div class="legend-item"><span class="legend-dot" style="background:var(--cyan)"></span>Cognito</div>
+  </div>
+
+  <div class="arch-diagram">
+
+    <!-- Gateway Zone -->
+    <div class="arch-zone zone-gateway col-gateway">
+      <div class="zone-label">Edge &amp; Identity</div>
+      <div class="comp comp-gw">
+        <span class="comp-icon">AG</span>
+        <span>API Gateway
+          <span class="comp-detail">— REST API · CORS · /sources, /digest-goals, /digests</span>
+        </span>
+      </div>
+      <div class="comp comp-cognito">
+        <span class="comp-icon">ID</span>
+        <span>Cognito User Pool
+          <span class="comp-detail">— JWT auth on /sources, /digests</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Compute Zone -->
+    <div class="arch-zone zone-compute">
+      <div class="zone-label">Lambda Functions</div>
+      <div class="comp comp-lambda">
+        <span class="comp-icon">IN</span>
+        <span>ingest-url
+          <span class="comp-detail">POST /sources</span>
+        </span>
+      </div>
+      <div class="comp comp-lambda">
+        <span class="comp-icon">ED</span>
+        <span>embed-source
+          <span class="comp-detail">Stream-triggered</span>
+        </span>
+      </div>
+      <div class="comp comp-lambda">
+        <span class="comp-icon">GD</span>
+        <span>generate-digest
+          <span class="comp-detail">POST /digests</span>
+        </span>
+      </div>
+      <div class="comp comp-lambda">
+        <span class="comp-icon">FS</span>
+        <span>fetch-source
+          <span class="comp-detail">GET /sources/:hash</span>
+        </span>
+      </div>
+      <div class="comp comp-lambda">
+        <span class="comp-icon">FD</span>
+        <span>fetch-digest
+          <span class="comp-detail">GET /digests/:id or ?sourceHash</span>
+        </span>
+      </div>
+      <div class="comp comp-lambda">
+        <span class="comp-icon">DG</span>
+        <span>digest-goals
+          <span class="comp-detail">GET /digest-goals</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Data Zone -->
+    <div class="arch-zone zone-data">
+      <div class="zone-label">DynamoDB Tables</div>
+      <div class="comp comp-dynamo">
+        <span class="comp-icon">SR</span>
+        <span>SourcesTable
+          <span class="comp-detail">PK: contentHash</span>
+        </span>
+      </div>
+      <div class="comp comp-dynamo">
+        <span class="comp-icon">DG</span>
+        <span>DigestsTable
+          <span class="comp-detail">PK: id</span>
+        </span>
+      </div>
+      <div style="margin-top:0.8rem;">
+        <div class="comp comp-s3">
+          <span class="comp-icon">S3</span>
+          <span>RawContentBucket
+            <span class="comp-detail">Phase-0 legacy</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stream Zone -->
+    <div class="arch-zone zone-stream col-stream">
+      <div class="zone-label">Event Pipeline</div>
+      <div class="comp comp-stream">
+        <span class="comp-icon">▸▸</span>
+        <span>DynamoDB Stream
+          <span class="comp-detail">SourcesTable → NEW_IMAGE → embed-source</span>
+        </span>
+      </div>
+      <div style="font-size:0.75rem; color:#9a9eb8; margin-top:0.4rem; padding:0 0.25rem;">
+        Filters: <code style="color:var(--purple);">eventName = INSERT</code> — automatic retries, no manual invoke needed
+      </div>
+    </div>
+
+    <!-- External Zone -->
+    <div class="arch-zone zone-external col-external">
+      <div class="zone-label">External Services</div>
+      <div class="comp comp-firecrawl">
+        <span class="comp-icon">FC</span>
+        <span>Firecrawl API
+          <span class="comp-detail">— Content extraction (Markdown)</span>
+        </span>
+      </div>
+      <div class="comp comp-bedrock">
+        <span class="comp-icon">BR</span>
+        <span>AWS Bedrock
+          <span class="comp-detail">— titan-embed-text-v2:0 (embedding) + claude-sonnet-v4 (generation)</span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ DATA FLOW ════════ -->
+  <h2 class="section-title">
+    <span class="icon" style="background:var(--green-bg);color:var(--green);">→</span>
+    Request Flows
+  </h2>
+
+  <div class="flow-cards">
+
+    <div class="flow-card">
+      <h3><span class="step-num">1</span> Ingest a URL</h3>
+      <ol>
+        <li>Browser → <strong>POST /sources</strong> (Cognito auth)</li>
+        <li><strong>ingest-url</strong> Lambda validates the URL</li>
+        <li>Queries <strong>UrlIndex GSI</strong> on SourcesTable for dedup</li>
+        <li>Fetches content via <strong>Firecrawl API</strong></li>
+        <li>SHA-256 hashes the content</li>
+        <li><strong>Conditional Put</strong> — `attribute_not_exists(contentHash)` for idempotency</li>
+        <li>Sets status = <code>"embedding"</code> → triggers DynamoDB Stream</li>
+        <li>Returns <code>{ sourceHash, status: "new"|"existing" }</code></li>
+      </ol>
+    </div>
+
+    <div class="flow-card">
+      <h3><span class="step-num">2</span> Generate Embedding</h3>
+      <ol>
+        <li><strong>DynamoDB Stream</strong> fires on INSERT with NEW_IMAGE</li>
+        <li><strong>embed-source</strong> Lambda receives the new source image</li>
+        <li>Sends content to <strong>Bedrock titan-embed-text-v2:0</strong></li>
+        <li>Receives 1536-dim normalized vector</li>
+        <li><strong>Update</strong> item: sets embedding, model, timestamp, status → <code>"ready"</code></li>
+      </ol>
+    </div>
+
+    <div class="flow-card">
+      <h3><span class="step-num">3</span> Generate a Digest</h3>
+      <ol>
+        <li>Browser → <strong>POST /digests</strong> with { sourceHash, digestGoal, modifiers }</li>
+        <li><strong>generate-digest</strong> checks <strong>SourceHashIndex GSI</strong> for existing pending digest</li>
+        <li>If none: creates row with status = <code>"pending"</code></li>
+        <li><strong>GetCommand</strong> fetches source content from SourcesTable</li>
+        <li>Assembles prompt: goal template + modifiers + catalog block descriptions + content</li>
+        <li>Calls <strong>Bedrock Claude</strong> via Vercel AI SDK <code>generateObject()</code></li>
+        <li>Validates output against <code>digestBlockSchema</code></li>
+        <li><strong>Update</strong> to status = <code>"done"</code>, stores DigestBlock[]</li>
+      </ol>
+    </div>
+
+    <div class="flow-card">
+      <h3><span class="step-num">4</span> Fetch Sources &amp; Digests</h3>
+      <ol>
+        <li><strong>GET /sources/:hash</strong> → <strong>fetch-source</strong> → <code>GetCommand(contentHash)</code></li>
+        <li><strong>GET /digests/:id</strong> → <strong>fetch-digest</strong> → <code>GetCommand(id)</code></li>
+        <li><strong>GET /digests?sourceHash=:hash</strong> → <code>Query(SourceHashIndex)</code> — lists all digests for a source</li>
+        <li><strong>GET /digest-goals</strong> → <strong>digest-goals</strong> — static config, no DB access</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ════════ TABLE SCHEMAS ════════ -->
+  <h2 class="section-title">
+    <span class="icon" style="background:var(--orange-bg);color:var(--orange);">☰</span>
+    Table Schemas
+  </h2>
+
+  <div class="table-grid">
+
+    <!-- SourcesTable -->
+    <div class="table-card">
+      <div class="table-card-header" style="background:var(--orange-bg);">
+        <span class="dot" style="background:var(--orange)"></span>
+        SourcesTable
+        <span class="pk-badge">Partition: contentHash</span>
+      </div>
+      <div class="table-attrs">
+        <div class="table-attr">
+          <span class="attr-name">contentHash</span>
+          <span class="attr-type">String</span>
+          <span class="attr-role">Partition key — SHA-256 of content</span>
+        </div>
+        <div class="table-attr">
+          <span class="attr-name">url</span>
+          <span class="attr-type">String</span>
+          <span class="attr-role">Original URL</span>
+        </div>
+        <div class="table-attr">
+          <span class="attr-name">content</span>
+          <span class="attr-type">String</span>
+          <span class="attr-role">Extracted readable text (Markdown)</span>
+        </div>
+        <div class="table-attr">
+          <span class="attr-name">contentType</span>
+          <span class="attr-type">String</span>
+          <span class="attr-role">article | video | unknown</span>
+        </div>
+        <div class="table-attr">
+          <span class="attr-name">fetchedAt</span>
+          <span class="attr-type">String</span>
+          <span class="attr-role">ISO datetime</span>
+        </div>
+        <div class="table-attr">
+          <span class="attr-name">fetchedBy</span>
+          <span class="attr-type">String</span>
+          <span class="attr-role">firecrawl</span>
+        </div>
+        <div class="table-attr">
+          <span class="attr-name">status</span>
+          <span class="attr-type">String</span>
+          <span class="attr-role">fetched → embedding → ready | failed</span>
+        </div>
+        <div class="table-attr">
+          <span class="attr-name">embedding</span>
+          <span class="attr-type">List&lt;Number&gt;</span>
+          <span class="attr-role">1536-dim vector (after embedding step)</span>
+        </div>
+        <div class="table-attr">
+          <span class="attr-name">embeddingModel</span>
+          <span class="attr-type">String</span>
+          <span class="attr-role">amazon.titan-embed-text-v2:0</span>
+        </div>
+        <div class="table-attr">
+          <span class="attr-name">embeddingAt</span>
+          <span class="attr-type">String</span>
+          <span class="attr-role">ISO datetime</span>
+        </div>
+      </div>
+      <div class="table-gsi">
+        <strong>UrlIndex</strong> — PK = url — dedup lookup, needed-by-ingest
+      </div>
+    </div>
+
+    <!-- DigestsTable -->
+    <div class="table-card">
+      <div class="table-card-header" style="background:var(--orange-bg);">
+        <span class="dot" style="background:var(--orange)"></span>
+        DigestsTable
+        <span class="pk-badge">Partition: id</span>
+      </div>
+      <div class="table-attrs">
+        <div class="table-attr">
+          <span class="attr-name">id</span>
+          <span class="attr-type">String</span>
+          <span class="attr-role">Partition key — UUID</span>
+        </div>
+        <div class="table-attr">
+          <span class="attr-name">sourceHash</span>
+          <span class="attr-type">String</span>
+          <span class="attr-role">FK → SourcesTable.contentHash</span>
+        </div>
+        <div class="table-attr">
+          <span class="attr-name">digestGoal</span>
+          <span class="attr-type">String</span>
+          <span class="attr-role">summary | tl_dr | notes | action_items | key_points</span>
+        </div>
+        <div class="table-attr">
+          <span class="attr-name">modifiers</span>
+          <span class="attr-type">Map</span>
+          <span class="attr-role">Goal-specific params (e.g., format, detail)</span>
+        </div>
+        <div class="table-attr">
+          <span class="attr-name">paramsVersion</span>
+          <span class="attr-type">String</span>
+          <span class="attr-role">catalog@ver-goals@goal — reproducible digests</span>
+        </div>
+        <div class="table-attr">
+          <span class="attr-name">status</span>
+          <span class="attr-type">String</span>
+          <span class="attr-role">pending → generating → done | failed</span>
+        </div>
+        <div class="table-attr">
+          <span class="attr-name">output</span>
+          <span class="attr-type">List&lt;Map&gt;</span>
+          <span class="attr-role">DigestBlock[] validated against catalog schema</span>
+        </div>
+        <div class="table-attr">
+          <span class="attr-name">error</span>
+          <span class="attr-type">String</span>
+          <span class="attr-role">Failure reason</span>
+        </div>
+        <div class="table-attr">
+          <span class="attr-name">model</span>
+          <span class="attr-type">String</span>
+          <span class="attr-role">anthropic.claude-sonnet-4-0-…</span>
+        </div>
+        <div class="table-attr">
+          <span class="attr-name">createdAt / updatedAt / completedAt</span>
+          <span class="attr-type">String</span>
+          <span class="attr-role">ISO datetimes</span>
+        </div>
+      </div>
+      <div class="table-gsi">
+        <strong>SourceHashIndex</strong> — PK = sourceHash, SK = digestGoal — dedup + list-by-source
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ LAMBDA REGISTRY ════════ -->
+  <h2 class="section-title">
+    <span class="icon" style="background:var(--green-bg);color:var(--green);">λ</span>
+    Lambda Registry
+  </h2>
+
+  <div class="lambda-grid">
+
+    <div class="lambda-card">
+      <div class="lc-icon">IN</div>
+      <div class="lc-info">
+        <h4>ingest-url</h4>
+        <p>POST /sources — validate URL, dedup via UrlIndex, Firecrawl fetch, conditional Put, set status="embedding"</p>
+        <span class="lc-trig">API Gateway → POST /sources</span>
+      </div>
+    </div>
+
+    <div class="lambda-card">
+      <div class="lc-icon">ED</div>
+      <div class="lc-info">
+        <h4>embed-source</h4>
+        <p>Process NEW_IMAGE from DynamoDB Stream — call Bedrock for 1536-dim embedding — Update item to status="ready"</p>
+        <span class="lc-trig">DynamoDB Stream (SourcesTable)</span>
+      </div>
+    </div>
+
+    <div class="lambda-card">
+      <div class="lc-icon">GD</div>
+      <div class="lc-info">
+        <h4>generate-digest</h4>
+        <p>POST /digests — check SourceHashIndex for pending, Get source content, call Claude via generateObject(), save DigestBlock[]</p>
+        <span class="lc-trig">API Gateway → POST /digests</span>
+      </div>
+    </div>
+
+    <div class="lambda-card">
+      <div class="lc-icon">FS</div>
+      <div class="lc-info">
+        <h4>fetch-source</h4>
+        <p>GET /sources/:hash — GetCommand by contentHash — return source row with optional embedding</p>
+        <span class="lc-trig">API Gateway → GET /sources/:hash</span>
+      </div>
+    </div>
+
+    <div class="lambda-card">
+      <div class="lc-icon">FD</div>
+      <div class="lc-info">
+        <h4>fetch-digest</h4>
+        <p>GET /digests/:id (GetCommand) OR GET /digests?sourceHash (Query SourceHashIndex) — single digest or list</p>
+        <span class="lc-trig">API Gateway → GET /digests/:id</span>
+      </div>
+    </div>
+
+    <div class="lambda-card">
+      <div class="lc-icon">DG</div>
+      <div class="lc-info">
+        <h4>digest-goals</h4>
+        <p>Static config — returns DIGEST_GOALS array with allowedBlockTypes, modifiers, prompt templates</p>
+        <span class="lc-trig">API Gateway → GET /digest-goals</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ════════ DESIGN NOTES ════════ -->
+  <h2 class="section-title">
+    <span class="icon" style="background:var(--purple-bg);color:var(--purple);">✦</span>
+    Key Design Decisions
+  </h2>
+
+  <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem 1.5rem; margin-bottom:1rem;">
+    <h3 style="font-size:0.95rem; margin-bottom:0.5rem;">No Aurora → DynamoDB from day one</h3>
+    <p style="font-size:0.88rem; color:#9a9eb8;">Aurora Serverless v2 on the AWS Free Plan requires "express configuration" — a manual CLI step CloudFormation can't automate. DynamoDB eliminates all of this: fully CDK-managed tables, on-demand billing (25GB/25RCU/WCU always-free), no VPC, no secrets, no cold starts.</p>
+  </div>
+
+  <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem 1.5rem; margin-bottom:1rem;">
+    <h3 style="font-size:0.95rem; margin-bottom:0.5rem;">Stream-triggered embedding, no manual invoke</h3>
+    <p style="font-size:0.88rem; color:#9a9eb8;">DynamoDB Streams on the SourcesTable automatically invoke embed-source on INSERT. This replaces the previous pattern of <code>ingest-url</code> directly invoking <code>embed-source</code> via Lambda's <code>InvokeFunction</code> API — eliminating a cross-Lambda IAM grant and the risk of invocation failures being silently swallowed.</p>
+  </div>
+
+  <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem 1.5rem; margin-bottom:1rem;">
+    <h3 style="font-size:0.95rem; margin-bottom:0.5rem;">Brute-force similarity search (adequate at personal scale)</h3>
+    <p style="font-size:0.88rem; color:#9a9eb8;">Losing pgvector's HNSW index is accepted — at personal-bookmark scale (dozens to low thousands of sources), a <code>Scan</code> + in-Lambda cosine similarity is fast and cheap. Revisit with OpenSearch Serverless only when scan latency becomes noticeable.</p>
+  </div>
+
+  <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem 1.5rem; margin-bottom:1rem;">
+    <h3 style="font-size:0.95rem; margin-bottom:0.5rem;">Shared DynamoDB helper: <code>lib/dynamo.ts</code></h3>
+    <p style="font-size:0.88rem; color:#9a9eb8;">Extracted from the previously-deferred C.3 task — a <code>DynamoDBDocumentClient</code> wrapper with typed helpers (get, put, update, query, scan) shared across all 5 data-touching Lambdas. Provides genuine reusability that the ARN-parameterized RDS helper never quite achieved.</p>
+  </div>
+
+  <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem 1.5rem; margin-bottom:2rem;">
+    <h3 style="font-size:0.95rem; margin-bottom:0.5rem;">Conditional puts for idempotent inserts</h3>
+    <p style="font-size:0.88rem; color:#9a9eb8;"><code>PutCommand</code> with <code>ConditionExpression: "attribute_not_exists(contentHash)"</code> replaces Aurora's <code>INSERT ... ON CONFLICT DO NOTHING</code>. <code>ConditionalCheckFailedException</code> signals the source already existed — matching the previous Lambda's dedup-then-branch behavior without any explicit conflict handling.</p>
+  </div>
+
+  <!-- ════════ FOOTER ════════ -->
+  <footer class="footer">
+    <p>Bookmark Digest Architecture · DynamoDB Migration · Built 2025</p>
+    <p style="margin-top:0.3rem; font-size:0.72rem;">Replaces Aurora Serverless v2 + pgvector (plans/dynamodb-migration.md)</p>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -3,12 +3,9 @@
   "compilerOptions": {
     "types": ["node"],
     "outDir": "./dist",
-    "rootDir": "."
+    "rootDir": ".",
+    "composite": false
   },
   "include": ["bin", "lib", "lambdas"],
-  "exclude": ["node_modules", "cdk.out"],
-  "references": [
-    { "path": "../../packages/schemas" },
-    { "path": "../../packages/shared" }
-  ]
+  "exclude": ["node_modules", "cdk.out"]
 }

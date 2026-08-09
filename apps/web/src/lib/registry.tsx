@@ -26,28 +26,31 @@ import { Step } from "../components/digestBlocks/Step/Step";
 import { Terminal } from "../components/digestBlocks/Terminal/Terminal";
 import { TLDR } from "../components/digestBlocks/TLDR/TLDR";
 
+/** Raw block-type → component map — the single source of truth for what @bookmark-digest/catalog's block types render to. */
+export const blockComponents = {
+  Callout,
+  Card,
+  ChecklistItem,
+  CodeBlock,
+  FaqItem,
+  Figure,
+  GlossaryTerm,
+  Grid,
+  LinkItem,
+  List,
+  NextSteps,
+  Prerequisites,
+  Prose,
+  ProsCons,
+  QuoteBlock,
+  StatCard,
+  Step,
+  Terminal,
+  TLDR,
+};
+
 const components = iterateComponents(
-  {
-    Callout,
-    Card,
-    ChecklistItem,
-    CodeBlock,
-    FaqItem,
-    Figure,
-    GlossaryTerm,
-    Grid,
-    LinkItem,
-    List,
-    NextSteps,
-    Prerequisites,
-    Prose,
-    ProsCons,
-    QuoteBlock,
-    StatCard,
-    Step,
-    Terminal,
-    TLDR,
-  },
+  blockComponents,
   (Element) =>
     function Wrapped({ props, children }) {
       if (!children) return <Element {...props} />;

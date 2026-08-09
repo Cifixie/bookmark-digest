@@ -47,3 +47,126 @@ export const submitUrlResponseSchema = z.object({
   status: jobStatus,
 });
 export type SubmitUrlResponse = z.infer<typeof submitUrlResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// Phase-1: Source + Digest schemas (data model for the ingestion pipeline)
+// ---------------------------------------------------------------------------
+
+/** Source status: lifecycle of a fetched URL through the pipeline. */
+export const sourceStatus = z.enum(["fetched", "embedding", "ready", "failed"]);
+export type SourceStatus = z.infer<typeof sourceStatus>;
+
+/** Content type of the fetched source. */
+export const sourceContentType = z.enum(["article", "video", "unknown"]);
+export type SourceContentType = z.infer<typeof sourceContentType>;
+
+/**
+ * Phase-1 source row. Represents a fetched piece of content, keyed by
+ * SHA-256 hash of its extracted text. Contains the raw content plus an
+ * embedding vector (populated after the embedding step).
+ */
+export const sourceSchema = z.object({
+  contentHash: z.string(),
+  url: z.string().url(),
+  content: z.string().nullable(),
+  contentType: sourceContentType,
+  fetchedAt: z.iso.datetime(),
+  fetchedBy: z.string().nullable(),
+  status: sourceStatus,
+  embedding: z.array(z.number()).nullable(),
+  embeddingModel: z.string().nullable(),
+  embeddingAt: z.iso.datetime().nullable(),
+});
+export type Source = z.infer<typeof sourceSchema>;
+
+/** Digest status: lifecycle of a generated digest. */
+export const digestStatus = z.enum(["pending", "generating", "done", "failed"]);
+export type DigestStatus = z.infer<typeof digestStatus>;
+
+/** Digest goal: what the user asked the system to generate. */
+export const digestGoalSchema = z.enum(["summary", "tl_dr", "notes", "action_items", "key_points"]); // Kept for compatibility with DB constraint; prefer DIGEST_GOALS from apps/infra/lib/digest-goals.ts
+export type DigestGoal = z.infer<typeof digestGoalSchema>;
+
+/**
+ * Phase-1 digest row. Represents a generated digest for a source,
+ * containing structured output (DigestBlock[]) validated against
+ * @bookmark-digest/catalog's digestBlockSchema.
+ */
+export const digestSchema = z.object({
+  id: z.string(),
+  sourceHash: z.string(),
+  digestGoal: digestGoalSchema,
+  modifiers: z.record(z.string(), z.any()).default({}),
+  paramsVersion: z.string(),
+  status: digestStatus,
+  /** DigestBlock[] from @bookmark-digest/catalog. */
+  output: z.array(z.record(z.string(), z.unknown())).nullable(),
+  error: z.string().nullable(),
+  model: z.string().nullable(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+  completedAt: z.iso.datetime().nullable(),
+});
+export type Digest = z.infer<typeof digestSchema>;
+
+/** API request: submit a URL for ingestion. */
+export const ingestUrlRequestSchema = z.object({
+  url: z.string().url(),
+});
+export type IngestUrlRequest = z.infer<typeof ingestUrlRequestSchema>;
+
+/** API request: request a digest for a source. */
+export const requestDigestRequestSchema = z.object({
+  sourceHash: z.string(),
+  digestGoal: digestGoalSchema,
+  modifiers: z.record(z.string(), z.any()).optional().default({}),
+});
+export type RequestDigestRequest = z.infer<typeof requestDigestRequestSchema>;
+
+/** API response: accepted digest request. */
+export const requestDigestResponseSchema = z.object({
+  digestId: z.string(),
+  status: z.literal("accepted"),
+});
+export type RequestDigestResponse = z.infer<typeof requestDigestResponseSchema>;
+
+/** API response: fetch a digest result. */
+export const fetchDigestResponseSchema = z.object({
+  id: z.string(),
+  digestGoal: z.string(),
+  modifiers: z.record(z.string(), z.any()),
+  status: digestStatus,
+  output: z.array(z.record(z.string(), z.unknown())).nullable(),
+  error: z.string().nullable(),
+  model: z.string().nullable(),
+  createdAt: z.iso.datetime(),
+  completedAt: z.iso.datetime().nullable(),
+});
+export type FetchDigestResponse = z.infer<typeof fetchDigestResponseSchema>;
+
+/** Modifier option for a digest goal. */
+export const digestGoalModifierSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  description: z.string(),
+  options: z.array(z.string()),
+  default: z.string().optional(),
+});
+export type DigestGoalModifier = z.infer<typeof digestGoalModifierSchema>;
+
+/** Single digest goal definition. */
+export const digestGoalSchemaApi = z.object({
+  goal: z.string(),
+  label: z.string(),
+  description: z.string(),
+  allowedBlockTypes: z.array(z.string()),
+  modifiers: z.array(digestGoalModifierSchema),
+});
+export type DigestGoalApi = z.infer<typeof digestGoalSchemaApi>;
+
+/** API response: list available digest goals (GET /digest-goals). */
+export const listDigestGoalsResponseSchema = z.object({
+  goals: z.array(digestGoalSchemaApi),
+  version: z.string().optional(),
+});
+export type ListDigestGoalsResponse = z.infer<typeof listDigestGoalsResponseSchema>;

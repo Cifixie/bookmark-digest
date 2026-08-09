@@ -1,6 +1,14 @@
-# Phase-1 Execution Plan
+# Phase-1 Execution Plan (SUPERSEDED)
 
-**Goal:** Wire Postgres + pgvector into the CDK stack, build out the core data pipeline (ingest → embed → digest), expose API endpoints, and dogfood end-to-end.
+> ⚠️ **This plan is superseded by [`plans/dynamodb-migration.md`](dynamodb-migration.md).**
+> Aurora has been replaced by DynamoDB for this project. See the migration plan for
+> the current architecture (DynamoDB tables, streams-based triggers, shared doc-client).
+> This doc is preserved for historical context only — it describes the original
+> Postgres/pgvector approach that was abandoned.
+
+**Original Goal:** Wire Postgres + pgvector into the CDK stack, build out the core data pipeline (ingest → embed → digest), expose API endpoints, and dogfood end-to-end.
+
+**Current architecture:** See [`plans/dynamodb-migration.md`](dynamodb-migration.md) — DynamoDB `Sources` + `Digests` tables with on-demand billing, stream-triggered embedding, and a shared `lib/dynamo.ts` doc-client wrapper.
 
 **Assumptions:**
 - Phase-0 stack (`BookmarkDigestPhase0`) is already deployed and functional

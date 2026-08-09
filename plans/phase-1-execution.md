@@ -97,11 +97,11 @@ CREATE UNIQUE INDEX idx_sources_url ON sources (url);
 CREATE TABLE digests (
   id              text PRIMARY KEY DEFAULT gen_random_uuid(),
   source_hash     text NOT NULL REFERENCES sources(content_hash) ON DELETE CASCADE,
-  digest_type     text NOT NULL,               -- 'summary', 'tl_dr', 'notes', ...
-  modifiers       jsonb DEFAULT '{}',          -- catalog-driven params (e.g., {tone: 'casual', length: 'short'})
-  params_version  text NOT NULL,               -- which catalog version produced this digest
+  digest_goal     text NOT NULL,               -- 'summary', 'tl_dr', 'notes', ... (NOT @bookmark-digest/catalog's `digestType` enum — see Step 5.2)
+  modifiers       jsonb DEFAULT '{}',          -- goal-specific params (e.g., {format: 'bullet', detail: 'comprehensive'})
+  params_version  text NOT NULL,               -- which catalog package version produced this digest
   status          text NOT NULL DEFAULT 'pending',-- 'pending', 'generating', 'done', 'failed'
-  output          text,                         -- the generated digest text
+  output          jsonb,                        -- DigestBlock[] JSON, validated against @bookmark-digest/catalog's digestBlockSchema
   error           text,
   model           text,                        -- 'anthropic.claude-sonnet-v4:0', ...
   created_at      timestamptz NOT NULL DEFAULT now(),
@@ -110,7 +110,7 @@ CREATE TABLE digests (
 );
 
 CREATE INDEX idx_digests_source ON digests (source_hash);
-CREATE INDEX idx_digests_type ON digests (digest_type);
+CREATE INDEX idx_digests_goal ON digests (digest_goal);
 ```
 
 ### 3.2 Where this lives
@@ -143,17 +143,25 @@ export type Source = z.infer<typeof sourceSchema>;
 export const digestStatus = z.enum(["pending", "generating", "done", "failed"]);
 export type DigestStatus = z.infer<typeof digestStatus>;
 
-export const digestTypeSchema = z.enum(["summary", "tl_dr", "notes", "action_items", "key_points"]);
-export type DigestType = z.infer<typeof digestTypeSchema>;
+// NOTE: this is deliberately NOT named `digestType` / `digestTypeSchema` — that
+// name is already taken by @bookmark-digest/catalog's `digestType` enum
+// (article/video/podcast/tutorial/news/review), which classifies the SOURCE
+// content, not the kind of digest being requested. `digestGoal` here answers
+// "what should the digest do" (summarize, extract action items, ...); see
+// Step 5.2 for how goals map onto the catalog's content blocks.
+export const digestGoalSchema = z.enum(["summary", "tl_dr", "notes", "action_items", "key_points"]);
+export type DigestGoal = z.infer<typeof digestGoalSchema>;
 
 export const digestSchema = z.object({
   id: z.string(),
   sourceHash: z.string(),
-  digestType: digestTypeSchema,
+  digestGoal: digestGoalSchema,
   modifiers: z.record(z.string(), z.any()).default({}),
   paramsVersion: z.string(),
   status: digestStatus,
-  output: z.string().nullable(),
+  // DigestBlock[] from @bookmark-digest/catalog, validated with
+  // `z.array(digestBlockSchema)` before it's persisted — not freeform text.
+  output: z.array(z.record(z.string(), z.unknown())).nullable(),
   error: z.string().nullable(),
   model: z.string().nullable(),
   createdAt: z.iso.datetime(),
@@ -171,12 +179,15 @@ export const ingestUrlRequestSchema = z.object({
   url: z.string().url(),
 });
 
-// List available digest types (from catalog)
-export const listDigestTypesResponseSchema = z.object({
-  types: z.array(z.object({
-    type: z.string(),
+// List available digest goals (static config, see Step 5.2 — NOT the
+// @bookmark-digest/catalog content-block catalog, which has its own
+// GET /catalog handler described below)
+export const listDigestGoalsResponseSchema = z.object({
+  goals: z.array(z.object({
+    goal: z.string(),
     label: z.string(),
     description: z.string(),
+    allowedBlockTypes: z.array(z.string()), // subset of @bookmark-digest/catalog's DigestBlock type names
     modifiers: z.array(z.object({
       key: z.string(),
       label: z.string(),
@@ -189,7 +200,7 @@ export const listDigestTypesResponseSchema = z.object({
 // Request a digest for a source
 export const requestDigestRequestSchema = z.object({
   sourceHash: z.string(),
-  digestType: digestTypeSchema,
+  digestGoal: digestGoalSchema,
   modifiers: z.record(z.string(), z.any()).optional().default({}),
 });
 
@@ -201,10 +212,10 @@ export const requestDigestResponseSchema = z.object({
 // Fetch digest result
 export const fetchDigestResponseSchema = z.object({
   id: z.string(),
-  digestType: z.string(),
+  digestGoal: z.string(),
   modifiers: z.record(z.string(), z.any()),
   status: digestStatus,
-  output: z.string().nullable(),
+  output: z.array(z.record(z.string(), z.unknown())).nullable(), // DigestBlock[]
   error: z.string().nullable(),
   model: z.string().nullable(),
   createdAt: z.iso.datetime(),
@@ -284,97 +295,109 @@ export async function getDbClient() {
 **Entry:** `apps/infra/lambdas/generate-digest/handler.ts`
 
 **Flow:**
-1. Receive `POST /digests` with `{ sourceHash, digestType, modifiers }`
+1. Receive `POST /digests` with `{ sourceHash, digestGoal, modifiers }`
 2. Validate with `requestDigestRequestSchema`
-3. **Prompt assembly** (catalog-driven):
-   - Lookup `digestType` in catalog for system prompt template + expected modifiers
+3. **Prompt assembly** (catalog-driven, using the real `@bookmark-digest/catalog` package — see 5.2):
+   - Lookup `digestGoal` in `DIGEST_GOALS` (5.2) for its `allowedBlockTypes` + prompt template + expected modifiers
+   - Call `catalog.prompt()` from `@bookmark-digest/catalog`, filtered/restricted to `allowedBlockTypes`, to get the block descriptions the model is allowed to author
    - Fetch Source row (content)
-   - Template: ``system: "You are a digest assistant. Type: {digestType}. Modifiers: {modifiers}.\n\nContent:\n{content}"``
-4. Call Bedrock via Vercel AI SDK:
+   - Template: ``system: "You are a digest assistant. Goal: {digestGoal}. Modifiers: {modifiers}.\n\n{catalogPrompt}\n\nRespond with a JSON array of blocks matching the schema above.\n\nContent:\n{content}"``
+4. Call Bedrock via Vercel AI SDK's `generateObject` (not `streamText` — output must be structured, not prose):
    ```ts
    import { anthropic } from "@ai-sdk/anthropic";
-   const { textStream } = streamText({
+   import { z } from "zod";
+   import { digestBlockSchema } from "@bookmark-digest/catalog";
+
+   const { object: blocks } = await generateObject({
      model: anthropic("anthropic.claude-sonnet-v4-0"),
      system: assembledPrompt,
+     schema: z.array(digestBlockSchema),
      maxTokens: 2048,
    });
    ```
-5. Collect stream → save to `digests.output`
+5. Re-validate `blocks` against `digestBlockSchema` (defense in depth beyond `generateObject`'s own schema enforcement) → save the validated `DigestBlock[]` JSON to `digests.output` (jsonb)
 6. Update digest row: `status = 'done', model = 'anthropic.claude-sonnet-v4-0', completed_at = now()`
 7. Return `{ digestId, status: 'done' }`
 
-### 5.2 Catalog package (`packages/catalog/src/index.ts`)
-The `defineCatalog` schema that drives digest types and modifiers:
+### 5.2 Digest goals config (NOT a second catalog)
+
+`@bookmark-digest/catalog` (built in `plans/phase-1-catalog.md`) already defines the 19 content blocks (`TLDR`, `Prose`, `List`, ...) via `defineCatalog` — that package is the single source of truth for what an LLM can author and how it's validated (`digestBlockSchema`, `catalog.prompt()`). This step does **not** define a second, competing `catalogSchema`/`defineCatalog` — an earlier draft of this plan did, before Part A's catalog existed, and it's since been superseded. Do not recreate `packages/catalog/src/index.ts`; import from it instead.
+
+What's actually missing is a much smaller thing: a static mapping from "what the user asked for" (a `digestGoal` — summary, tl_dr, notes, action_items, key_points) to "which of the 19 blocks are appropriate for that goal" plus the goal's own prompt framing and modifiers. This is app-level config, not an LLM-authored catalog component, so it lives outside `packages/catalog` (which stays reserved for the two-axis block/page model) — e.g. `apps/infra/lib/digest-goals.ts`, imported by both the `generate-digest` and `GET /digest-goals` (see 6.1) Lambdas:
 
 ```ts
-import { z } from "zod";
+import type { DigestBlock } from "@bookmark-digest/catalog";
+import { digestGoalSchema, type DigestGoal } from "@bookmark-digest/schemas";
 
-const digestTypeSchema = z.object({
-  type: z.string(),
-  label: z.string(),
-  description: z.string(),
-  systemPrompt: z.string(),          // template string with {modifiers} interpolation
-  expectedOutputLength: z.enum(["short", "medium", "long"]).default("medium"),
-  modifiers: z.array(z.object({
-    key: z.string(),
-    label: z.string(),
-    description: z.string(),
-    options: z.array(z.string()),
-    default: z.string().optional(),
-  })),
-  tier: z.enum(["1", "2"]),          // 1 = Structure, 2 = Digest Essentials
-});
+interface DigestGoalConfig {
+  goal: DigestGoal;
+  label: string;
+  description: string;
+  promptTemplate: string;                 // "{modifiers}" interpolation, filled in at call time
+  allowedBlockTypes: DigestBlock["type"][]; // restricts which catalog blocks the model may emit
+  modifiers: Array<{
+    key: string;
+    label: string;
+    description: string;
+    options: string[];
+    default?: string;
+  }>;
+}
 
-export const catalogSchema = z.object({
-  version: z.string(),
-  digestTypes: z.array(digestTypeSchema),
-});
-export type Catalog = z.infer<typeof catalogSchema>;
-
-// Tier 1: Structure
-const TIER_1_TYPES = [
+export const DIGEST_GOALS: DigestGoalConfig[] = [
   {
-    type: "summary",
+    goal: "summary",
     label: "Summary",
     description: "A concise prose summary of the source content.",
-    systemPrompt: "Provide a concise summary of the following content. Keep it under 200 words.",
+    promptTemplate: "Provide a concise summary of the following content. Keep it under 200 words.",
+    allowedBlockTypes: ["Prose"],
     modifiers: [],
-    tier: "1" as const,
   },
   {
-    type: "tl_dr",
+    goal: "tl_dr",
     label: "TL;DR",
     description: "Ultra-short bullet-point summary.",
-    systemPrompt: "Give a TL;DR — 3-5 bullet points capturing the core message.",
+    promptTemplate: "Give a TL;DR — 3-5 bullet points capturing the core message.",
+    allowedBlockTypes: ["TLDR", "List"],
     modifiers: [],
-    tier: "1" as const,
   },
-  // ... more Tier 1
-];
-
-// Tier 2: Digest Essentials
-const TIER_2_TYPES = [
   {
-    type: "notes",
+    goal: "notes",
     label: "Notes",
     description: "Structured notes from the content.",
-    systemPrompt: "Extract structured notes from the following content.",
+    promptTemplate: "Extract structured notes from the following content.",
+    allowedBlockTypes: ["List", "Card", "GlossaryTerm"],
     modifiers: [
       { key: "format", label: "Format", description: "Output format for notes", options: ["bullet", "paragraph", "markdown"], default: "bullet" },
       { key: "detail", label: "Detail level", options: ["brief", "comprehensive"], default: "comprehensive" },
     ],
-    tier: "2" as const,
   },
-  // ... more Tier 2
+  {
+    goal: "action_items",
+    label: "Action Items",
+    description: "Extracted next steps or action items.",
+    promptTemplate: "Extract concrete action items or next steps from the following content.",
+    allowedBlockTypes: ["NextSteps", "ChecklistItem"],
+    modifiers: [],
+  },
+  {
+    goal: "key_points",
+    label: "Key Points",
+    description: "The most important standalone points.",
+    promptTemplate: "List the key points from the following content.",
+    allowedBlockTypes: ["List", "StatCard", "Callout"],
+    modifiers: [],
+  },
 ];
 
-export function defineCatalog(tier?: "1" | "2"): Catalog {
-  const types = tier
-    ? [...TIER_1_TYPES, ...TIER_2_TYPES].filter(t => t.tier === tier)
-    : [...TIER_1_TYPES, ...TIER_2_TYPES];
-  return { version: "0.1.0", digestTypes: types };
+export function getDigestGoal(goal: DigestGoal): DigestGoalConfig {
+  const found = DIGEST_GOALS.find(g => g.goal === goal);
+  if (!found) throw new Error(`Unknown digest goal: ${goal}`);
+  return found;
 }
 ```
+
+The block choices above are illustrative — revisit them during dogfooding (Step 8).
 
 ---
 
@@ -386,12 +409,12 @@ export function defineCatalog(tier?: "1" | "2"): Catalog {
 |--------|------|------------|---------|-------------|
 | `POST` | `/sources` | Cognito | `ingest-url` | Submit URL for ingestion (dedup + fetch) |
 | `GET`  | `/sources/{sourceHash}` | Cognito | Lambda Proxy | Fetch a Source (with optional embedding) |
-| `GET`  | `/catalog` | None* | Static | Return catalog JSON |
+| `GET`  | `/digest-goals` | None* | Static | Return `DIGEST_GOALS` (5.2) as JSON — what the picker UI renders |
 | `POST` | `/digests` | Cognito | `generate-digest` | Request a digest for a source |
 | `GET`  | `/digests/{digestId}` | Cognito | Lambda Proxy | Fetch a digest result |
 | `GET`  | `/digests?sourceHash=...` | Cognito | Lambda Proxy | List digests for a source |
 
-*\*Catalog endpoint can be public or Cognito-authorized; public is simpler since it's just type definitions.*
+*\*`/digest-goals` endpoint can be public or Cognito-authorized; public is simpler since it's just config. Note this is deliberately not named `/catalog` — that name is reserved for a future endpoint exposing `@bookmark-digest/catalog`'s block schema itself (e.g. for tooling/debugging), which is a distinct concept from the digest-goal picker.*
 
 ### 6.2 Route adders in `bookmark-digest-stack.ts`
 
@@ -401,10 +424,11 @@ const sources = api.root.addResource("sources");
 const sourceHash = sources.addResource("{sourceHash}");
 const digests = api.root.addResource("digests");
 const digestId = digests.addResource("{digestId}");
+const digestGoals = api.root.addResource("digest-goals");
 
-// GET /catalog (no authorizer)
-digests.addMethod("GET", new apigw.LambdaIntegration(catalogFn, { proxy: true }), {
-  // No authorizer - catalog is just type definitions
+// GET /digest-goals (no authorizer)
+digestGoals.addMethod("GET", new apigw.LambdaIntegration(digestGoalsFn, { proxy: true }), {
+  // No authorizer - this is just static config (DIGEST_GOALS from 5.2)
 });
 
 // POST /sources (Cognito auth)
@@ -449,14 +473,14 @@ Add all Lambdas as `NodejsFunction` entries with appropriate:
 ### 7.1 Frontend changes (`apps/web/src/app/page.tsx`)
 
 Current state: single URL submit → mock response.
-Target state: **Submit URL → show source → show digest-type branch tree → select digests → show results.**
+Target state: **Submit URL → show source → show digest-goal picker → select digests → render results as catalog blocks.**
 
 ```
 [Submit URL]
     ↓
 Source status: "fetched" → Source loaded
     ↓
-┌─ Digest Options (from catalog GET /catalog) ─┐
+┌─ Digest Goals (from GET /digest-goals) ─────┐
 │  ☐ Summary        [Generate]                 │
 │  ☐ TL;DR          [Generate]                 │
 │  ☐ Notes          [Generate]                  │
@@ -464,36 +488,32 @@ Source status: "fetched" → Source loaded
 │  ☐ Action Items   [Generate]                 │
 └──────────────────────────────────────────────┘
     ↓ (after generating)
-┌─ Digest Results ─┐
-│ Summary: "..."   │
-│ TL;DR: "..."     │
-│ Notes: { bullets }│
-└──────────────────┘
+┌─ Digest Results (rendered via apps/web's DigestBlock registry) ─┐
+│ Summary  → <Prose>                                              │
+│ TL;DR    → <TLDR> / <List>                                      │
+│ Notes    → <List> / <Card> / <GlossaryTerm>                     │
+└───────────────────────────────────────────────────────────────┘
 ```
+
+Each digest's `output` is a `DigestBlock[]` (validated against `@bookmark-digest/catalog`'s `digestBlockSchema` — see Step 5.1), so results are rendered with the **same block registry already built in `plans/phase-1-catalog.md`** (`apps/web/src/lib/registry.ts` + the `digestBlocks/*` renderers), not as raw text. This is the payoff of routing digest generation through the real catalog: the frontend gets structured, typed content for free instead of parsing prose.
 
 ### 7.2 Components to add
 
 1. **`@/components/SourceCard`** — Displays source info + status
-2. **`@/components/DigestBranch`** — Catalog-driven UI for selecting digest types + modifiers
-   - Renders `digestType.label` + `digestType.description`
-   - For each modifier in the catalog, renders a selector (dropdown for enum, text input for freeform)
-3. **`@/components/DigestResult`** — Displays a single digest output
-4. **`@/components/BranchTree`** — Grouped digest options by tier (Structure / Digest Essentials)
+2. **`@/components/DigestGoalPicker`** — UI for selecting a digest goal + its modifiers
+   - Renders `goal.label` + `goal.description` (from `GET /digest-goals`)
+   - For each modifier, renders a selector (dropdown for enum, text input for freeform)
+3. **`@/components/DigestResult`** — Renders a digest's `DigestBlock[]` output by mapping each block through the existing `apps/web/src/lib/registry.ts` component lookup (reuse it directly rather than duplicating the block→component mapping)
+4. **`@/components/GoalList`** — Flat list of digest goals from `DIGEST_GOALS`; no tiers/grouping — the earlier draft's Tier 1/Tier 2 grouping was part of the superseded from-scratch catalog sketch (see Step 5.2) and doesn't apply here
 
-### 7.3 Catalog-driven rendering
-The `BranchTree` component reads the catalog from `GET /catalog` and renders itself:
+### 7.3 Goal-driven rendering
+The `GoalList` component reads goals from `GET /digest-goals` and renders itself flat (no tier grouping):
 ```tsx
-function BranchTree({ catalog }: { catalog: Catalog }) {
-  const tierGroups = groupBy(catalog.digestTypes, t => t.tier);
+function GoalList({ goals }: { goals: DigestGoalConfig[] }) {
   return (
     <div>
-      <h3>Tier 1: Structure</h3>
-      {tierGroups["1"]?.map(t => (
-        <DigestBranch key={t.type} type={t} />
-      ))}
-      <h3>Tier 2: Digest Essentials</h3>
-      {tierGroups["2"]?.map(t => (
-        <DigestBranch key={t.type} type={t} />
+      {goals.map(g => (
+        <DigestGoalPicker key={g.goal} goal={g} />
       ))}
     </div>
   );
@@ -503,9 +523,9 @@ function BranchTree({ catalog }: { catalog: Catalog }) {
 ### 7.4 State management
 Keep it simple — `useState` for now:
 - `sourceHash: string | null` — current source
-- `catalog: Catalog | null` — loaded from `/catalog`
-- `digests: Digest[]` — list of generated digests
-- `generating: Record<string, boolean>` — which digest types are in-flight
+- `digestGoals: DigestGoalConfig[]` — loaded from `/digest-goals`
+- `digests: Digest[]` — list of generated digests (each with a `DigestBlock[]` output)
+- `generating: Record<string, boolean>` — which digest goals are in-flight
 
 ---
 
@@ -522,18 +542,18 @@ Pick 3-5 of your own bookmarks across types:
 - [ ] `POST /sources` succeeds → returns `sourceHash`
 - [ ] `GET /sources/{sourceHash}` returns content with `status: 'ready'`
 - [ ] Embedding exists (`embedding` array is populated)
-- [ ] `GET /catalog` returns the digest type definitions
-- [ ] For each selected digest type: `POST /digests` → `GET /digests/{digestId}` returns the output
+- [ ] `GET /digest-goals` returns the `DIGEST_GOALS` definitions
+- [ ] For each selected digest goal: `POST /digests` → `GET /digests/{digestId}` returns a `DigestBlock[]` output that validates against `digestBlockSchema` and renders correctly through the block registry
 - [ ] Output is useful, not garbage — subjective quality check
 - [ ] Error handling: submit an invalid URL → 400; submit a failing URL (404 site) → clean error
 
-### 8.3 Things to look for (catalog shape rough edges)
+### 8.3 Things to look for (digest-goal shape rough edges)
 - Are the modifier options actually useful? Or do you want to add/remove options?
-- Is the catalog versioning mechanism clear?
-- Do the prompt templates produce consistently good output?
-- Should any Tier 1/2 types be promoted/demoted?
-- Is the BranchTree rendering intuitive?
-- Are there missing digest types you keep wanting?
+- Is the `paramsVersion` / catalog-package-version tracking clear enough to reproduce a past digest?
+- Do the prompt templates + `allowedBlockTypes` restrictions produce consistently good, well-typed output?
+- Are the `allowedBlockTypes` choices per goal (Step 5.2) right, or does a goal need access to different blocks?
+- Is the goal picker UI intuitive without tier grouping?
+- Are there missing digest goals you keep wanting?
 
 ### 8.4 Outputs to save
 - Save the list of dogfooded URLs + results to `plans/dogfood-results.md`

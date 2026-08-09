@@ -1,7 +1,6 @@
-import type { BaseComponentProps } from "@json-render/react";
 import type { GridProps } from "@bookmark-digest/catalog";
 
-export const Grid = ({ props }: BaseComponentProps<GridProps>) => {
+export const Grid = (props: GridProps) => {
   return (
     <div style={{
       display: "grid",

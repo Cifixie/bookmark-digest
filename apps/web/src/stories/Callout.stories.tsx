@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { Callout } from "../../components/digestBlocks/Callout/Callout";
+import { Callout } from "../components/digestBlocks/Callout/Callout";
 import type { CalloutProps } from "@bookmark-digest/catalog";
 
 const meta = {
@@ -36,6 +36,7 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     variant: "info",
+    title: null,
     text: "This is a callout box with default variant styling.",
   },
 };
@@ -51,6 +52,7 @@ export const Tip: Story = {
 export const Warning: Story = {
   args: {
     variant: "warning",
+    title: null,
     text: "This is a warning callout. Be careful with this configuration.",
   },
 };

@@ -1,7 +1,6 @@
-import type { BaseComponentProps } from "@json-render/react";
 import type { FigureProps } from "@bookmark-digest/catalog";
 
-export const Figure = ({ props }: BaseComponentProps<FigureProps>) => {
+export const Figure = (props: FigureProps) => {
   const { alt, caption, source } = props;
   return (
     <figure style={{ margin: "16px 0", textAlign: "center" }}>

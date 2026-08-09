@@ -1,7 +1,6 @@
-import type { BaseComponentProps } from "@json-render/react";
 import type { StatCardProps } from "@bookmark-digest/catalog";
 
-export const StatCard = ({ props }: BaseComponentProps<StatCardProps>) => {
+export const StatCard = (props: StatCardProps) => {
   const { value, label, change } = props;
   return (
     <div style={{

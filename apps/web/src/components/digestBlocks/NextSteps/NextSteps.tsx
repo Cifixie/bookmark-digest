@@ -1,7 +1,6 @@
-import type { BaseComponentProps } from "@json-render/react";
 import type { NextStepsProps } from "@bookmark-digest/catalog";
 
-export const NextSteps = ({ props }: BaseComponentProps<NextStepsProps>) => {
+export const NextSteps = (props: NextStepsProps) => {
   const { title, steps } = props;
   return (
     <div style={{ margin: "12px 0" }}>

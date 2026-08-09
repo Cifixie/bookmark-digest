@@ -1,7 +1,6 @@
-import type { BaseComponentProps } from "@json-render/react";
 import type { ChecklistItemProps } from "@bookmark-digest/catalog";
 
-export const ChecklistItem = ({ props }: BaseComponentProps<ChecklistItemProps>) => {
+export const ChecklistItem = (props: ChecklistItemProps) => {
   const { text, checked } = props;
   return (
     <div style={{

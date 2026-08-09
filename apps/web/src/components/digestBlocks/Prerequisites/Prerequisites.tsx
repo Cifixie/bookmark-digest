@@ -1,7 +1,6 @@
-import type { BaseComponentProps } from "@json-render/react";
 import type { PrerequisitesProps } from "@bookmark-digest/catalog";
 
-export const Prerequisites = ({ props }: BaseComponentProps<PrerequisitesProps>) => {
+export const Prerequisites = (props: PrerequisitesProps) => {
   const { title, items } = props;
   return (
     <div style={{ margin: "12px 0" }}>

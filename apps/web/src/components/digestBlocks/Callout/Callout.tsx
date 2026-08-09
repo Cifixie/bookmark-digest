@@ -1,4 +1,3 @@
-import type { BaseComponentProps } from "@json-render/react";
 import type { CalloutProps } from "@bookmark-digest/catalog";
 
 const icons: Record<CalloutProps["variant"], string> = {
@@ -40,7 +39,7 @@ const variantColors: Record<CalloutProps["variant"], { bg: string; border: strin
   misconception: { bg: "#ffebee", border: "#f44336", text: "#b71c1c" },
 };
 
-export const Callout = ({ props }: BaseComponentProps<CalloutProps>) => {
+export const Callout = (props: CalloutProps) => {
   const { variant, title, text } = props;
   const colors = variantColors[variant];
   const label = title ?? defaultLabels[variant];

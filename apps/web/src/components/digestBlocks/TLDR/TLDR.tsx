@@ -1,7 +1,6 @@
-import type { BaseComponentProps } from "@json-render/react";
 import type { TLDRProps } from "@bookmark-digest/catalog";
 
-export const TLDR = ({ props }: BaseComponentProps<TLDRProps>) => {
+export const TLDR = (props: TLDRProps) => {
   const { label, points } = props;
   return (
     <div style={{

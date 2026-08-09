@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { DigestPage } from "../../components/page/DigestPage";
+import { DigestPage } from "../components/page/DigestPage";
 import type { DigestPage as DigestPageType } from "@bookmark-digest/catalog";
 
 const meta = {

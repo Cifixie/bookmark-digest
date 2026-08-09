@@ -1,7 +1,6 @@
-import type { BaseComponentProps } from "@json-render/react";
 import type { TerminalProps } from "@bookmark-digest/catalog";
 
-export const Terminal = ({ props }: BaseComponentProps<TerminalProps>) => {
+export const Terminal = (props: TerminalProps) => {
   const { command, output, caption } = props;
   return (
     <div style={{ margin: "12px 0" }}>

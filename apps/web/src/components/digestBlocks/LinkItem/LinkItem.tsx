@@ -1,7 +1,6 @@
-import type { BaseComponentProps } from "@json-render/react";
 import type { LinkItemProps } from "@bookmark-digest/catalog";
 
-export const LinkItem = ({ props }: BaseComponentProps<LinkItemProps>) => {
+export const LinkItem = (props: LinkItemProps) => {
   const { text, href, description } = props;
   return (
     <li style={{ marginBottom: 8 }}>

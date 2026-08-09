@@ -1,7 +1,6 @@
-import type { BaseComponentProps } from "@json-render/react";
 import type { CodeBlockProps } from "@bookmark-digest/catalog";
 
-export const CodeBlock = ({ props }: BaseComponentProps<CodeBlockProps>) => {
+export const CodeBlock = (props: CodeBlockProps) => {
   const { language, code, caption } = props;
   return (
     <div style={{ margin: "12px 0" }}>

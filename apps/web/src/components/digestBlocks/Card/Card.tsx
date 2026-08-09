@@ -1,7 +1,6 @@
-import type { BaseComponentProps } from "@json-render/react";
 import type { CardProps } from "@bookmark-digest/catalog";
 
-export const Card = ({ props }: BaseComponentProps<CardProps>) => {
+export const Card = (props: CardProps) => {
   const { title, subtitle, text } = props;
   return (
     <div style={{

@@ -1,7 +1,6 @@
-import type { BaseComponentProps } from "@json-render/react";
 import type { GlossaryTermProps } from "@bookmark-digest/catalog";
 
-export const GlossaryTerm = ({ props }: BaseComponentProps<GlossaryTermProps>) => {
+export const GlossaryTerm = (props: GlossaryTermProps) => {
   const { term, definition } = props;
   return (
     <div style={{ margin: "8px 0", paddingLeft: 16, borderLeft: "3px solid #ccc" }}>

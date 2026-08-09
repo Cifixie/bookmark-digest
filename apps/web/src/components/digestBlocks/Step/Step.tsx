@@ -1,7 +1,6 @@
-import type { BaseComponentProps } from "@json-render/react";
 import type { StepProps } from "@bookmark-digest/catalog";
 
-export const Step = ({ props }: BaseComponentProps<StepProps>) => {
+export const Step = (props: StepProps) => {
   const { order, title, description } = props;
   return (
     <div style={{ display: "flex", gap: 12, margin: "12px 0", alignItems: "flex-start" }}>

@@ -5,6 +5,7 @@
 
 import { defineRegistry } from "@json-render/react";
 import { catalog } from "@bookmark-digest/catalog";
+import { iterateComponents } from "./iterateComponents";
 import { Callout } from "../components/digestBlocks/Callout/Callout";
 import { Card } from "../components/digestBlocks/Card/Card";
 import { ChecklistItem } from "../components/digestBlocks/ChecklistItem/ChecklistItem";
@@ -25,8 +26,8 @@ import { Step } from "../components/digestBlocks/Step/Step";
 import { Terminal } from "../components/digestBlocks/Terminal/Terminal";
 import { TLDR } from "../components/digestBlocks/TLDR/TLDR";
 
-export const registry = defineRegistry(catalog, {
-  components: {
+const components = iterateComponents(
+  {
     Callout,
     Card,
     ChecklistItem,
@@ -47,4 +48,11 @@ export const registry = defineRegistry(catalog, {
     Terminal,
     TLDR,
   },
-});
+  (Element) =>
+    function Wrapped({ props, children }) {
+      if (!children) return <Element {...props} />;
+      return <Element {...props}>{children}</Element>;
+    },
+);
+
+export const registry = defineRegistry(catalog, { components });

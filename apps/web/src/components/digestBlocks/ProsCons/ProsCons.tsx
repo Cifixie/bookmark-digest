@@ -1,7 +1,6 @@
-import type { BaseComponentProps } from "@json-render/react";
 import type { ProsConsProps } from "@bookmark-digest/catalog";
 
-export const ProsCons = ({ props }: BaseComponentProps<ProsConsProps>) => {
+export const ProsCons = (props: ProsConsProps) => {
   const { prosTitle, pros, consTitle, cons } = props;
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, margin: "12px 0" }}>

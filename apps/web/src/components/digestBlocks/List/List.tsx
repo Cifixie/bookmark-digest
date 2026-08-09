@@ -1,7 +1,6 @@
-import type { BaseComponentProps } from "@json-render/react";
 import type { ListProps } from "@bookmark-digest/catalog";
 
-export const List = ({ props }: BaseComponentProps<ListProps>) => {
+export const List = (props: ListProps) => {
   const { title } = props;
   return (
     <div style={{ margin: "12px 0" }}>

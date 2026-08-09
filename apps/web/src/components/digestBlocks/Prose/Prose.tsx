@@ -1,7 +1,6 @@
-import type { BaseComponentProps } from "@json-render/react";
 import type { ProseProps } from "@bookmark-digest/catalog";
 
-export const Prose = ({ props }: BaseComponentProps<ProseProps>) => {
+export const Prose = (props: ProseProps) => {
   const { paragraphs } = props;
   return (
     <div style={{ margin: "8px 0" }}>

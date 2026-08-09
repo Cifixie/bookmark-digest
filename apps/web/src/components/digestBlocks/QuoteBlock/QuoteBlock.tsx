@@ -1,7 +1,6 @@
-import type { BaseComponentProps } from "@json-render/react";
 import type { QuoteBlockProps } from "@bookmark-digest/catalog";
 
-export const QuoteBlock = ({ props }: BaseComponentProps<QuoteBlockProps>) => {
+export const QuoteBlock = (props: QuoteBlockProps) => {
   const { quote, attribution, timestampSeconds } = props;
   return (
     <blockquote style={{

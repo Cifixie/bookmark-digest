@@ -1,8 +1,7 @@
-import type { BaseComponentProps } from "@json-render/react";
 import type { FaqItemProps } from "@bookmark-digest/catalog";
 import { useState } from "react";
 
-export const FaqItem = ({ props }: BaseComponentProps<FaqItemProps>) => {
+export const FaqItem = (props: FaqItemProps) => {
   const [open, setOpen] = useState(false);
   const { question, answer } = props;
   return (

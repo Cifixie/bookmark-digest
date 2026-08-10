@@ -24,9 +24,18 @@ import { StartingPosition, FilterRule, FilterCriteria } from "aws-cdk-lib/aws-la
 import * as apigw from "aws-cdk-lib/aws-apigateway";
 import * as sfn from "aws-cdk-lib/aws-stepfunctions";
 import * as cognito from "aws-cdk-lib/aws-cognito";
+import { Rule, Schedule } from "aws-cdk-lib/aws-events";
+import { LambdaFunction } from "aws-cdk-lib/aws-events-targets";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as lambdaEventSources from "aws-cdk-lib/aws-lambda-event-sources";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as sqs from "aws-cdk-lib/aws-sqs";
+import { SqsDlq } from "aws-cdk-lib/aws-lambda-event-sources";
+import * as sns from "aws-cdk-lib/aws-sns";
+import * as subs from "aws-cdk-lib/aws-sns-subscriptions";
+import * as lambdaEvents from "aws-cdk-lib/aws-lambda-event-sources";
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
+import * as config from "./config";
 
 // ---------------------------------------------------------------------------
 // Type definitions for API responses
@@ -186,6 +195,7 @@ export class BookmarkDigest extends cdk.Stack {
       environment: {
         SOURCES_TABLE_NAME: sourcesTable.tableName,
         FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY ?? "",
+        FIRECRAWL_API_URL: config.FIRECRAWL_API_URL,
       },
     });
 
@@ -200,7 +210,8 @@ export class BookmarkDigest extends cdk.Stack {
       timeout: cdk.Duration.minutes(15),
       environment: {
         SOURCES_TABLE_NAME: sourcesTable.tableName,
-        BEDROCK_EMBEDDING_MODEL: "amazon.titan-embed-text-v2:0",
+        BEDROCK_EMBEDDING_MODEL: config.BEDROCK_EMBEDDING_MODEL_ID,
+        BEDROCK_EMBEDDING_DIMENSIONS: String(config.BEDROCK_EMBEDDING_DIMENSIONS),
       },
     });
 
@@ -208,7 +219,7 @@ export class BookmarkDigest extends cdk.Stack {
       new iam.PolicyStatement({
         actions: ["bedrock:InvokeModel"],
         resources: [
-          `arn:aws:bedrock:eu-north-1::foundation-model/amazon.titan-embed-text-v2:0`,
+          config.BEDROCK_EMBEDDING_MODEL_ARN,
         ],
       })
     );
@@ -217,18 +228,35 @@ export class BookmarkDigest extends cdk.Stack {
     // it does not grant table access, which the handler needs for UpdateItem.
     sourcesTable.grantReadWriteData(embedSourceFn);
 
+    // embed-source DLQ — captures batch-level failures that Lambda can't retry
+    const embedDlq = new sqs.Queue(this, "EmbedDlq", {
+      retentionPeriod: cdk.Duration.days(14),
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      enforceSSL: true,
+    });
+
     // Wire embed-source as DynamoDB Stream consumer on SourcesTable
     embedSourceFn.addEventSource(new lambdaEventSources.DynamoEventSource(sourcesTable, {
       startingPosition: StartingPosition.LATEST,
       batchSize: 5,
+      retryAttempts: 0, // no auto-retry; batch-level failures go to DLQ
       filters: [
         FilterCriteria.filter({
           eventName: FilterRule.isEqual("INSERT"),
         }),
       ],
+      onFailure: new SqsDlq(embedDlq),
     }));
 
-    // generate-digest: call Claude via Bedrock for structured output
+    // Personal Gemini API key — created out-of-band (not by this stack) so the
+    // key never enters the CloudFormation template or cdk.out assets.
+    const geminiApiKeySecret = secretsmanager.Secret.fromSecretNameV2(
+      this,
+      "GeminiApiKeySecret",
+      config.GEMINI_API_KEY_SECRET_NAME
+    );
+
+    // generate-digest: call Gemini for structured output
     const generateDigestFn = new lambdaNodejs.NodejsFunction(this, "GenerateDigestFunction", {
       entry: "lambdas/generate-digest/handler.ts",
       handler: "handler",
@@ -237,23 +265,17 @@ export class BookmarkDigest extends cdk.Stack {
       environment: {
         SOURCES_TABLE_NAME: sourcesTable.tableName,
         DIGESTS_TABLE_NAME: digestsTable.tableName,
-        BEDROCK_MODEL: "anthropic.claude-sonnet-4-0-20250514-v1:0",
-        DIGEST_MAX_RETRIES: "3",
-        DIGEST_MAX_TOKENS: "4096",
+        GEMINI_MODEL: config.GEMINI_MODEL_ID,
+        GEMINI_API_KEY_SECRET_ARN: geminiApiKeySecret.secretArn,
+        DIGEST_MAX_RETRIES: String(config.DIGEST_MAX_RETRIES),
+        DIGEST_MAX_TOKENS: String(config.DIGEST_MAX_TOKENS),
         CATALOG_VERSION: "0.0.0",
       },
     });
 
     sourcesTable.grantReadData(generateDigestFn);
     digestsTable.grantReadWriteData(generateDigestFn);
-    generateDigestFn.role?.addToPrincipalPolicy(
-      new iam.PolicyStatement({
-        actions: ["bedrock:InvokeModel"],
-        resources: [
-          `arn:aws:bedrock:eu-north-1::foundation-model/anthropic.claude-sonnet-4-0-20250514-v1:0`,
-        ],
-      })
-    );
+    geminiApiKeySecret.grantRead(generateDigestFn);
 
     // =====================================================================
     // Phase-1: Static/config Lambdas
@@ -420,6 +442,45 @@ export class BookmarkDigest extends cdk.Stack {
         authorizationType: apigw.AuthorizationType.COGNITO,
       }
     );
+
+    // =====================================================================
+    // Embed failure alerting
+    // =====================================================================
+
+    const embedAlertTopic = new sns.Topic(this, "EmbedAlertTopic", {
+      displayName: "bookmark-digest-embed-alerts",
+    });
+
+    // Add email subscription — update the address before deploying.
+    // Stack deploy fails if the email domain isn't confirmed in SES/SNS,
+    // so this is optional: wrap in conditional or make the env var required.
+    const alertEmail = process.env.EMBED_ALERT_EMAIL;
+    if (alertEmail) {
+      embedAlertTopic.addSubscription(new subs.EmailSubscription(alertEmail));
+    }
+
+    // Daily checker: scans for failed sources older than 1 hour and
+    // publishes a CloudWatch alarm via SNS if any are found.
+    const checkEmbedFailuresFn = new lambdaNodejs.NodejsFunction(this, "CheckEmbedFailuresFunction", {
+      entry: "lambdas/check-embed-failures/handler.ts",
+      handler: "handler",
+      runtime: cdk.aws_lambda.Runtime.NODEJS_24_X,
+      timeout: cdk.Duration.seconds(30),
+      environment: {
+        SOURCES_TABLE_NAME: sourcesTable.tableName,
+        ALERT_TOPIC_ARN: embedAlertTopic.topicArn,
+      },
+    });
+
+    sourcesTable.grantReadData(checkEmbedFailuresFn);
+    embedAlertTopic.grantPublish(checkEmbedFailuresFn);
+
+    // Run daily via EventBridge (cron: every day at 06:00 UTC)
+    const eventBridgeRule = new Rule(this, "CheckEmbedFailuresSchedule", {
+      schedule: Schedule.cron({ minute: "0", hour: "6" }),
+      enabled: true,
+    });
+    eventBridgeRule.addTarget(new LambdaFunction(checkEmbedFailuresFn));
 
     // =====================================================================
     // Phase-1: CDK outputs

@@ -18,9 +18,11 @@
     "cdk": "cdk"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^2.0.0",
+    "@ai-sdk/google": "^4.0.39",
     "@aws-sdk/client-bedrock-runtime": "^3.850.0",
     "@aws-sdk/client-dynamodb": "^3.850.0",
+    "@aws-sdk/client-secrets-manager": "^3.1106.0",
+    "@aws-sdk/client-sns": "^3.850.0",
     "@aws-sdk/lib-dynamodb": "^3.850.0",
     "@bookmark-digest/catalog": "workspace:*",
     "@bookmark-digest/schemas": "workspace:*",

@@ -86,7 +86,8 @@ export async function sourcesQueryByUrl(url: string) {
     new QueryCommand({
       TableName: SOURCES_TABLE,
       IndexName: "UrlIndex",
-      KeyConditionExpression: "url = :url",
+      KeyConditionExpression: "#url = :url",
+      ExpressionAttributeNames: { "#url": "url" },
       ExpressionAttributeValues: { ":url": url },
     })
   );

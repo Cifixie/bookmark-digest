@@ -5,7 +5,8 @@
  */
 
 import { createHash } from "crypto";
-import { sourcesPut, sourcesQueryByUrl, sourcesUpdate } from "../../lib/dynamo";
+import { sourcesPut, sourcesQueryByUrl } from "../../lib/dynamo";
+import { FIRECRAWL_API_URL } from "../../lib/config";
 
 // --- Firecrawl fetch ---
 
@@ -17,7 +18,7 @@ async function fetchWithFirecrawl(url: string): Promise<{ markdown: string } | n
   }
 
   try {
-    const res = await fetch("https://api.firecrawl.dev/v1/scrape", {
+    const res = await fetch(FIRECRAWL_API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
@@ -75,7 +76,9 @@ export async function handler(event: { body?: string }): Promise<{
 
     if (existingItems && existingItems.length > 0) {
       const existing = existingItems[0] as { contentHash: string; status: string };
-      if (existing.status === "ready") {
+      // "ready" = already embedded; "embedding" = currently embedding (skip).
+      // "failed" = re-accept for re-fetch/re-embed.
+      if (existing.status === "ready" || existing.status === "embedding") {
         return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ sourceHash: existing.contentHash, status: "existing" }) };
       }
     }
@@ -89,7 +92,11 @@ export async function handler(event: { body?: string }): Promise<{
     const contentHash = createHash("sha256").update(fetched.markdown).digest("hex");
     const now = new Date().toISOString();
 
-    // Conditional put for idempotent insert
+    // Conditional put for idempotent insert. Status is set to "embedding"
+    // directly on the INSERT (not via a follow-up UPDATE) because embed-source's
+    // DynamoDB Stream trigger is filtered to INSERT events only — a separate
+    // UPDATE would fire a MODIFY event that never reaches the Lambda, and
+    // embed-source's status guard would then skip the stale "fetched" INSERT.
     try {
       await sourcesPut(
         {
@@ -99,18 +106,10 @@ export async function handler(event: { body?: string }): Promise<{
           contentType: "article",
           fetchedAt: now,
           fetchedBy: "firecrawl",
-          status: "fetched",
+          status: "embedding",
         },
         "attribute_not_exists(contentHash)"
       );
-
-      // Successfully inserted — transition to embedding. A targeted update
-      // (not a full-item put) so it can't clobber the embedding/status fields
-      // embed-source writes concurrently once the INSERT stream event fires.
-      await sourcesUpdate(contentHash, "SET #s = :status", {
-        ":status": "embedding",
-        "#s": "status",
-      });
 
       return {
         statusCode: 201,

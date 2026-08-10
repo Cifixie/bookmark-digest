@@ -9,9 +9,7 @@
 
 import { sourcesGet, sourcesScan } from "../../lib/dynamo";
 import { rankBySimilarity } from "../../lib/similarity";
-
-const DEFAULT_COUNT = 3;
-const MAX_COUNT = 20;
+import { RELATED_DEFAULT_COUNT, RELATED_MAX_COUNT } from "../../lib/config";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,8 +23,8 @@ export async function handler(event: any): Promise<{ statusCode: number; headers
 
   const requestedCount = parseInt(event.queryStringParameters?.count ?? "", 10);
   const count = Number.isFinite(requestedCount) && requestedCount > 0
-    ? Math.min(requestedCount, MAX_COUNT)
-    : DEFAULT_COUNT;
+    ? Math.min(requestedCount, RELATED_MAX_COUNT)
+    : RELATED_DEFAULT_COUNT;
 
   try {
     const sourceResult = await sourcesGet(sourceHash);

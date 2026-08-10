@@ -1,15 +1,17 @@
 /**
  * generate-digest Lambda — Phase-1 digest generation (DynamoDB).
- * Calls Bedrock (Claude) for structured output using @bookmark-digest/catalog's digestBlockSchema.
+ * Calls Gemini for structured output using @bookmark-digest/catalog's digestBlockSchema.
  *
  * Trigger: POST /digests via API Gateway.
  */
 
 import { generateObject } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
 import { z } from "zod";
 import { digestBlockSchema } from "@bookmark-digest/catalog";
 import { randomUUID } from "crypto";
+import { GEMINI_MODEL_ID, DIGEST_MAX_RETRIES, DIGEST_MAX_TOKENS } from "../../lib/config";
 import {
   digestsGet,
   digestsPut,
@@ -19,9 +21,26 @@ import {
 } from "../../lib/dynamo";
 import { getDigestGoal } from "../../lib/digest-goals";
 
-const MAX_RETRIES = parseInt(process.env.DIGEST_MAX_RETRIES ?? "3", 10);
-const GENERATION_MODEL = process.env.BEDROCK_MODEL ?? "anthropic.claude-sonnet-4-0-20250514-v1:0";
-const MAX_TOKENS = parseInt(process.env.DIGEST_MAX_TOKENS ?? "4096", 10);
+const MAX_RETRIES = DIGEST_MAX_RETRIES;
+const GENERATION_MODEL = process.env.GEMINI_MODEL ?? GEMINI_MODEL_ID;
+const MAX_TOKENS = DIGEST_MAX_TOKENS;
+
+const secretsClient = new SecretsManagerClient({});
+let cachedGoogleProvider: ReturnType<typeof createGoogleGenerativeAI> | null = null;
+
+async function getGoogleProvider() {
+  if (cachedGoogleProvider) return cachedGoogleProvider;
+
+  const secretArn = process.env.GEMINI_API_KEY_SECRET_ARN;
+  if (!secretArn) throw new Error("GEMINI_API_KEY_SECRET_ARN not set");
+
+  const secret = await secretsClient.send(new GetSecretValueCommand({ SecretId: secretArn }));
+  const { apiKey } = JSON.parse(secret.SecretString ?? "{}");
+  if (!apiKey) throw new Error("Gemini secret missing 'apiKey' field");
+
+  cachedGoogleProvider = createGoogleGenerativeAI({ apiKey });
+  return cachedGoogleProvider;
+}
 
 // --- Lambda handler ---
 
@@ -111,10 +130,10 @@ export async function handler(event: any): Promise<{ statusCode: number; headers
       goalConfig.promptTemplate,
       modifierHints ? `Modifiers: ${modifierHints}` : "",
       `You may use: ${goalConfig.allowedBlockTypes.join(", ")}.`,
-      "Respond with a JSON array of blocks. Each block has 'type' and 'props' fields.",
     ].filter(Boolean).join("\n");
 
     // Generate with retries
+    const google = await getGoogleProvider();
     let blocks: unknown[] | null = null;
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       if (attempt > 0) {
@@ -123,16 +142,18 @@ export async function handler(event: any): Promise<{ statusCode: number; headers
 
       try {
         const result = await generateObject({
-          model: anthropic(GENERATION_MODEL as any),
+          model: google(GENERATION_MODEL),
           system: systemPrompt,
           prompt: `Content:\n${content}`,
-          schema: z.array(digestBlockSchema),
+          // Gemini's structured-output schema requires a top-level "object" type —
+          // a bare top-level array is rejected.
+          schema: z.object({ blocks: z.array(digestBlockSchema) }),
           maxOutputTokens: MAX_TOKENS,
           temperature: 0.3,
         });
 
-        const validated = z.array(z.record(z.string(), z.unknown())).safeParse(result.object);
-        if (validated.success) { blocks = result.object; break; }
+        const validated = z.array(z.record(z.string(), z.unknown())).safeParse(result.object.blocks);
+        if (validated.success) { blocks = result.object.blocks; break; }
       } catch (err) {
         console.error(`Attempt ${attempt} failed:`, err);
       }

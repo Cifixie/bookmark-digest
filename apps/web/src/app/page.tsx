@@ -380,7 +380,7 @@ export default function Home() {
           const data: SourceResponse = await res.json();
           setSource(data);
 
-          if (data.status === "ready") {
+          if (data.status === "ready" || data.status === "failed") {
             return; // Stop polling
           }
         }

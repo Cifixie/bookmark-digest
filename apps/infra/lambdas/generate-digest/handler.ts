@@ -32,6 +32,7 @@ import {
   sourcesGet,
 } from "../../lib/dynamo";
 import { getDigestGoal } from "../../lib/digest-goals";
+import customRules from "./customRules";
 
 const GENERATION_MODEL = process.env.GEMINI_MODEL ?? GEMINI_MODEL_ID;
 const FALLBACK_MODEL = process.env.BEDROCK_HAIKU_INFERENCE_PROFILE_ID ?? BEDROCK_HAIKU_INFERENCE_PROFILE_ID;
@@ -59,7 +60,19 @@ async function getGoogleProvider() {
 }
 
 function isQuotaExceeded(err: unknown): boolean {
-  return err instanceof Error && /RESOURCE_EXHAUSTED|429/.test(err.message);
+  if (!(err instanceof Error)) return false;
+  // The AI SDK retries transient failures and wraps the underlying cause in
+  // a RetryError, whose top-level .message doesn't include "429" or
+  // "RESOURCE_EXHAUSTED" — those only appear on the nested per-attempt
+  // errors (err.errors[]). Check both levels.
+  const pattern = /RESOURCE_EXHAUSTED|429|quota exceeded/i;
+  if (pattern.test(err.message)) return true;
+  const nested = (err as { errors?: unknown[] }).errors;
+  return Array.isArray(nested) && nested.some((e) => {
+    if (typeof e !== "object" || e === null) return false;
+    const { statusCode, message } = e as { statusCode?: number; message?: string };
+    return statusCode === 429 || (typeof message === "string" && pattern.test(message));
+  });
 }
 
 // --- Lambda handler ---
@@ -192,18 +205,7 @@ async function runGeneration({ digestId, sourceHash, digestGoal }: WorkerEvent):
     // that — left unsaid, it reaches for those patterns (its own first
     // example shows title: {"$item":"title"}) and emits objects where a
     // plain string prop is expected.
-    const catalogPrompt = catalog.prompt({
-      customRules: [
-        'Use "SectionContainer" as the root element.',
-        "Use sequential keys (el-0, el-1, ...). Provide REAL props, never empty {}.",
-        "This is static one-shot content, not an interactive app: there is no state model. " +
-          "Do NOT use \"repeat\", \"state\", or dynamic prop expressions " +
-          "({\"$state\":...}, {\"$item\":...}, {\"$bindState\":...}, {\"$template\":...}, {\"$cond\":...}). " +
-          "Every prop value must be a literal string, number, boolean, or array — write out each " +
-          "repeated item (e.g. each Card, Step, GlossaryTerm) as its own element instead.",
-        "Every key referenced in a children array must exist as its own element in the output.",
-      ],
-    });
+    const catalogPrompt = catalog.prompt({ customRules });
 
     const systemPrompt = [goalConfig.promptTemplate, catalogPrompt].filter(Boolean).join("\n");
 
@@ -229,6 +231,7 @@ async function runGeneration({ digestId, sourceHash, digestGoal }: WorkerEvent):
       });
     } catch (err) {
       if (!isQuotaExceeded(err)) {
+        console.error(`Gemini request failed for ${digestId}:`, err);
         await digestsUpdate(digestId, "SET #s = :status, #e = :err, #m = :model, #ca = :at", {
           ":status": "failed",
           ":err": "Gemini request failed",
@@ -242,7 +245,7 @@ async function runGeneration({ digestId, sourceHash, digestGoal }: WorkerEvent):
         return;
       }
 
-      console.warn("Gemini quota exceeded, falling back to Bedrock Claude Haiku");
+      console.warn(`Gemini quota exceeded for ${digestId}, falling back to Bedrock`);
       usedModel = FALLBACK_MODEL;
       try {
         result = await generateText({
@@ -253,7 +256,7 @@ async function runGeneration({ digestId, sourceHash, digestGoal }: WorkerEvent):
           temperature: 0.3,
         });
       } catch (fallbackErr) {
-        console.error("Bedrock Haiku fallback also failed:", fallbackErr);
+        console.error(`Bedrock fallback also failed for ${digestId}:`, fallbackErr);
         await digestsUpdate(digestId, "SET #s = :status, #e = :err, #m = :model, #ca = :at", {
           ":status": "failed",
           ":err": "Gemini quota exceeded and Bedrock Haiku fallback failed",
@@ -316,7 +319,7 @@ async function runGeneration({ digestId, sourceHash, digestGoal }: WorkerEvent):
       const err = isThin
         ? `Spec too thin (${elementCount} elements)`
         : `Validation failed: ${validation.issues.slice(0, 5).join("; ")}`;
-      console.warn(err);
+      console.warn(`Validation failed for ${digestId}: ${err}`);
       await digestsUpdate(digestId, "SET #s = :status, #e = :err, #m = :model, #ca = :at", {
         ":status": "failed",
         ":err": err,
@@ -346,7 +349,7 @@ async function runGeneration({ digestId, sourceHash, digestGoal }: WorkerEvent):
       "#u": "updatedAt",
     });
   } catch (err) {
-    console.error("Digest generation failed:", err);
+    console.error(`Generation failed for ${digestId}:`, err);
     await digestsUpdate(digestId, "SET #s = :status, #e = :err, #m = :model, #ca = :at", {
       ":status": "failed",
       ":err": "Internal error during generation",

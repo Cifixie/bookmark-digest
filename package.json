@@ -14,6 +14,7 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "clean": "pnpm -r clean && rm -rf node_modules",
+    "deploy": "pnpm --filter web build && pnpm --filter infra cdk deploy --outputs-file outputs.json",
     "outputs": "pnpm --filter infra cdk deploy --outputs-file outputs.json"
   },
   "devDependencies": {

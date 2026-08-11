@@ -243,6 +243,17 @@ export class BookmarkDigest extends cdk.Stack {
       })
     );
 
+    // Anthropic models are delivered via AWS Marketplace: the first
+    // invocation in the account needs these actions so Bedrock can
+    // auto-subscribe. One-time — after that, any role can invoke without
+    // them. See https://repost.aws/knowledge-center/bedrock-resolve-marketplace-permission
+    generateDigestWorkerFn.role?.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        actions: ["aws-marketplace:ViewSubscriptions", "aws-marketplace:Subscribe"],
+        resources: ["*"],
+      })
+    );
+
     // generate-digest: thin HTTP-facing Lambda behind POST /digests.
     // API Gateway REST APIs hard-cap the integration timeout at 29s, well
     // under how long Gemini generation (with retries) can take. So this

@@ -36,6 +36,7 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
+import * as cr from "aws-cdk-lib/custom-resources";
 import * as config from "./config";
 
 // ---------------------------------------------------------------------------
@@ -109,20 +110,23 @@ export class BookmarkDigest extends cdk.Stack {
     // Phase-1: DynamoDB Tables
     // =====================================================================
 
-    // Use CfnTable directly so we can define the EmbeddingVectorIndex GSI with
-    // VectorIndexConfiguration. TableV2.addGlobalSecondaryIndex() creates a
-    // separate CFN resource and doesn't support vector index props.
+    // Use CfnTable directly (rather than TableV2) purely so we get a stable,
+    // known table name/ARN to target with the vector-index custom resource
+    // below — DynamoDB vector indexes are NOT CloudFormation resources or
+    // GSI properties (confirmed against docs.aws.amazon.com/amazondynamodb;
+    // a prior attempt at modeling this as a GSI with a `VectorIndexConfiguration`
+    // property was rejected outright by CloudFormation's change-set
+    // validation: "Unsupported property [VectorIndexConfiguration]"). Vector
+    // indexes are managed exclusively through the CreateTable/UpdateTable
+    // SDK APIs (`VectorIndexes` / `VectorIndexUpdates` params) and queried via
+    // the SearchVectors API — see the AwsCustomResource below and
+    // dynamo.ts::sourcesKnnQuery.
     const sourcesTableCfn = new cdk.aws_dynamodb.CfnTable(this, "SourcesTable", {
       tableName: "bookmark-digest-sources",
       keySchema: [{ attributeName: "contentHash", keyType: "HASH" }],
       attributeDefinitions: [
         { attributeName: "contentHash", attributeType: "S" },
         { attributeName: "url", attributeType: "S" },
-        // Vector attribute for the K-NN GSI below. Not a real DynamoDB
-        // ScalarAttributeType (S/N/B) — CloudFormation's vector-search
-        // preview accepts this as-is; matches how items store it (a List
-        // of Numbers, see dynamo.ts::sourcesKnnQuery).
-        { attributeName: "embedding", attributeType: "L" },
       ],
       billingMode: "PAY_PER_REQUEST",
       globalSecondaryIndexes: [
@@ -131,39 +135,51 @@ export class BookmarkDigest extends cdk.Stack {
           keySchema: [{ attributeName: "url", keyType: "HASH" }],
           projection: { projectionType: "ALL" },
         },
-        {
-          indexName: "EmbeddingVectorIndex",
-          keySchema: [
-            { attributeName: "embedding", keyType: "HASH" },
-            { attributeName: "contentHash", keyType: "RANGE" },
-          ],
-          projection: {
-            projectionType: "INCLUDE",
-            nonKeyAttributes: ["url", "status", "contentType", "fetchedAt"],
-          },
-        },
       ],
       streamSpecification: { streamViewType: "NEW_IMAGE" },
       pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: true },
       deletionProtectionEnabled: true,
     });
 
-    // VectorIndexConfiguration is a CloudFormation-only property not yet
-    // reflected in CDK v2.263.0's GlobalSecondaryIndexProperty type — putting
-    // it directly in the `globalSecondaryIndexes` prop above gets silently
-    // dropped by the generated L1 property renderer (only known keys survive
-    // it). addPropertyOverride writes straight into the synthesized template
-    // at the raw CFN property path, bypassing that renderer entirely — the
-    // standard CDK escape hatch for CFN properties the installed L1 doesn't
-    // model yet. Index 1 = EmbeddingVectorIndex (2nd entry above).
-    sourcesTableCfn.addPropertyOverride("GlobalSecondaryIndexes.1.VectorIndexConfiguration", {
-      Name: "embeddingVectorIndexConfig",
-      FieldPath: "embedding",
-      KnnL2Configuration: {
-        Dimension: config.BEDROCK_EMBEDDING_DIMENSIONS,
-        NumberOfVectorsPerDimension: 5000,
+    // Create the EmbeddingVectorIndex via a custom resource calling
+    // dynamodb:UpdateTable directly, since CloudFormation has no native
+    // resource for this yet. onCreate-only (no onUpdate): re-running
+    // `VectorIndexUpdates: [{ Create: ... }]` against an index that already
+    // exists fails, and this stack has no mechanism yet to change vector-index
+    // config after creation — deleting/recreating would need an explicit
+    // Delete action wired up separately if that's ever needed.
+    new cr.AwsCustomResource(this, "EmbeddingVectorIndexResource", {
+      onCreate: {
+        service: "dynamodb",
+        action: "updateTable",
+        parameters: {
+          TableName: sourcesTableCfn.ref,
+          VectorIndexUpdates: [
+            {
+              Create: {
+                IndexName: "EmbeddingVectorIndex",
+                VectorAttribute: { AttributeName: "embedding" },
+                Dimensions: config.BEDROCK_EMBEDDING_DIMENSIONS,
+                DistanceFunction: "COSINE",
+                // contentHash as INLINE_FILTER lets sourcesKnnQuery exclude
+                // the query source itself via SearchConditionExpression.
+                SearchSchema: [{ AttributeName: "contentHash", SearchSchemaElementType: "INLINE_FILTER" }],
+                Projection: {
+                  ProjectionType: "INCLUDE",
+                  NonKeyAttributes: ["contentHash", "url", "status", "contentType", "fetchedAt"],
+                },
+              },
+            },
+          ],
+        },
+        physicalResourceId: cr.PhysicalResourceId.of("EmbeddingVectorIndex"),
       },
-    });
+      // Vector indexes are a very new DynamoDB API surface — the AWS SDK
+      // bundled in the Lambda runtime likely predates it. Force the provider
+      // to install the latest SDK rather than relying on the runtime's.
+      installLatestAwsSdk: true,
+      policy: cr.AwsCustomResourcePolicy.fromSdkCalls({ resources: [sourcesTableCfn.attrArn] }),
+    }).node.addDependency(sourcesTableCfn);
 
     // CfnTable doesn't implement ITable, so it has no grantReadData() /
     // grantReadWriteData() helpers — grant directly via IAM statements
@@ -416,6 +432,14 @@ export class BookmarkDigest extends cdk.Stack {
     });
 
     grantSourcesTableRead(relatedSourcesFn);
+    // dynamodb:SearchVectors isn't covered by grantSourcesTableRead's
+    // standard Query/Scan/GetItem set — it's the dedicated vector-index API.
+    relatedSourcesFn.role?.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        actions: ["dynamodb:SearchVectors"],
+        resources: sourcesTableArns,
+      })
+    );
 
     // GET /digests/{digestId}: fetch a digest result from DynamoDB
     const fetchDigestFn = new lambdaNodejs.NodejsFunction(this, "FetchDigestFunction", {

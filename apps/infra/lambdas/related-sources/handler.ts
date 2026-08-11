@@ -1,9 +1,9 @@
 /**
  * related-sources Lambda — GET /sources/{sourceHash}/related
  *
- * Uses DynamoDB K-NN vector search on the EmbeddingVectorIndex GSI to find
- * the most similar sources. Falls back to brute-force cosine similarity if
- * the vector index isn't available.
+ * Uses DynamoDB vector search (SearchVectors) on the EmbeddingVectorIndex
+ * to find the most similar sources. Falls back to brute-force cosine
+ * similarity if the vector index isn't available.
  *
  * Backs the RelatedFromYourBookmarks non-catalog section (see
  * packages/catalog/src/nonCatalog/RelatedFromYourBookmarks.schema.ts).
@@ -38,19 +38,13 @@ export async function handler(event: any): Promise<{ statusCode: number; headers
       return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ items: [] }) };
     }
 
-    // Try K-NN vector search first (efficient for large source sets)
+    // Try vector search first (efficient for large source sets)
     try {
       const items = await sourcesKnnQuery(source.embedding, sourceHash, count);
-      // K-NN returns items already sorted by similarity — add empty scores
-      // (DynamoDB K-NN doesn't return numeric scores in the response).
-      const scoredItems = items.map((item) => ({
-        ...item,
-        score: 0,
-      }));
-      return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ items: scoredItems }) };
+      return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ items }) };
     } catch {
-      // K-NN not available — fall back to brute-force
-      console.warn("K-NN query failed, falling back to brute-force cosine similarity");
+      // Vector index not available — fall back to brute-force
+      console.warn("Vector search failed, falling back to brute-force cosine similarity");
     }
 
     // Brute-force fallback

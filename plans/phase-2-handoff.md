@@ -21,29 +21,47 @@
 - **TimelineEvent**: props `items[]` (date, label, text, sourceIndex?), `narrative?`
 - Multi-source prompt updated to suggest TimelineEvent for evolution shape
 
-### Step 4: DynamoDB K-NN vector search (commits `95840c7`, CDK wiring below)
-- `sourcesKnnQuery()` in `dynamo.ts` — raw DynamoDB client with `KnnConfig`
-- `related-sources` Lambda: K-NN first, brute-force fallback
-- **CDK stack**: `SourcesTable` is now a `CfnTable` (Option A from the original
-  handoff draft) with `EmbeddingVectorIndex` GSI. Since `VectorIndexConfiguration`
-  isn't in CDK v2.263.0's `GlobalSecondaryIndexProperty` type (and, worse, gets
-  silently stripped by the generated L1 property renderer if just typed past
-  with `as any` in the props object), it's added post-construction via
-  `sourcesTableCfn.addPropertyOverride("GlobalSecondaryIndexes.1.VectorIndexConfiguration", {...})`
-  — the standard CDK escape hatch that writes straight into the synthesized
-  template, bypassing the renderer. Confirmed present in `cdk synth` output.
-  `cdk synth` also emits two template-validation *warnings* (not errors) for
-  `VectorIndexConfiguration` and the `embedding` attribute's `L` type, since
-  the local CFN schema doesn't recognize this preview feature yet — expected,
-  not a blocker.
+### Step 4: DynamoDB vector search (commit `95840c7` + fixes below)
+**Correction to the original handoff draft**: DynamoDB vector indexes are
+**not** a GSI property. An earlier attempt modeled the `EmbeddingVectorIndex`
+as a GSI with a `VectorIndexConfiguration` property (via `addPropertyOverride`,
+to work around CDK's L1 types not knowing about it) — this synthesized fine
+but was **rejected at deploy time** by CloudFormation's own change-set
+validation: `Unsupported property [VectorIndexConfiguration]`. Confirmed
+against `docs.aws.amazon.com/amazondynamodb/latest/developerguide/VectorSearch.html`:
+vector indexes have no CloudFormation resource or GSI property at all — they're
+managed exclusively through the `CreateTable`/`UpdateTable` SDK APIs
+(`VectorIndexes` / `VectorIndexUpdates` params) and queried via the dedicated
+`SearchVectors` API, not `Query`/`KnnConfig`.
+
+Fixed:
+- **CDK stack**: `SourcesTable` (`CfnTable`) now only declares the real
+  `UrlIndex` GSI. The vector index is created by a separate
+  `cr.AwsCustomResource` (`EmbeddingVectorIndexResource`) that calls
+  `dynamodb:updateTable` directly with a `VectorIndexUpdates: [{ Create: {...} }]`
+  payload matching the real API shape (`VectorAttribute`, `Dimensions`,
+  `DistanceFunction: "COSINE"`, `SearchSchema` with `contentHash` as
+  `INLINE_FILTER` so queries can exclude the source itself, `Projection`).
+  `installLatestAwsSdk: true` is set explicitly — vector search is new enough
+  that the Lambda runtime's bundled SDK may predate it. onCreate-only (no
+  onUpdate): re-running `Create` against an existing index fails; changing
+  vector-index config later needs an explicit `Delete` + `Create` wired up
+  separately.
+- **`dynamo.ts::sourcesKnnQuery`**: rewritten to call `SearchVectorsCommand`
+  (`SearchVector`, `SearchConditionExpression`, `TopK`) instead of
+  `QueryCommand` + `KnnConfig` (which doesn't exist). `SearchVectors` also
+  returns a real similarity `Score` per result, so `related-sources/handler.ts`
+  no longer needs to synthesize a placeholder `score: 0`.
 - All `sourcesTable.grant*Data(fn)` calls replaced with `grantSourcesTableRead`/
   `grantSourcesTableReadWrite` helpers (local to the stack file) that add
   direct IAM policy statements on `${tableArn}` + `${tableArn}/index/*`, since
-  `CfnTable` doesn't implement `ITable`.
+  `CfnTable` doesn't implement `ITable`. `relatedSourcesFn` additionally gets
+  `dynamodb:SearchVectors`, which isn't in that standard read set.
 - The DynamoDB Streams trigger (`embedSourceFn`) also needed rewiring: `CfnTable`
   can't be passed to `lambdaEventSources.DynamoEventSource` (needs `ITable`), so
   it's now a plain `lambda.EventSourceMapping` against `sourcesTableCfn.attrStreamArn`,
   with the stream-read IAM actions added manually.
+- `cdk synth` is clean — no warnings, no errors.
 
 ### 5. Suggested-bundle UX (later)
 Once vector search works, the "suggested bundle" flow from `phase-2-scope.md` can be built:
@@ -71,9 +89,12 @@ cd apps/infra && npx cdk synth
 ```
 
 ## Blockers (resolved)
-1. **CDK types missing `vectorIndexConfiguration`** — resolved via `addPropertyOverride` (see Step 4 above), not a type cast — casts on the props object get dropped by the L1 renderer before synth.
+1. **Vector indexes aren't a CloudFormation resource/GSI property at all** — the
+   `VectorIndexConfiguration`-on-a-GSI approach passed `cdk synth` but was
+   rejected by CloudFormation at deploy time. Resolved via `cr.AwsCustomResource`
+   calling `dynamodb:updateTable` directly (see Step 4 above).
 2. **CfnTable doesn't implement ITable** — resolved via local `grantSourcesTableRead`/`grantSourcesTableReadWrite` helpers using direct IAM statements.
-3. **Embedding attribute not declared on CfnTable** — resolved: `{ attributeName: "embedding", attributeType: "L" }` added to `attributeDefinitions`.
+3. **`sourcesKnnQuery` used `QueryCommand` + a `KnnConfig` parameter that doesn't exist** — resolved: rewritten against the real `SearchVectorsCommand`.
 4. **DynamoDB Streams trigger used `lambdaEventSources.DynamoEventSource(sourcesTable, ...)`** — that construct requires `ITable`, which `CfnTable` doesn't implement. Resolved via `lambda.EventSourceMapping` targeting `sourcesTableCfn.attrStreamArn` directly.
 
 ## Key Files

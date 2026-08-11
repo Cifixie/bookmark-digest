@@ -3,11 +3,12 @@
  *
  * Uses @aws-sdk/lib-dynamodb to produce a high-level doc-client that
  * marshals/unmarshals native JS values (no AttributeValue wrappers).
- * For K-NN vector queries, uses the raw DynamoDB client (not doc-client)
- * since the VectorSearch protocol extension isn't available in lib-dynamodb.
+ * For vector search, uses the raw DynamoDB client (not doc-client) since
+ * SearchVectorsCommand isn't wrapped by lib-dynamodb — its request/response
+ * still use raw AttributeValue maps.
  */
 
-import { DynamoDBClient, QueryCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, SearchVectorsCommand } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand, QueryCommand as DocQueryCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 
 let _docClient: DynamoDBDocumentClient | null = null;
@@ -173,14 +174,17 @@ export async function sourcesScan(filterExpression?: string, expressionAttribute
 }
 
 // ---------------------------------------------------------------------------
-// K-NN vector search — raw client for VectorSearch protocol support
+// Vector search — raw client, EmbeddingVectorIndex (see bookmark-digest-stack.ts)
 // ---------------------------------------------------------------------------
 
 const RAW_DDB_CLIENT = new DynamoDBClient({});
 
 /**
- * Query the EmbeddingVectorIndex GSI using K-NN to find the K nearest
- * embeddings to `queryEmbedding`, excluding `excludeContentHash`.
+ * Search the EmbeddingVectorIndex for the K nearest embeddings to
+ * `queryEmbedding`, excluding `excludeContentHash`. `contentHash` is
+ * declared as an INLINE_FILTER attribute on the index (see the stack's
+ * vector-index custom resource), which is what makes it usable in
+ * `SearchConditionExpression` here.
  */
 export async function sourcesKnnQuery(
   queryEmbedding: number[],
@@ -193,35 +197,26 @@ export async function sourcesKnnQuery(
   fetchedAt: string;
   score: number;
 }>> {
-  const queryVector = queryEmbedding.map((v) => ({ N: String(v) }));
+  const result = await RAW_DDB_CLIENT.send(
+    new SearchVectorsCommand({
+      TableName: SOURCES_TABLE,
+      IndexName: "EmbeddingVectorIndex",
+      SearchVector: queryEmbedding.map((v) => ({ N: String(v) })),
+      SearchConditionExpression: "contentHash <> :exclude",
+      ExpressionAttributeValues: { ":exclude": { S: excludeContentHash } },
+      TopK: k,
+      ProjectionExpression: "contentHash, url, contentType, fetchedAt",
+    })
+  );
 
-  const rawParams = {
-    TableName: SOURCES_TABLE,
-    IndexName: "EmbeddingVectorIndex",
-    KeyConditionExpression: "embedding = :sentinel",
-    FilterExpression: "contentHash <> :exclude",
-    ExpressionAttributeValues: {
-      ":sentinel": { L: queryVector },
-      ":exclude": { S: excludeContentHash },
-    },
-    KnnConfig: {
-      vectorCount: k,
-      vectorGroup: {
-        vectorGroupQuery: {
-          value: { L: queryVector },
-        },
-      },
-    },
-    ProjectionExpression: "contentHash, url, contentType, fetchedAt",
-  };
-
-  const result = await RAW_DDB_CLIENT.send(new QueryCommand(rawParams));
-
-  return (result.Items ?? []).map((item) => ({
-    contentHash: (item.contentHash as any).S ?? "",
-    url: (item.url as any).S ?? "",
-    contentType: (item.contentType as any).S ?? "",
-    fetchedAt: (item.fetchedAt as any).S ?? "",
-    score: 0,
-  }));
+  return (result.SearchResults ?? []).map((result) => {
+    const item = result.Item ?? {};
+    return {
+      contentHash: (item.contentHash as any)?.S ?? "",
+      url: (item.url as any)?.S ?? "",
+      contentType: (item.contentType as any)?.S ?? "",
+      fetchedAt: (item.fetchedAt as any)?.S ?? "",
+      score: result.Score ?? 0,
+    };
+  });
 }

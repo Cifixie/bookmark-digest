@@ -26,6 +26,7 @@ describe("DigestPage fixture", () => {
         digestType: "article",
         tone: "conversational",
         length: "medium",
+        subject: "engineering",
       },
       sections: [
         {
@@ -77,6 +78,8 @@ describe("DigestPage fixture", () => {
         digestType: "video",
         tone: "beginner-friendly",
         length: "long",
+        subject: "ai-ml",
+        tags: ["Keynote"],
       },
       sections: [
         {

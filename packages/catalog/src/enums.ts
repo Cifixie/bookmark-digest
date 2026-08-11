@@ -38,6 +38,27 @@ export const digestType = z.enum([
 ]);
 export type DigestType = z.infer<typeof digestType>;
 
+/**
+ * Broad topic domain — the primary browse/filter facet. Deliberately a small,
+ * curated enum (not free text): reliability of "everything tagged AI/ML shows
+ * up under AI/ML" matters more here than precision, so the model picks from a
+ * fixed list rather than inventing its own spelling/casing per digest.
+ * Narrower topic descriptors belong in DigestMeta.tags instead.
+ */
+export const subject = z.enum([
+  "engineering",
+  "ai-ml",
+  "design",
+  "business",
+  "science",
+  "productivity",
+  "culture",
+  "health",
+  "finance",
+  "other",
+]);
+export type Subject = z.infer<typeof subject>;
+
 // ---------------------------------------------------------------------------
 // Source health enums (informational status of the original link)
 // ---------------------------------------------------------------------------

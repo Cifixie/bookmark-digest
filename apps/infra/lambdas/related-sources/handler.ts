@@ -1,13 +1,15 @@
 /**
  * related-sources Lambda — GET /sources/{sourceHash}/related
  *
+ * Uses DynamoDB K-NN vector search on the EmbeddingVectorIndex GSI to find
+ * the most similar sources. Falls back to brute-force cosine similarity if
+ * the vector index isn't available.
+ *
  * Backs the RelatedFromYourBookmarks non-catalog section (see
  * packages/catalog/src/nonCatalog/RelatedFromYourBookmarks.schema.ts).
- * Replaces pgvector's ANN index with a brute-force cosine similarity scan —
- * see plans/dynamodb-migration.md §2 for why that's the right trade-off here.
  */
 
-import { sourcesGet, sourcesScan } from "../../lib/dynamo";
+import { sourcesGet, sourcesKnnQuery, sourcesScan } from "../../lib/dynamo";
 import { rankBySimilarity } from "../../lib/similarity";
 import { RELATED_DEFAULT_COUNT, RELATED_MAX_COUNT } from "../../lib/config";
 
@@ -36,6 +38,22 @@ export async function handler(event: any): Promise<{ statusCode: number; headers
       return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ items: [] }) };
     }
 
+    // Try K-NN vector search first (efficient for large source sets)
+    try {
+      const items = await sourcesKnnQuery(source.embedding, sourceHash, count);
+      // K-NN returns items already sorted by similarity — add empty scores
+      // (DynamoDB K-NN doesn't return numeric scores in the response).
+      const scoredItems = items.map((item) => ({
+        ...item,
+        score: 0,
+      }));
+      return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ items: scoredItems }) };
+    } catch {
+      // K-NN not available — fall back to brute-force
+      console.warn("K-NN query failed, falling back to brute-force cosine similarity");
+    }
+
+    // Brute-force fallback
     const scanResult = await sourcesScan("#s = :ready", { ":ready": "ready", "#s": "status" });
     const candidates = (scanResult?.Items ?? []) as Array<{
       contentHash: string;

@@ -3,10 +3,12 @@
  *
  * Uses @aws-sdk/lib-dynamodb to produce a high-level doc-client that
  * marshals/unmarshals native JS values (no AttributeValue wrappers).
+ * For K-NN vector queries, uses the raw DynamoDB client (not doc-client)
+ * since the VectorSearch protocol extension isn't available in lib-dynamodb.
  */
 
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand, QueryCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBClient, QueryCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand, QueryCommand as DocQueryCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 
 let _docClient: DynamoDBDocumentClient | null = null;
 
@@ -88,7 +90,7 @@ export async function sourcesUpdate(contentHash: string, expression: string, exp
 
 export async function sourcesQueryByUrl(url: string) {
   return getDocClient().send(
-    new QueryCommand({
+    new DocQueryCommand({
       TableName: SOURCES_TABLE,
       IndexName: "UrlIndex",
       KeyConditionExpression: "#url = :url",
@@ -152,7 +154,7 @@ export async function digestsQueryBySourceHash(sourceHash: string, digestGoal?: 
     params.KeyConditionExpression += " AND digestGoal = :dg";
     params.ExpressionAttributeValues[":dg"] = digestGoal;
   }
-  return getDocClient().send(new QueryCommand(params));
+  return getDocClient().send(new DocQueryCommand(params));
 }
 
 // ---------------------------------------------------------------------------
@@ -168,4 +170,58 @@ export async function sourcesScan(filterExpression?: string, expressionAttribute
     if (Object.keys(names).length > 0) params.ExpressionAttributeNames = names;
   }
   return getDocClient().send(new ScanCommand(params));
+}
+
+// ---------------------------------------------------------------------------
+// K-NN vector search — raw client for VectorSearch protocol support
+// ---------------------------------------------------------------------------
+
+const RAW_DDB_CLIENT = new DynamoDBClient({});
+
+/**
+ * Query the EmbeddingVectorIndex GSI using K-NN to find the K nearest
+ * embeddings to `queryEmbedding`, excluding `excludeContentHash`.
+ */
+export async function sourcesKnnQuery(
+  queryEmbedding: number[],
+  excludeContentHash: string,
+  k: number,
+): Promise<Array<{
+  contentHash: string;
+  url: string;
+  contentType: string;
+  fetchedAt: string;
+  score: number;
+}>> {
+  const queryVector = queryEmbedding.map((v) => ({ N: String(v) }));
+
+  const rawParams = {
+    TableName: SOURCES_TABLE,
+    IndexName: "EmbeddingVectorIndex",
+    KeyConditionExpression: "embedding = :sentinel",
+    FilterExpression: "contentHash <> :exclude",
+    ExpressionAttributeValues: {
+      ":sentinel": { L: queryVector },
+      ":exclude": { S: excludeContentHash },
+    },
+    KnnConfig: {
+      vectorCount: k,
+      vectorGroup: {
+        vectorGroupQuery: {
+          value: { L: queryVector },
+        },
+      },
+    },
+    ProjectionExpression: "contentHash, url, contentType, fetchedAt",
+  };
+
+  const result = await RAW_DDB_CLIENT.send(new QueryCommand(rawParams));
+
+  return (result.Items ?? []).map((item) => ({
+    contentHash: (item.contentHash as any).S ?? "",
+    url: (item.url as any).S ?? "",
+    contentType: (item.contentType as any).S ?? "",
+    fetchedAt: (item.fetchedAt as any).S ?? "",
+    score: 0,
+  }));
 }

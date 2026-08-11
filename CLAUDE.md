@@ -1,10 +1,10 @@
-# aws-archive — @bookmark-digest monorepo
+# bookmark-digest — @bookmark-digest monorepo
 
 ## Monorepo Layout
 
 ```
 apps/
-  web/              — Next.js 16 app (renderer consumer)
+  web/              — Vite SPA (renderer consumer)
   infra/            — AWS CDK infrastructure
 packages/
   catalog/          — @bookmark-digest/catalog (two-axis digest schema, React-free)
@@ -31,7 +31,7 @@ The catalog is built on a **source-variant** + **digest-block** model:
 
 ## Component Naming
 
-All digest components use the `Digest*` prefix for page shell elements and raw names for content blocks. `Summary*` (ai-archive naming) has been replaced.
+All digest components use the `Digest*` prefix for page shell elements and raw names for content blocks. `Summary*` (old naming) has been replaced.
 
 Mergers:
 - `MythVsReality` → `Callout` with `variant: "misconception"`

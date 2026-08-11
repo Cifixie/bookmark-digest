@@ -1,13 +1,13 @@
-# Part A — Digest Catalog: two-axis schema + renderers (aws-archive)
+# Part A — Digest Catalog: two-axis schema + renderers (bookmark-digest)
 
 ## Context
 
-`aws-archive` (`@bookmark-digest/*` pnpm monorepo) is a Phase-0 skeleton. `packages/catalog/src/index.ts` is an empty placeholder reserved for the Tier 1/Tier 2 `defineCatalog` schemas. The `ai-archive/components` tree is a **draft reference** for the component shapes, but its flat 36-component list, `Summary*` naming, and co-located React `.tsx` files don't match either the finalized 27-component catalog or aws-archive's production constraints.
+`bookmark-digest` (`@bookmark-digest/*` pnpm monorepo) is a Phase-0 skeleton. `packages/catalog/src/index.ts` is an empty placeholder reserved for the Tier 1/Tier 2 `defineCatalog` schemas. The `components/` tree in the web app is a **draft reference** for the component shapes, but its flat 36-component list, `Summary*` naming, and co-located React `.tsx` files don't match either the finalized 27-component catalog or bookmark-digest's production constraints.
 
 This work builds the production catalog: a **two-axis model** — a `source-variant` discriminated union (how the digest was sourced) and a `digest-block` union (the content that fills sections) — composed into a typed `DigestPage` tree, plus raw React renderers in the web app. It replaces `Summary*` with `Digest*`, folds merged components (MythVsReality→Callout, TranscriptQuote→QuoteBlock, VideoHero/Chapter/Speaker→temporal source variant), and defers Tier 3.
 
 ### Confirmed decisions
-- **Layout**: folder-per-component + barrels (ai-archive style), not the flat 3-file split.
+- **Layout**: folder-per-component + barrels, not the flat 3-file split.
 - **Schema**: stock `@json-render/react/schema` (verified React-free at the `/schema` subpath — safe in a Lambda-imported package). Register **only LLM-authored content blocks**. No custom `defineSchema`, no `authoredBy` field.
 - **Non-LLM sections** (`RelatedFromYourBookmarks`, `MyNote`): **not** in the catalog. Standalone schemas + their own resolver/workflow, embedded into the page separately.
 - **Scope**: schemas **and** React renderers. Renderers live in `apps/web/src/components` (only consumer today). Design is intentionally raw.
@@ -53,7 +53,7 @@ sourceVariants/
   Temporal/Temporal.schema.ts
   index.ts                         sourceVariantSchema = discriminatedUnion("kind", [...]) + types
 digestBlocks/
-  Callout/Callout.catalog.ts       export const props (zod) + description  ← ai-archive .catalog.ts shape
+  Callout/Callout.catalog.ts       export const props (zod) + description
   TLDR/TLDR.catalog.ts
   ... (19 content-block folders)
   catalog.ts                       barrel: export * as Callout from "./Callout/Callout.catalog"; ...
@@ -67,8 +67,8 @@ catalog.ts                   defineCatalog(schema, { components: {...digestBlock
 index.ts                     DigestPage type tree + DigestBlock union + re-exports everything
 ```
 
-- Each content block's `.catalog.ts` mirrors ai-archive exactly: `import z from "zod"; export const props = z.object({...}); export type XProps = z.infer<typeof props>; export const description = "..."`.
-- `catalog.ts` composition (mirrors ai-archive `lib/catalog.ts`):
+- Each content block's `.catalog.ts` follows: `import z from "zod"; export const props = z.object({...}); export type XProps = z.infer<typeof props>; export const description = "..."`.
+- `catalog.ts` composition pattern:
   ```ts
   import { defineCatalog } from "@json-render/core";
   import { schema } from "@json-render/react/schema";
@@ -79,9 +79,8 @@ index.ts                     DigestPage type tree + DigestBlock union + re-expor
 - **Add deps** to `packages/catalog/package.json`: `@json-render/core`, `@json-render/react` (peer `react` unmet is fine — `.npmrc` has `strict-peer-dependencies=false`; only the React-free `/schema` subpath is imported).
 
 ### Files to reference / reuse
-- `ai-archive/components/*/*.catalog.ts` — port the Zod `props` + `description` per block, adjusting to the finalized names/fields. **Check ai-archive's `List` and `Grid` catalog files** to decide item-containment (props-array vs json-render slots) before porting.
-- `ai-archive/lib/catalog.ts` — the `defineCatalog` composition pattern.
-- `aws-archive/packages/schemas/src/index.ts` — Zod 4 idiom already in use (`z.uuid()`, `z.iso.datetime()`, `z.enum(...).default(...)`).
+- `packages/catalog/src/` — port the Zod `props` + `description` per block, adjusting to the finalized names/fields. **Check `List` and `Grid` catalog files** to decide item-containment (props-array vs json-render slots) before porting.
+- `packages/schemas/src/index.ts` — Zod 4 idiom already in use (`z.uuid()`, `z.iso.datetime()`, `z.enum(...).default(...)`).
 
 ---
 
@@ -95,9 +94,9 @@ components/
 lib/registry.ts    defineRegistry(catalog, { components: { Callout: ..., TLDR: ... } })
 ```
 
-- Content blocks render via json-render: `defineRegistry(catalog, {...})` + `<Renderer>`, converting each section's `content: DigestBlock[]` into child elements. This inherits prompt/validation/state/visibility (FaqItem disclosure, ChecklistItem) for free and matches ai-archive.
+- Content blocks render via json-render: `defineRegistry(catalog, {...})` + `<Renderer>`, converting each section's `content: DigestBlock[]` into child elements. This inherits prompt/validation/state/visibility (FaqItem disclosure, ChecklistItem) for free.
 - `DigestPage.tsx` (plain React) consumes the typed `DigestPage`: renders `DigestHero` (branches on `source.kind`), `SourceMeta`, then maps `sections` → `DigestSection` (heading/anchorId + json-render content), then `MyNote` / `RelatedFromYourBookmarks` as page-level embeds, then `DigestFooter`.
-- Renderers are typed with catalog prop types (or `BaseComponentProps<Props>` from `@json-render/react`). Adapt ai-archive's Tailwind markup into CSS Module classes; keep styling raw/minimal.
+- Renderers are typed with catalog prop types (or `BaseComponentProps<Props>` from `@json-render/react`). Adapt any existing markup into CSS Module classes; keep styling raw/minimal.
 - Add `@json-render/core` to web deps if `defineCatalog`'s return type is referenced (already transitive via `@json-render/react`).
 
 ---
@@ -105,7 +104,7 @@ lib/registry.ts    defineRegistry(catalog, { components: { Callout: ..., TLDR: .
 ## Smoke test & housekeeping
 
 - **Smoke test** (`packages/catalog`): one hand-written JSON fixture per content block + one `DigestPage` fixture, each `.parse()`d against its schema, plus a `digestBlockSchema` round-trip. Add `vitest` as a catalog devDep and a real `test` script (currently `echo "no tests yet"`). This is the early shape-mistake tripwire.
-- **CLAUDE.md**: none exists in `aws-archive` — create `aws-archive/CLAUDE.md` documenting the monorepo layout, the two-axis catalog model, the `Digest*` naming, the merged/deferred components, and the React-free catalog constraint. Also note the ingestion `plans/phase-0-checklist.md` is superseded by this Phase-1 work.
+- **CLAUDE.md**: exists at `bookmark-digest/CLAUDE.md` — ensure it documents the monorepo layout, the two-axis catalog model, the `Digest*` naming, the merged/deferred components, and the React-free catalog constraint. Also note the ingestion `plans/phase-0-checklist.md` is superseded by this Phase-1 work.
 - **Verify Zod-4 compatibility early** (see below) before porting all 19 blocks.
 
 ---
@@ -134,5 +133,5 @@ lib/registry.ts    defineRegistry(catalog, { components: { Callout: ..., TLDR: .
 
 ## Risks / watch-outs
 - **Zod version skew**: json-render 0.19.0 resolves `zod@3` in its own pnpm tree while our packages use `zod@4`. `defineCatalog`'s `props: s.zod()` stores schemas opaquely, but `catalog.prompt()` / spec validation may assume zod-3 internals. Task 3 spike must confirm this before scaling; fallback is pinning a compatible zod or bridging.
-- **List/Grid containment**: decide props-array vs json-render slots/children by inspecting ai-archive before porting — affects both the block schema and the `DigestBlock` union shape.
+- **List/Grid containment**: decide props-array vs json-render slots/children by inspecting the existing components before porting — affects both the block schema and the `DigestBlock` union shape.
 - **CSS Modules in Next 16**: native, but confirm no Turbopack config gap on first `.module.css` import.

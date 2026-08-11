@@ -1,18 +1,20 @@
 # Phase-3: Browse (Sources + Digests) with search
 
 **Context:** assumes phase-2 (`plans/phase-2-scope.md`, `plans/phase-2-handoff.md`)
-is complete — multi-source digest generation, `ComparisonTable`/`AuthorCard`/
-`TimelineEvent` blocks, and the `RelatedFromYourBookmarks` native-vector-search
-upgrade have all shipped. This is the step right before "Explore this"
+is complete — multi-source digest generation and the `ComparisonTable`/
+`AuthorCard`/`TimelineEvent` blocks have shipped, and
+`RelatedFromYourBookmarks` works. This is the step right before "Explore this"
 (phase-4): you need a usable way to browse what you already have before an
 agent starts adding more of it.
 
-**Phase-2 status as of this writing:** multi-source backend, the three new
-blocks, and the K-NN query code (`dynamo.ts::sourcesKnnQuery`,
-`related-sources` Lambda with brute-force fallback) are done. The
-`SourcesTable` CDK migration (`TableV2` → `CfnTable`, needed for the
-`EmbeddingVectorIndex` GSI) is still in progress — see Prerequisite below
-before this ships.
+**Phase-2 status:** complete, with one correction to what this plan originally
+assumed. The DynamoDB native vector index was built and then **reverted** —
+`SearchVectors` can't express the query it needed, and its operational cost
+isn't justified at this scale. `RelatedFromYourBookmarks` runs on brute-force
+cosine similarity over a paginated scan (`lib/similarity.ts`), which is
+correct today and good for well past the current corpus. `SourcesTable` is
+still a `TableV2`. See `plans/phase-2-handoff.md` §4 for the full reasoning
+before assuming a vector index is available to build on.
 
 ## What we actually have to filter/search on today
 
@@ -29,36 +31,27 @@ Audited against the live schema, not assumptions:
 | **`title`** | ❌ | ❌ | **doesn't exist.** Firecrawl's response includes `data.data.metadata.title` for free — `ingest-url/handler.ts` currently discards everything but `.markdown`. Cheapest, highest-impact fix: capture and store it. Without this, Browse just shows raw URLs. |
 | **`subject`/`tags`** | ❌ | added to `DigestMeta` schema, **not yet generated** | see Data model section below — schema is decided, generation isn't wired |
 | `digestType`/`tone`/`length`/`difficulty` | — | schema exists, unused | `DigestMeta` (`packages/catalog/src/page/DigestMeta.schema.ts`) is defined but `generate-digest/handler.ts` never populates or stores it |
-| `embedding` | ✅ | — | fuel for semantic search, gated on the `SourcesTable` migration actually landing (see Prerequisite) |
+| `embedding` | ✅ | — | fuel for semantic search; usable today via brute-force cosine similarity, no index needed (see Semantic search below) |
 
 **Bottom line:** no tags today (design decided, not built), and `title` is the
 one true gap worth closing before Browse ships — everything else
 (`contentType`, `status`, date range, `digestGoal`) is already there to filter
 on immediately.
 
-## Prerequisite: finish the SourcesTable migration safely
+## Prerequisite: none — but keep `cdk diff` honest
 
-The phase-2 vector-search work changes `SourcesTable` from a CDK `TableV2`
-construct (→ `AWS::DynamoDB::GlobalTable`) to a raw `CfnTable`
-(→ `AWS::DynamoDB::Table`) to get the vector index — in progress now
-(`bookmark-digest-stack.ts`, per `plans/phase-2-handoff.md` §4a).
-**These are different CloudFormation resource types at the same construct id
-— CloudFormation will replace the table, not update it in place.** The
-current in-progress diff doesn't yet set a retain/replace-safety policy.
-Before this is deployed:
+This plan previously called out a real hazard: the phase-2 vector work swapped
+`SourcesTable` from `TableV2` (`AWS::DynamoDB::GlobalTable`) to a raw
+`CfnTable` (`AWS::DynamoDB::Table`) at the same construct id, which changes
+both the resource type *and* the logical ID — CloudFormation would have
+replaced the table rather than updating it, pointing the stack at an empty one.
+That was caught before deploy and the migration is reverted; the live table is
+untouched (`SourcesTable1DBF2A17`, `DeletionPolicy: Retain`, PITR now on).
 
-- Add `cfnTable.cfnOptions.updateReplacePolicy = cdk.CfnDeletionPolicy.RETAIN`
-  so the *old* table isn't deleted outright.
-- RETAIN only prevents deletion of the orphaned old table — the stack's
-  `SourcesTable` reference now points at a brand-new, empty table regardless.
-  Any already-ingested sources need an explicit copy step (scan old table →
-  write to new table) before or immediately after cutover, or Browse launches
-  showing an empty list.
-
-This blocks Browse's semantic-search layer (needs the new vector index) and,
-more importantly, blocks losing every bookmark ingested so far. Resolve this
-as part of finishing phase-2, not as part of this plan — but Browse can't be
-considered "done" if it ships against a freshly-emptied table.
+The lesson stands for anything in this phase that touches the tables: run
+`npx cdk diff` and confirm `SourcesTable` shows as `[~]` (modify), never
+`[-]`/`[+]`. A logical-ID or resource-type change reads as an innocuous
+refactor in the source diff and as data loss in the change set.
 
 ## Data model additions
 
@@ -72,13 +65,15 @@ considered "done" if it ships against a freshly-emptied table.
    client-side or in the list Lambda. No storage needed, no migration.
 3. **`DigestMeta` (`digestType`/`tone`/`length`/`difficulty`/`subject`/`tags`)
    — schema decided, generation not wired.**
-   - `subject` — required, small curated enum (`engineering`/`ai-ml`/`design`/
+   - `subject` — small curated enum (`engineering`/`ai-ml`/`design`/
      `business`/`science`/`productivity`/`culture`/`health`/`finance`/`other`,
      `packages/catalog/src/enums.ts`). Primary browse filter — an enum
      specifically because reliability ("everything tagged ai-ml actually
      shows up together") matters more here than precision, so the model can't
      drift into inconsistent free-text spellings for the field driving the
-     top-level filter.
+     top-level filter. Currently `.optional()` in the schema, since nothing
+     produces it yet — tighten to required in the same change that wires
+     generation, and backfill existing digests then.
    - `tags` — optional, 1-6 free-ish strings (`"CSS"`, `"Design Systems"`).
      Secondary search/refinement layer where occasional inconsistency is
      fine. Together these give a "broad category / specific topic" split
@@ -130,22 +125,21 @@ pattern (`similarity.ts`'s own comment says as much):
   filtering in code after the scan is simpler and correct at this scale).
   Same approach for a new Digests list endpoint, matching on `digestGoal`,
   `status`, `sourceHash(es)` and date range.
-- **v1.5 — semantic search**, once the `SourcesTable` migration is actually
-  live: reuse the same embedding + `sourcesKnnQuery` path
-  `RelatedFromYourBookmarks` uses, but driven by a search-box query embedded
-  on the fly rather than another source's embedding. Purely additive — v1
-  ships without it.
+- **v1.5 — semantic search**: reuse the same embedding + cosine-ranking path
+  `RelatedFromYourBookmarks` uses (`related-sources` Lambda +
+  `lib/similarity.ts`), but driven by a search-box query embedded on the fly
+  rather than another source's embedding. Needs no index — it's the same scan
+  plus one Bedrock embed call. Purely additive; v1 ships without it.
 
 Skip a real search engine (OpenSearch etc.) entirely — it's solving a
 scale problem this project doesn't have.
 
 ## API additions
 
-- **`GET /sources`** already exists (`list-sources` Lambda, full unconditional
-  scan, no filters, returns raw `embedding` arrays in the payload — wasteful
-  for a list view). Extend it to accept query-string filters
-  (`contentType`, `status`, `q` for substring, `from`/`to` for date range) and
-  drop `embedding` from the list response (fetch it only on the detail view).
+- **`GET /sources`** already exists (`list-sources` Lambda: full paginated
+  scan, no filters, projects only list-view fields and reports `embedded:
+  boolean` rather than the vector). Extend it to accept query-string filters
+  (`contentType`, `status`, `q` for substring, `from`/`to` for date range).
 - **`GET /digests` list-all doesn't exist yet** — the current `GET /digests`
   route requires `sourceHash` (single-source lookup only). Add a genuine
   list-all mode (no `sourceHash` param) with the same filter query params,
@@ -180,4 +174,5 @@ scale problem this project doesn't have.
 3. Extend `list-sources` with filters; add the Digests list-all endpoint.
 4. Build the `/browse` page against those two endpoints (structural
    filter + substring search only).
-5. Layer semantic search once the vector index is confirmed live.
+5. Layer semantic search (embed the query, rank with the existing
+   cosine-similarity path).

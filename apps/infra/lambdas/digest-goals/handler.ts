@@ -4,7 +4,7 @@
  */
 
 import { listDigestGoalsResponseSchema } from "@bookmark-digest/schemas";
-import { DIGEST_GOALS } from "../../lib/digest-goals";
+import { DIGEST_GOALS, SOURCE_MODES } from "../../lib/digest-goals";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,8 +17,10 @@ export async function handler(): Promise<{
   headers: Record<string, string>;
   body: string;
 }> {
+  // Only the client-facing fields — promptTemplate stays server-side.
   const response = listDigestGoalsResponseSchema.parse({
     goals: DIGEST_GOALS,
+    sourceModes: SOURCE_MODES.map(({ mode, label, description }) => ({ mode, label, description })),
     version: process.env.CATALOG_VERSION ?? "0.0.0",
   });
 

@@ -3,12 +3,9 @@
  *
  * Uses @aws-sdk/lib-dynamodb to produce a high-level doc-client that
  * marshals/unmarshals native JS values (no AttributeValue wrappers).
- * For vector search, uses the raw DynamoDB client (not doc-client) since
- * SearchVectorsCommand isn't wrapped by lib-dynamodb — its request/response
- * still use raw AttributeValue maps.
  */
 
-import { DynamoDBClient, SearchVectorsCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand, QueryCommand as DocQueryCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 
 let _docClient: DynamoDBDocumentClient | null = null;
@@ -117,6 +114,7 @@ export async function digestsPut(item: {
   id: string;
   sourceHash: string;
   sourceHashes?: string[]; // multi-source digests — array of all source hashes
+  sourceMode?: string; // multi-source only — how the sources relate (see digest-goals.ts)
   digestGoal: string;
   paramsVersion: string;
   status: string;
@@ -159,64 +157,47 @@ export async function digestsQueryBySourceHash(sourceHash: string, digestGoal?: 
 }
 
 // ---------------------------------------------------------------------------
-// Scan (used for brute-force similarity search — late addition)
+// Scan (backs the source list and brute-force similarity search)
 // ---------------------------------------------------------------------------
-
-export async function sourcesScan(filterExpression?: string, expressionAttributes?: Record<string, unknown>) {
-  const params: any = { TableName: SOURCES_TABLE };
-  if (filterExpression) {
-    const { values, names } = splitExpressionAttributes(expressionAttributes ?? {});
-    params.FilterExpression = filterExpression;
-    params.ExpressionAttributeValues = values;
-    if (Object.keys(names).length > 0) params.ExpressionAttributeNames = names;
-  }
-  return getDocClient().send(new ScanCommand(params));
-}
-
-// ---------------------------------------------------------------------------
-// Vector search — raw client, EmbeddingVectorIndex (see bookmark-digest-stack.ts)
-// ---------------------------------------------------------------------------
-
-const RAW_DDB_CLIENT = new DynamoDBClient({});
 
 /**
- * Search the EmbeddingVectorIndex for the K nearest embeddings to
- * `queryEmbedding`, excluding `excludeContentHash`. `contentHash` is
- * declared as an INLINE_FILTER attribute on the index (see the stack's
- * vector-index custom resource), which is what makes it usable in
- * `SearchConditionExpression` here.
+ * Scan the Sources table, following `LastEvaluatedKey` to completion.
+ *
+ * A single Scan page caps at 1 MB *before* FilterExpression is applied, and
+ * source items carry the full fetched `content` plus a multi-hundred-float
+ * `embedding` — so a single page holds only a handful of sources. Returning
+ * one page silently truncates the result set, which reads as "that's all the
+ * bookmarks there are". Always pass `projectionExpression` to keep `content`
+ * out of the response unless the caller genuinely needs it.
+ *
+ * Scanning the whole table is the accepted cost at personal-bookmark scale
+ * (see lib/similarity.ts). Revisit if the corpus outgrows it.
  */
-export async function sourcesKnnQuery(
-  queryEmbedding: number[],
-  excludeContentHash: string,
-  k: number,
-): Promise<Array<{
-  contentHash: string;
-  url: string;
-  contentType: string;
-  fetchedAt: string;
-  score: number;
-}>> {
-  const result = await RAW_DDB_CLIENT.send(
-    new SearchVectorsCommand({
-      TableName: SOURCES_TABLE,
-      IndexName: "EmbeddingVectorIndex",
-      SearchVector: queryEmbedding.map((v) => ({ N: String(v) })),
-      SearchConditionExpression: "contentHash <> :exclude",
-      ExpressionAttributeValues: { ":exclude": { S: excludeContentHash } },
-      TopK: k,
-      ProjectionExpression: "contentHash, url, contentType, fetchedAt",
-    })
-  );
+export async function sourcesScan(
+  filterExpression?: string,
+  expressionAttributes?: Record<string, unknown>,
+  projectionExpression?: string
+) {
+  const params: any = { TableName: SOURCES_TABLE };
+  const { values, names } = splitExpressionAttributes(expressionAttributes ?? {});
+  if (filterExpression) {
+    params.FilterExpression = filterExpression;
+    params.ExpressionAttributeValues = values;
+  }
+  if (projectionExpression) {
+    params.ProjectionExpression = projectionExpression;
+  }
+  if (Object.keys(names).length > 0) params.ExpressionAttributeNames = names;
 
-  return (result.SearchResults ?? []).map((result) => {
-    const item = result.Item ?? {};
-    return {
-      contentHash: (item.contentHash as any)?.S ?? "",
-      url: (item.url as any)?.S ?? "",
-      contentType: (item.contentType as any)?.S ?? "",
-      fetchedAt: (item.fetchedAt as any)?.S ?? "",
-      score: result.Score ?? 0,
-    };
-  });
+  const items: Record<string, any>[] = [];
+  let lastEvaluatedKey: Record<string, any> | undefined;
+  do {
+    const page = await getDocClient().send(
+      new ScanCommand({ ...params, ExclusiveStartKey: lastEvaluatedKey })
+    );
+    if (page.Items) items.push(...page.Items);
+    lastEvaluatedKey = page.LastEvaluatedKey;
+  } while (lastEvaluatedKey);
+
+  return { Items: items, Count: items.length };
 }

@@ -1,15 +1,15 @@
 /**
  * related-sources Lambda — GET /sources/{sourceHash}/related
  *
- * Uses DynamoDB vector search (SearchVectors) on the EmbeddingVectorIndex
- * to find the most similar sources. Falls back to brute-force cosine
- * similarity if the vector index isn't available.
+ * Ranks every embedded source by cosine similarity to the requested source's
+ * embedding. Brute-force over a full table scan, which is the right trade at
+ * personal-bookmark scale — see lib/similarity.ts.
  *
  * Backs the RelatedFromYourBookmarks non-catalog section (see
  * packages/catalog/src/nonCatalog/RelatedFromYourBookmarks.schema.ts).
  */
 
-import { sourcesGet, sourcesKnnQuery, sourcesScan } from "../../lib/dynamo";
+import { sourcesGet, sourcesScan } from "../../lib/dynamo";
 import { rankBySimilarity } from "../../lib/similarity";
 import { RELATED_DEFAULT_COUNT, RELATED_MAX_COUNT } from "../../lib/config";
 
@@ -38,17 +38,14 @@ export async function handler(event: any): Promise<{ statusCode: number; headers
       return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ items: [] }) };
     }
 
-    // Try vector search first (efficient for large source sets)
-    try {
-      const items = await sourcesKnnQuery(source.embedding, sourceHash, count);
-      return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ items }) };
-    } catch {
-      // Vector index not available — fall back to brute-force
-      console.warn("Vector search failed, falling back to brute-force cosine similarity");
-    }
-
-    // Brute-force fallback
-    const scanResult = await sourcesScan("#s = :ready", { ":ready": "ready", "#s": "status" });
+    // `content` is deliberately not projected — it's the largest attribute on
+    // the item and similarity only needs the embedding.
+    // `url` and `status` are DynamoDB reserved words — hence the # aliases.
+    const scanResult = await sourcesScan(
+      "#s = :ready",
+      { ":ready": "ready", "#s": "status", "#url": "url" },
+      "contentHash, #url, contentType, fetchedAt, embedding"
+    );
     const candidates = (scanResult?.Items ?? []) as Array<{
       contentHash: string;
       url: string;

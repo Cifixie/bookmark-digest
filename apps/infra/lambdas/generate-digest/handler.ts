@@ -24,14 +24,20 @@ import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 import { compileSpecStream, autoFixSpec, type Spec } from "@json-render/core";
 import { validateDigestSpec, catalog } from "@bookmark-digest/catalog";
 import { randomUUID } from "crypto";
-import { GEMINI_MODEL_ID, DIGEST_MAX_TOKENS, BEDROCK_HAIKU_INFERENCE_PROFILE_ID } from "../../lib/config";
+import {
+  GEMINI_MODEL_ID,
+  DIGEST_MAX_TOKENS,
+  BEDROCK_HAIKU_INFERENCE_PROFILE_ID,
+  MAX_SOURCES_PER_DIGEST,
+  MAX_SOURCE_CHARS_MULTI,
+} from "../../lib/config";
 import {
   digestsPut,
   digestsQueryBySourceHash,
   digestsUpdate,
   sourcesGet,
 } from "../../lib/dynamo";
-import { getDigestGoal } from "../../lib/digest-goals";
+import { getDigestGoal, getSourceMode, DEFAULT_SOURCE_MODE } from "../../lib/digest-goals";
 import customRules from "./customRules";
 
 const GENERATION_MODEL = process.env.GEMINI_MODEL ?? GEMINI_MODEL_ID;
@@ -88,6 +94,8 @@ interface WorkerEvent {
   sourceHashes: string[];
   digestGoal: string;
   multiSource?: boolean;
+  /** How the sources relate; only meaningful when multiSource. */
+  sourceMode?: string;
 }
 
 type HandlerResult = { statusCode: number; headers: Record<string, string>; body: string };
@@ -110,18 +118,40 @@ export async function handler(event: any): Promise<HandlerResult> {
   const sourceHashes = body.sourceHashes;
   const digestGoal = body.digestGoal;
 
-  // Accept either single-source (sourceHash) or multi-source (sourceHashes)
+  // Accept either single-source (sourceHash) or multi-source (sourceHashes).
   // Multi-source takes precedence; falls back to legacy format for backward compat.
-  let hashes: string[];
-  if (sourceHashes && Array.isArray(sourceHashes) && sourceHashes.length > 0) {
-    hashes = sourceHashes;
+  let requested: unknown[];
+  if (Array.isArray(sourceHashes) && sourceHashes.length > 0) {
+    requested = sourceHashes;
   } else if (sourceHash) {
-    hashes = [sourceHash];
+    requested = [sourceHash];
   } else {
     return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: "sourceHash or sourceHashes required" }) };
   }
 
-  const multiSource = sourceHashes && Array.isArray(sourceHashes) && sourceHashes.length > 1;
+  if (!requested.every((h): h is string => typeof h === "string" && h.length > 0)) {
+    return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: "sourceHashes must be non-empty strings" }) };
+  }
+
+  // Deduplicate and sort. Both matter for the dedup check below: the stored
+  // `sourceHash` (hashes[0]) is the GSI partition key we look existing digests
+  // up by, so {A,B} and {B,A} have to normalize to the same first element or
+  // the same bundle generates twice. Sorting also makes the array comparison
+  // an equality check rather than a subset test.
+  const hashes = [...new Set(requested as string[])].sort();
+
+  if (hashes.length > MAX_SOURCES_PER_DIGEST) {
+    return {
+      statusCode: 400,
+      headers: corsHeaders,
+      body: JSON.stringify({ error: `At most ${MAX_SOURCES_PER_DIGEST} sources per digest (got ${hashes.length})` }),
+    };
+  }
+
+  const multiSource = hashes.length > 1;
+  // How the sources relate to each other — orthogonal to digestGoal, which
+  // covers depth and voice. Only meaningful for a bundle.
+  const sourceMode = multiSource ? (body.sourceMode ?? DEFAULT_SOURCE_MODE) : undefined;
   if (!digestGoal) {
     return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: "digestGoal required" }) };
   }
@@ -132,21 +162,34 @@ export async function handler(event: any): Promise<HandlerResult> {
     return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: `Invalid digestGoal: ${digestGoal}` }) };
   }
 
+  if (sourceMode !== undefined) {
+    try {
+      getSourceMode(sourceMode);
+    } catch {
+      return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: `Invalid sourceMode: ${sourceMode}` }) };
+    }
+  }
+
   try {
-    // Dedup check — multi-source digests can't use the GSI (sourceHash is scalar),
-    // so we scan matching rows and compare sourceHashes arrays.
+    // Dedup check — the GSI is keyed on the scalar `sourceHash`, which for a
+    // multi-source digest is only the first of its hashes, so the GSI narrows
+    // the candidates and the full (normalized, sorted) array decides.
     const existingResult = await digestsQueryBySourceHash(hashes[0], digestGoal);
     const existingItems = existingResult?.Items as any[] | undefined;
     const existingPending = existingItems?.find((item: any) => {
       if (item.status !== "pending" && item.status !== "generating") return false;
       if (multiSource) {
-        // Compare full sourceHashes array for multi-source digests
         const existingHashes: string[] = item.sourceHashes;
-        if (!existingHashes || existingHashes.length !== hashes.length) return false;
-        return hashes.every((h) => existingHashes.includes(h));
+        if (!Array.isArray(existingHashes) || existingHashes.length !== hashes.length) return false;
+        // Same sources + goal but a different mode is a different digest,
+        // not a duplicate — comparing and synthesizing a bundle are both
+        // legitimate outputs to want.
+        if ((item.sourceMode ?? DEFAULT_SOURCE_MODE) !== sourceMode) return false;
+        return hashes.every((h, i) => existingHashes[i] === h);
       }
-      // Single-source: GSI-level match is sufficient
-      return item.sourceHash === hashes[0];
+      // Single-source: a legacy row may predate `sourceHashes` entirely, so
+      // match on the scalar and require it not be part of a bundle.
+      return item.sourceHash === hashes[0] && (item.sourceHashes?.length ?? 1) === 1;
     });
 
     if (existingPending) {
@@ -162,6 +205,7 @@ export async function handler(event: any): Promise<HandlerResult> {
       id: digestId,
       sourceHash: hashes[0],
       sourceHashes: hashes,
+      sourceMode,
       digestGoal,
       paramsVersion,
       status: "pending",
@@ -169,7 +213,7 @@ export async function handler(event: any): Promise<HandlerResult> {
       updatedAt: now,
     });
 
-    const workerEvent: WorkerEvent = { digestId, sourceHashes: hashes, digestGoal, multiSource };
+    const workerEvent: WorkerEvent = { digestId, sourceHashes: hashes, digestGoal, multiSource, sourceMode };
     await lambdaClient.send(
       new InvokeCommand({
         FunctionName: process.env.GENERATE_DIGEST_WORKER_FUNCTION_NAME,
@@ -186,7 +230,7 @@ export async function handler(event: any): Promise<HandlerResult> {
 }
 
 /** Runs the actual Gemini generation and writes the result. Invoked async from `handler`. */
-async function runGeneration({ digestId, sourceHashes, digestGoal, multiSource }: WorkerEvent): Promise<void> {
+async function runGeneration({ digestId, sourceHashes, digestGoal, multiSource, sourceMode }: WorkerEvent): Promise<void> {
   const now = new Date().toISOString();
 
   try {
@@ -236,24 +280,37 @@ async function runGeneration({ digestId, sourceHashes, digestGoal, multiSource }
     // plain string prop is expected.
     const catalogPrompt = catalog.prompt({ customRules });
 
-    const systemPrompt = [goalConfig.promptTemplate, catalogPrompt].filter(Boolean).join("\n");
+    // The goal template sets depth and voice; the source-mode template (multi
+    // only) sets page composition across sources and so comes after it, since
+    // the goal templates are written in the singular ("let the article's
+    // structure drive the page structure") and would otherwise pull the model
+    // toward a single-source shape. Composition guidance lives here in the
+    // system prompt, not in the user turn alongside the content — putting the
+    // two in different turns is what previously let "compare and contrast"
+    // fight the goal's own instructions, and comparison won regardless of
+    // whether the sources were actually in competition.
+    const modeTemplate = multiSource && sourceMode ? getSourceMode(sourceMode).promptTemplate : "";
+    const systemPrompt = [goalConfig.promptTemplate, modeTemplate, catalogPrompt]
+      .filter(Boolean)
+      .join("\n");
 
-    // Build the content prompt — single or multi-source.
-    // Multi-source digests instruct the model to compare/synthesize across
-    // sources and attribute claims back to their origin.
+    // The user turn carries only the material — no shape instructions.
     let contentPrompt: string;
     if (multiSource) {
       const sourcesSection = sourceResults
-        .map(
-          (r, i) =>
-            `--- Source ${i + 1} ---\nURL: ${r.url}\nFetched: ${r.fetchedAt}\nContent:\n${r.content}`,
-        )
+        .map((r, i) => {
+          const content = r.content as string;
+          // Truncate per source rather than dropping whole sources: every
+          // mode needs all N present, and the opening of an article carries
+          // most of its thesis.
+          const clipped =
+            content.length > MAX_SOURCE_CHARS_MULTI
+              ? `${content.slice(0, MAX_SOURCE_CHARS_MULTI)}\n[…source truncated at ${MAX_SOURCE_CHARS_MULTI} characters]`
+              : content;
+          return `--- Source ${i + 1} ---\nURL: ${r.url}\nFetched: ${r.fetchedAt}\nContent:\n${clipped}`;
+        })
         .join("\n\n");
-      contentPrompt = `You are synthesizing a digest from ${sourceHashes.length} distinct sources on the same topic. Compare, contrast, and synthesize the information across all sources.
-
-When presenting findings, be specific about which source each claim comes from. Use AuthorCard blocks to attribute specific claims, quotes, or findings to individual sources. Use ComparisonTable when the sources offer comparable data (product specs, ratings, metrics, trade-offs). Use TimelineEvent when the sources are sampled across time and show how perspectives, facts, or products evolved (evolution shape).
-
-${sourcesSection}`;
+      contentPrompt = `The following ${sourceHashes.length} sources are the material for this digest.\n\n${sourcesSection}`;
     } else {
       contentPrompt = `Content:\n${sourceResults[0].content}`;
     }
@@ -320,6 +377,16 @@ ${sourcesSection}`;
       }
     }
 
+    // `finishReason: "length"` means the model was cut off mid-stream, which
+    // shows up downstream as a structurally broken spec (a container whose
+    // children were emitted before the children themselves). Log it up front
+    // so that cause is distinguishable from the model simply getting it wrong
+    // — multi-source prompts are large enough to make this a live risk.
+    console.info(
+      `Generation for ${digestId}: model=${usedModel} finishReason=${result.finishReason} ` +
+        `inputTokens=${result.usage?.inputTokens} outputTokens=${result.usage?.outputTokens}`
+    );
+
     const compiled = compileSpecStream(result.text, { root: "", elements: {} }) as unknown as Spec;
     const { spec: parsedSpec } = autoFixSpec(compiled);
 
@@ -336,6 +403,32 @@ ${sourcesSection}`;
       // is left to fail validation as-is.
       if (el.children === undefined) el.children = [];
       if (el.props === undefined) el.props = {};
+    }
+
+    // Drop child references pointing at elements that were never emitted.
+    // autoFixSpec doesn't do this (it only relocates misplaced element-level
+    // keys), so a single dangling reference otherwise fails the whole digest
+    // — and each failure costs one of the day's scarce free-tier requests.
+    // Same policy as the benign gaps above: repair the structure, keep the
+    // digest, and log what was lost. The MIN_ELEMENTS floor below still
+    // catches the case where pruning leaves nothing worth showing.
+    const droppedRefs: string[] = [];
+    for (const [key, element] of Object.entries(parsedSpec.elements)) {
+      const el = element as any;
+      if (!Array.isArray(el.children)) continue;
+      const kept = el.children.filter((child: unknown) => typeof child === "string" && child in parsedSpec.elements);
+      if (kept.length !== el.children.length) {
+        for (const child of el.children) {
+          if (!kept.includes(child)) droppedRefs.push(`${key}→${String(child)}`);
+        }
+        el.children = kept;
+      }
+    }
+    if (droppedRefs.length > 0) {
+      console.warn(
+        `Pruned ${droppedRefs.length} dangling child reference(s) for ${digestId}: ${droppedRefs.join(", ")}. ` +
+          `The model referenced blocks it never emitted; the digest is missing that content.`
+      );
     }
 
     // Auto-wrap: if root element is not SectionContainer, wrap the
@@ -369,6 +462,12 @@ ${sourcesSection}`;
         ? `Spec too thin (${elementCount} elements)`
         : `Validation failed: ${validation.issues.slice(0, 5).join("; ")}`;
       console.warn(`Validation failed for ${digestId}: ${err}`);
+      // A failed generation has already spent a request against a 20/day
+      // quota. Without the raw output there's nothing left to diagnose it
+      // with, so log a bounded prefix rather than re-running to reproduce.
+      console.warn(
+        `Raw model output for ${digestId} (first 4000 chars of ${result.text.length}):\n${result.text.slice(0, 4000)}`
+      );
       await digestsUpdate(digestId, "SET #s = :status, #e = :err, #m = :model, #ca = :at", {
         ":status": "failed",
         ":err": err,

@@ -89,6 +89,21 @@ export const RELATED_MAX_COUNT =
 export const DIGEST_MAX_TOKENS =
   parseInt(process.env.DIGEST_MAX_TOKENS ?? "32768", 10);
 
+// Multi-source digests concatenate every selected source into one prompt, so
+// the input side does need bounding here: N sources of unbounded length will
+// blow past the model's context window (and its per-request cost) with no
+// warning. These two caps are the input-side counterpart to
+// DIGEST_MAX_TOKENS above.
+export const MAX_SOURCES_PER_DIGEST =
+  parseInt(process.env.MAX_SOURCES_PER_DIGEST ?? "8", 10);
+
+// Per-source character budget for multi-source prompts. ~4 chars/token, so 8
+// sources x 60k chars lands around 120k tokens of input — comfortable for
+// Gemini's window with room for the catalog prompt and the output. Single-
+// source digests are left untruncated; they were never the risk.
+export const MAX_SOURCE_CHARS_MULTI =
+  parseInt(process.env.MAX_SOURCE_CHARS_MULTI ?? "60000", 10);
+
 // ---------------------------------------------------------------------------
 // Firecrawl
 // ---------------------------------------------------------------------------

@@ -20,14 +20,18 @@ The catalog is built on a **source-variant** + **digest-block** model:
 - **Digest blocks** (19 content types) — registered in `defineCatalog`. Each block is `{ type: "<BlockName>", props: <Props> }`.
 - **DigestPage** — the typed page tree: `{ source, meta, sections, accentColor }`.
 
-### 19 Content Blocks (all registered)
-`TLDR, Prose, List, Grid, Callout, Card, StatCard, FaqItem, GlossaryTerm, Figure, QuoteBlock, CodeBlock, Terminal, ChecklistItem, NextSteps, Prerequisites, LinkItem, ProsCons, Step`
+### 22 Content Blocks (all registered)
+`TLDR, Prose, List, Grid, Callout, Card, StatCard, FaqItem, GlossaryTerm, Figure, QuoteBlock, CodeBlock, Terminal, ChecklistItem, NextSteps, Prerequisites, LinkItem, ProsCons, Step, ComparisonTable, AuthorCard, TimelineEvent`
+
+Every registered block needs a renderer in `apps/web/src/lib/registry.tsx`. Missing
+one is otherwise silent (the generator emits it, validation passes, the page shows
+nothing), so `registry.tsx` throws at module load if any block type is unrendered.
 
 ### Non-catalog sections (standalone schemas, NOT in defineCatalog)
 `RelatedFromYourBookmarks` (vector-similarity retrieval — brute-force cosine similarity over DynamoDB, see `plans/dynamodb-migration.md`), `MyNote` (user-authored) — embedded into the page separately by the renderer.
 
 ### Deferred (Tier 3)
-`ComparisonTable/Versus, TimelineEvent, DecisionItem, AuthorCard`
+`DecisionItem`
 
 ## Component Naming
 
@@ -41,6 +45,23 @@ Mergers:
 ## React-Free Catalog
 
 `packages/catalog` must remain React-free (imported by both web app and validation Lambdas). Renderers live in `apps/web/src/components`.
+
+## Digest Generation: Two Independent Axes
+
+Both live in `apps/infra/lib/digest-goals.ts` and are composed into the **system**
+prompt (goal template, then mode template, then `catalog.prompt()`). The user turn
+carries only the source material — never shape instructions, or the two fight.
+
+- **`digestGoal`** — depth and voice: `tl_dr` | `summary` | `understand`.
+  Applies to every digest. Templates are written in the singular.
+- **`sourceMode`** — how a bundle's sources relate: `synthesize` (default) |
+  `compare` | `evolution`. Multi-source only. Owns page composition, and comes
+  after the goal template so it overrides that singular voicing.
+
+Source count does **not** imply shape. Two articles by one author on one subject
+want `synthesize` (merge, don't attribute per source, no ComparisonTable across
+sources); competing reviews want `compare`; sources across time want `evolution`.
+Asserting comparison for all bundles produces contests that aren't there.
 
 ## State Machine
 

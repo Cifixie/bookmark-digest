@@ -13,7 +13,15 @@ import type { Spec } from "@bookmark-digest/catalog";
 import {
   listDigestGoalsResponseSchema,
   type DigestGoalApi as DigestGoal,
+  type SourceModeApi as SourceMode,
 } from "@bookmark-digest/schemas";
+
+/**
+ * Mirrors MAX_SOURCES_PER_DIGEST in apps/infra/lib/config.ts. The API rejects
+ * anything over this with a 400; enforcing it here too turns that into a
+ * disabled button instead of a failed request.
+ */
+const MAX_SOURCES_PER_DIGEST = 8;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -26,7 +34,8 @@ interface SourceItem {
   fetchedAt: string;
   fetchedBy: string | null;
   status: string;
-  embedding?: number[] | null;
+  /** GET /sources reports whether an embedding exists; it never ships the vector itself. */
+  embedded?: boolean;
   embeddingModel?: string | null;
 }
 
@@ -45,6 +54,8 @@ interface SourceResponse {
 interface DigestResponse {
   id: string;
   sourceHash: string;
+  /** All sources for a bundle digest; absent on digests created before multi-source. */
+  sourceHashes?: string[];
   digestGoal: string;
   paramsVersion: string;
   status: string;
@@ -162,7 +173,7 @@ function SourceCard({
         <span>{source.contentType}</span>
         <span>fetched {source.fetchedAt}</span>
         <span>hash: {source.sourceHash.slice(0, 12)}…</span>
-        {source.embedding && <span>✓ embedded</span>}
+        {source.embedded && <span>✓ embedded</span>}
       </div>
     </div>
   );
@@ -278,10 +289,10 @@ function DigestResultCard({
       >
         <h4 style={{ margin: 0, textTransform: "capitalize" }}>
           {digest.digestGoal}
-          {digest.sourceHash !== digest.sourceHash ? (
+          {(digest.sourceHashes?.length ?? 1) > 1 ? (
             <span style={{ fontSize: 11, color: "#999", fontWeight: 400 }}>
               {" "}
-              (multi-source)
+              ({digest.sourceHashes!.length} sources)
             </span>
           ) : null}
         </h4>
@@ -329,6 +340,10 @@ export default function Home() {
 
   const [url, setUrl] = useState("");
   const [sources, setSources] = useState<SourceItem[]>([]);
+  // The source the single-source panel acts on. Tracked by hash rather than
+  // by position, so the panel and its goal buttons can't drift apart from
+  // whatever order `sources` happens to be in.
+  const [activeSourceHash, setActiveSourceHash] = useState<string | null>(null);
   const [selectedSourceHashes, setSelectedSourceHashes] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [goals, setGoals] = useState<DigestGoal[]>([]);
@@ -339,14 +354,14 @@ export default function Home() {
   >({});
   const [generatingMulti, setGeneratingMulti] = useState(false);
   const [multiSourceGoal, setMultiSourceGoal] = useState("summary");
+  const [sourceModes, setSourceModes] = useState<SourceMode[]>([]);
+  // How the selected sources relate. Defaults to synthesize: bundling usually
+  // means "several things on one topic", not "rank these against each other".
+  const [sourceMode, setSourceMode] = useState("synthesize");
   const [loadingSources, setLoadingSources] = useState(false);
 
   useEffect(() => {
     loadGoals();
-  }, []);
-
-  useEffect(() => {
-    // Load all existing sources on mount
     loadAllSources();
   }, []);
 
@@ -359,6 +374,7 @@ export default function Home() {
         if (res.ok) {
           const data = listDigestGoalsResponseSchema.parse(await res.json());
           setGoals(data.goals);
+          setSourceModes(data.sourceModes ?? []);
         }
       }
     } catch {
@@ -374,8 +390,10 @@ export default function Home() {
       const res = await fetchWithAuth("GET", "/sources");
       if (res.ok) {
         const data = await res.json();
+        // The API returns newest-first.
         const items = (data.sources as SourceItem[]) ?? [];
         setSources(items);
+        setActiveSourceHash((prev) => prev ?? items[0]?.sourceHash ?? null);
       }
     } catch {
       console.warn("Failed to load sources");
@@ -408,9 +426,8 @@ export default function Home() {
       }
 
       const data: IngestResponse = await res.json();
-      // Add to sources list
+      // Newest first, matching the list endpoint's order.
       setSources((prev) => [
-        ...prev.filter((s) => s.sourceHash !== data.sourceHash),
         {
           sourceHash: data.sourceHash,
           url,
@@ -419,7 +436,9 @@ export default function Home() {
           fetchedAt: new Date().toISOString(),
           fetchedBy: "firecrawl",
         },
+        ...prev.filter((s) => s.sourceHash !== data.sourceHash),
       ]);
+      setActiveSourceHash(data.sourceHash);
       pollSource(data.sourceHash);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -438,7 +457,7 @@ export default function Home() {
                 ? {
                     ...s,
                     status: data.status,
-                    embedding: data.embedding,
+                    embedded: Boolean(data.embeddingModel),
                     embeddingModel: data.embeddingModel,
                   }
                 : s,
@@ -494,6 +513,7 @@ export default function Home() {
       const res = await fetchWithAuth("POST", "/digests", {
         sourceHashes: selectedSourceHashes,
         digestGoal: multiSourceGoal,
+        sourceMode,
       });
 
       if (!res.ok) {
@@ -542,6 +562,8 @@ export default function Home() {
   }
 
   const readySources = sources.filter((s) => s.status === "ready");
+  const activeSource = sources.find((s) => s.sourceHash === activeSourceHash);
+  const tooManySelected = selectedSourceHashes.length > MAX_SOURCES_PER_DIGEST;
 
   return (
     <>
@@ -585,14 +607,14 @@ export default function Home() {
         <p style={{ color: "#ef4444", fontSize: 13, marginTop: 12 }}>{error}</p>
       )}
 
-      {/* --- Single-source: show last submitted source --- */}
-      {sources.length > 0 && (
+      {/* --- Single-source: the source just submitted, or the newest on load --- */}
+      {activeSource && (
         <div style={{ marginTop: 24 }}>
           <h3 style={{ fontSize: 16, marginBottom: 8 }}>
             Latest Source
           </h3>
-          <SourceCard source={sources[0]} />
-          {sources[0].status === "ready" && (
+          <SourceCard source={activeSource} />
+          {activeSource.status === "ready" && (
             <div style={{ marginTop: 16 }}>
               <h4 style={{ fontSize: 14, marginBottom: 8 }}>
                 Digest Goals
@@ -608,7 +630,7 @@ export default function Home() {
                     goal={goal}
                     onGenerate={handleGenerateGoal}
                     generating={!!generatingGoals[goal.goal]}
-                    sourceHash={sources[0].sourceHash}
+                    sourceHash={activeSource.sourceHash}
                   />
                 ))
               ) : (
@@ -676,17 +698,47 @@ export default function Home() {
                   ))}
                 </select>
               )}
+              {/* How the sources relate — orthogonal to the goal above, which
+                  only sets depth and voice. */}
+              {selectedSourceHashes.length >= 2 && sourceModes.length > 0 && (
+                <select
+                  value={sourceMode}
+                  onChange={(e) => setSourceMode(e.target.value)}
+                  title={
+                    sourceModes.find((m) => m.mode === sourceMode)?.description ?? ""
+                  }
+                  style={{
+                    padding: "4px 8px",
+                    borderRadius: 6,
+                    border: "1px solid #d1d5db",
+                    fontSize: 12,
+                    background: "white",
+                    cursor: "pointer",
+                  }}
+                >
+                  {sourceModes.map((m) => (
+                    <option key={m.mode} value={m.mode} title={m.description}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {selectedSourceHashes.length > MAX_SOURCES_PER_DIGEST && (
+                <span style={{ fontSize: 12, color: "#ef4444" }}>
+                  Max {MAX_SOURCES_PER_DIGEST} sources
+                </span>
+              )}
               {selectedSourceHashes.length >= 2 && (
                 <button
                   onClick={handleGenerateMulti}
-                  disabled={generatingMulti}
+                  disabled={generatingMulti || tooManySelected}
                   style={{
                     padding: "6px 16px",
-                    background: generatingMulti ? "#9ca3af" : "#4a90d9",
+                    background: generatingMulti || tooManySelected ? "#9ca3af" : "#4a90d9",
                     color: "white",
                     border: "none",
                     borderRadius: 6,
-                    cursor: generatingMulti ? "not-allowed" : "pointer",
+                    cursor: generatingMulti || tooManySelected ? "not-allowed" : "pointer",
                     fontSize: 13,
                     fontWeight: 500,
                   }}

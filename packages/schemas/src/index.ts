@@ -164,9 +164,22 @@ export const digestGoalSchemaApi = z.object({
 });
 export type DigestGoalApi = z.infer<typeof digestGoalSchemaApi>;
 
+/**
+ * How the sources in a multi-source bundle relate to each other — a separate
+ * axis from the digest goal, which covers depth and voice only.
+ */
+export const sourceModeSchemaApi = z.object({
+  mode: z.string(),
+  label: z.string(),
+  description: z.string(),
+});
+export type SourceModeApi = z.infer<typeof sourceModeSchemaApi>;
+
 /** API response: list available digest goals (GET /digest-goals). */
 export const listDigestGoalsResponseSchema = z.object({
   goals: z.array(digestGoalSchemaApi),
+  /** Optional so a client built before source modes existed still parses. */
+  sourceModes: z.array(sourceModeSchemaApi).optional(),
   version: z.string().optional(),
 });
 export type ListDigestGoalsResponse = z.infer<typeof listDigestGoalsResponseSchema>;

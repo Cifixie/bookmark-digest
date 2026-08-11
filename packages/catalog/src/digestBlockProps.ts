@@ -27,6 +27,7 @@ import * as SectionContainer from "./digestBlocks/SectionContainer.catalog";
 import * as StatCard from "./digestBlocks/StatCard.catalog";
 import * as Step from "./digestBlocks/Step.catalog";
 import * as Terminal from "./digestBlocks/Terminal.catalog";
+import * as TimelineEvent from "./digestBlocks/TimelineEvent.catalog";
 import * as TLDR from "./digestBlocks/TLDR.catalog";
 
 /** Maps each DigestBlock type literal to its Zod props schema. */
@@ -52,5 +53,6 @@ export const digestBlockProps: Record<string, z.ZodType> = {
   StatCard: StatCard.props,
   Step: Step.props,
   Terminal: Terminal.props,
+  TimelineEvent: TimelineEvent.props,
   TLDR: TLDR.props,
 };

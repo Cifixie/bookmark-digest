@@ -30,6 +30,7 @@ import * as QuoteBlock from "./digestBlocks/QuoteBlock.catalog";
 import * as StatCard from "./digestBlocks/StatCard.catalog";
 import * as Step from "./digestBlocks/Step.catalog";
 import * as Terminal from "./digestBlocks/Terminal.catalog";
+import * as TimelineEvent from "./digestBlocks/TimelineEvent.catalog";
 import * as TLDR from "./digestBlocks/TLDR.catalog";
 
 // --- Source variants ---
@@ -85,6 +86,7 @@ type DigestBlockTypeLiteral =
   | "StatCard"
   | "Step"
   | "Terminal"
+  | "TimelineEvent"
   | "TLDR";
 
 /**
@@ -125,6 +127,7 @@ export const digestBlockSchema = z.object({
     "StatCard",
     "Step",
     "Terminal",
+    "TimelineEvent",
     "TLDR",
   ]),
   props: z.record(z.string(), z.unknown()),
@@ -189,4 +192,5 @@ export type { SectionContainerProps } from "./digestBlocks/SectionContainer.cata
 export type { StatCardProps } from "./digestBlocks/StatCard.catalog";
 export type { StepProps } from "./digestBlocks/Step.catalog";
 export type { TerminalProps } from "./digestBlocks/Terminal.catalog";
+export type { TimelineEventProps } from "./digestBlocks/TimelineEvent.catalog";
 export type { TLDRProps } from "./digestBlocks/TLDR.catalog";

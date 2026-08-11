@@ -20,7 +20,7 @@ describe("digestBlockSchema", () => {
     expect(block.props.points).toHaveLength(2);
   });
 
-  it("validates all 21 block types", () => {
+  it("validates all 22 block types", () => {
     const allTypes: DigestBlock["type"][] = [
       "AuthorCard", "Callout", "Card", "ChecklistItem", "CodeBlock",
       "ComparisonTable", "FaqItem", "Figure", "GlossaryTerm", "Grid",
@@ -41,7 +41,7 @@ describe("digestBlockSchema", () => {
 });
 
 describe("catalog", () => {
-  it("generates prompt with all 21 content blocks", () => {
+  it("generates prompt with all 22 content blocks", () => {
     const prompt = catalog.prompt();
     const allTypes: DigestBlock["type"][] = [
       "AuthorCard", "Callout", "Card", "ChecklistItem", "CodeBlock",

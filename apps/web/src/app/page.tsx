@@ -338,6 +338,7 @@ export default function Home() {
     Record<string, boolean>
   >({});
   const [generatingMulti, setGeneratingMulti] = useState(false);
+  const [multiSourceGoal, setMultiSourceGoal] = useState("summary");
   const [loadingSources, setLoadingSources] = useState(false);
 
   useEffect(() => {
@@ -492,7 +493,7 @@ export default function Home() {
     try {
       const res = await fetchWithAuth("POST", "/digests", {
         sourceHashes: selectedSourceHashes,
-        digestGoal: "summary", // default goal; could be configurable
+        digestGoal: multiSourceGoal,
       });
 
       if (!res.ok) {
@@ -655,6 +656,26 @@ export default function Home() {
                   ? `${selectedSourceHashes.length} selected`
                   : "Select all"}
               </label>
+              {selectedSourceHashes.length >= 2 && goals.length > 0 && (
+                <select
+                  value={multiSourceGoal}
+                  onChange={(e) => setMultiSourceGoal(e.target.value)}
+                  style={{
+                    padding: "4px 8px",
+                    borderRadius: 6,
+                    border: "1px solid #d1d5db",
+                    fontSize: 12,
+                    background: "white",
+                    cursor: "pointer",
+                  }}
+                >
+                  {goals.map((goal) => (
+                    <option key={goal.goal} value={goal.goal}>
+                      {goal.label}
+                    </option>
+                  ))}
+                </select>
+              )}
               {selectedSourceHashes.length >= 2 && (
                 <button
                   onClick={handleGenerateMulti}

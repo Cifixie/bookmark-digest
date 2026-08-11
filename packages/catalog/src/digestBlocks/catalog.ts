@@ -19,4 +19,5 @@ export * as SectionContainer from "./SectionContainer.catalog";
 export * as StatCard from "./StatCard.catalog";
 export * as Step from "./Step.catalog";
 export * as Terminal from "./Terminal.catalog";
+export * as TimelineEvent from "./TimelineEvent.catalog";
 export * as TLDR from "./TLDR.catalog";

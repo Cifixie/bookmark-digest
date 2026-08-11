@@ -251,7 +251,7 @@ async function runGeneration({ digestId, sourceHashes, digestGoal, multiSource }
         .join("\n\n");
       contentPrompt = `You are synthesizing a digest from ${sourceHashes.length} distinct sources on the same topic. Compare, contrast, and synthesize the information across all sources.
 
-When presenting findings, be specific about which source each claim comes from. Use AuthorCard blocks to attribute specific claims, quotes, or findings to individual sources. Use ComparisonTable when the sources offer comparable data (product specs, ratings, metrics, trade-offs).
+When presenting findings, be specific about which source each claim comes from. Use AuthorCard blocks to attribute specific claims, quotes, or findings to individual sources. Use ComparisonTable when the sources offer comparable data (product specs, ratings, metrics, trade-offs). Use TimelineEvent when the sources are sampled across time and show how perspectives, facts, or products evolved (evolution shape).
 
 ${sourcesSection}`;
     } else {

@@ -249,7 +249,9 @@ async function runGeneration({ digestId, sourceHashes, digestGoal, multiSource }
             `--- Source ${i + 1} ---\nURL: ${r.url}\nFetched: ${r.fetchedAt}\nContent:\n${r.content}`,
         )
         .join("\n\n");
-      contentPrompt = `You are synthesizing a digest from ${sourceHashes.length} distinct sources. Compare, contrast, and synthesize the information across all sources. Attribute specific claims or quotes back to their source (e.g., "According to Source 1, …").
+      contentPrompt = `You are synthesizing a digest from ${sourceHashes.length} distinct sources on the same topic. Compare, contrast, and synthesize the information across all sources.
+
+When presenting findings, be specific about which source each claim comes from. Use AuthorCard blocks to attribute specific claims, quotes, or findings to individual sources. Use ComparisonTable when the sources offer comparable data (product specs, ratings, metrics, trade-offs).
 
 ${sourcesSection}`;
     } else {

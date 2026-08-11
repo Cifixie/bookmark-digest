@@ -20,12 +20,12 @@ describe("digestBlockSchema", () => {
     expect(block.props.points).toHaveLength(2);
   });
 
-  it("validates all 19 block types", () => {
+  it("validates all 21 block types", () => {
     const allTypes: DigestBlock["type"][] = [
-      "Callout", "Card", "ChecklistItem", "CodeBlock", "FaqItem",
-      "Figure", "GlossaryTerm", "Grid", "LinkItem", "List",
-      "NextSteps", "Prerequisites", "Prose", "ProsCons", "QuoteBlock",
-      "StatCard", "Step", "Terminal", "TLDR",
+      "AuthorCard", "Callout", "Card", "ChecklistItem", "CodeBlock",
+      "ComparisonTable", "FaqItem", "Figure", "GlossaryTerm", "Grid",
+      "LinkItem", "List", "NextSteps", "Prerequisites", "Prose",
+      "ProsCons", "QuoteBlock", "StatCard", "Step", "Terminal", "TLDR",
     ];
     for (const type of allTypes) {
       const block = digestBlockSchema.parse({ type, props: {} });
@@ -41,13 +41,13 @@ describe("digestBlockSchema", () => {
 });
 
 describe("catalog", () => {
-  it("generates prompt with all 19 content blocks", () => {
+  it("generates prompt with all 21 content blocks", () => {
     const prompt = catalog.prompt();
     const allTypes: DigestBlock["type"][] = [
-      "Callout", "Card", "ChecklistItem", "CodeBlock", "FaqItem",
-      "Figure", "GlossaryTerm", "Grid", "LinkItem", "List",
-      "NextSteps", "Prerequisites", "Prose", "ProsCons", "QuoteBlock",
-      "StatCard", "Step", "Terminal", "TLDR",
+      "AuthorCard", "Callout", "Card", "ChecklistItem", "CodeBlock",
+      "ComparisonTable", "FaqItem", "Figure", "GlossaryTerm", "Grid",
+      "LinkItem", "List", "NextSteps", "Prerequisites", "Prose",
+      "ProsCons", "QuoteBlock", "StatCard", "Step", "Terminal", "TLDR",
     ];
     for (const type of allTypes) {
       expect(prompt).toContain(`- ${type}:`);

@@ -6,10 +6,12 @@
 // ---------------------------------------------------------------------------
 
 import { z } from "zod";
+import * as AuthorCard from "./digestBlocks/AuthorCard.catalog";
 import * as Callout from "./digestBlocks/Callout.catalog";
 import * as Card from "./digestBlocks/Card.catalog";
 import * as ChecklistItem from "./digestBlocks/ChecklistItem.catalog";
 import * as CodeBlock from "./digestBlocks/CodeBlock.catalog";
+import * as ComparisonTable from "./digestBlocks/ComparisonTable.catalog";
 import * as FaqItem from "./digestBlocks/FaqItem.catalog";
 import * as Figure from "./digestBlocks/Figure.catalog";
 import * as GlossaryTerm from "./digestBlocks/GlossaryTerm.catalog";
@@ -29,10 +31,12 @@ import * as TLDR from "./digestBlocks/TLDR.catalog";
 
 /** Maps each DigestBlock type literal to its Zod props schema. */
 export const digestBlockProps: Record<string, z.ZodType> = {
+  AuthorCard: AuthorCard.props,
   Callout: Callout.props,
   Card: Card.props,
   ChecklistItem: ChecklistItem.props,
   CodeBlock: CodeBlock.props,
+  ComparisonTable: ComparisonTable.props,
   FaqItem: FaqItem.props,
   Figure: Figure.props,
   GlossaryTerm: GlossaryTerm.props,

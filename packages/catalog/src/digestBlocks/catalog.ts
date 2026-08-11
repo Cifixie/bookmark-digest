@@ -1,7 +1,9 @@
+export * as AuthorCard from "./AuthorCard.catalog";
 export * as Callout from "./Callout.catalog";
 export * as Card from "./Card.catalog";
 export * as ChecklistItem from "./ChecklistItem.catalog";
 export * as CodeBlock from "./CodeBlock.catalog";
+export * as ComparisonTable from "./ComparisonTable.catalog";
 export * as FaqItem from "./FaqItem.catalog";
 export * as Figure from "./Figure.catalog";
 export * as GlossaryTerm from "./GlossaryTerm.catalog";

@@ -10,10 +10,12 @@
 import { z } from "zod";
 
 // --- Content block schemas (used to derive the DigestBlock union) ---
+import * as AuthorCard from "./digestBlocks/AuthorCard.catalog";
 import * as Callout from "./digestBlocks/Callout.catalog";
 import * as Card from "./digestBlocks/Card.catalog";
 import * as ChecklistItem from "./digestBlocks/ChecklistItem.catalog";
 import * as CodeBlock from "./digestBlocks/CodeBlock.catalog";
+import * as ComparisonTable from "./digestBlocks/ComparisonTable.catalog";
 import * as FaqItem from "./digestBlocks/FaqItem.catalog";
 import * as Figure from "./digestBlocks/Figure.catalog";
 import * as GlossaryTerm from "./digestBlocks/GlossaryTerm.catalog";
@@ -62,10 +64,12 @@ import type { DigestMeta } from "./page/DigestMeta.schema";
 // ---------------------------------------------------------------------------
 
 type DigestBlockTypeLiteral =
+  | "AuthorCard"
   | "Callout"
   | "Card"
   | "ChecklistItem"
   | "CodeBlock"
+  | "ComparisonTable"
   | "FaqItem"
   | "Figure"
   | "GlossaryTerm"
@@ -100,10 +104,12 @@ export type DigestBlock = {
  */
 export const digestBlockSchema = z.object({
   type: z.enum([
+    "AuthorCard",
     "Callout",
     "Card",
     "ChecklistItem",
     "CodeBlock",
+    "ComparisonTable",
     "FaqItem",
     "Figure",
     "GlossaryTerm",
@@ -162,10 +168,12 @@ export interface DigestPage {
 // Export all component prop types for renderer use
 // ---------------------------------------------------------------------------
 
+export type { AuthorCardProps } from "./digestBlocks/AuthorCard.catalog";
 export type { CalloutProps } from "./digestBlocks/Callout.catalog";
 export type { CardProps } from "./digestBlocks/Card.catalog";
 export type { ChecklistItemProps } from "./digestBlocks/ChecklistItem.catalog";
 export type { CodeBlockProps } from "./digestBlocks/CodeBlock.catalog";
+export type { ComparisonTableProps } from "./digestBlocks/ComparisonTable.catalog";
 export type { FaqItemProps } from "./digestBlocks/FaqItem.catalog";
 export type { FigureProps } from "./digestBlocks/Figure.catalog";
 export type { GlossaryTermProps } from "./digestBlocks/GlossaryTerm.catalog";

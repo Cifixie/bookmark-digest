@@ -23,6 +23,9 @@ importers:
       '@aws-sdk/client-dynamodb':
         specifier: ^3.850.0
         version: 3.1106.0
+      '@aws-sdk/client-lambda':
+        specifier: ^3.1106.0
+        version: 3.1106.0
       '@aws-sdk/client-secrets-manager':
         specifier: ^3.1106.0
         version: 3.1106.0
@@ -41,6 +44,9 @@ importers:
       '@bookmark-digest/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@json-render/core':
+        specifier: ^0.19.0
+        version: 0.19.0(zod@4.4.3)
       ai:
         specifier: ^7.0.51
         version: 7.0.51(zod@4.4.3)
@@ -349,6 +355,10 @@ packages:
 
   '@aws-sdk/client-kinesis@3.1102.0':
     resolution: {integrity: sha512-XVPOhVJMr5tVsoArlA+CVbuHhQEFxq2P/GUVNhDfocd2LavtgMPm2uerpYKa+osyrepfIBAnxLg+K0OWTacDog==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/client-lambda@3.1106.0':
+    resolution: {integrity: sha512-vxZtyCy6k9GaZ6j39zg1cNHDtAgwan/a2cQRtnaiQ4iUtX4MGxHdErKyhYAj59tkSqiKAMQpOFhIH7mb0u/9UQ==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/client-personalize-events@3.1102.0':
@@ -3657,6 +3667,17 @@ snapshots:
     dependencies:
       '@aws-sdk/core': 3.977.5
       '@aws-sdk/credential-provider-node': 3.972.77
+      '@aws-sdk/types': 3.974.2
+      '@smithy/core': 3.31.1
+      '@smithy/fetch-http-handler': 5.6.13
+      '@smithy/node-http-handler': 4.9.13
+      '@smithy/types': 4.16.1
+      tslib: 2.8.1
+
+  '@aws-sdk/client-lambda@3.1106.0':
+    dependencies:
+      '@aws-sdk/core': 3.977.6
+      '@aws-sdk/credential-provider-node': 3.972.78
       '@aws-sdk/types': 3.974.2
       '@smithy/core': 3.31.1
       '@smithy/fetch-http-handler': 5.6.13

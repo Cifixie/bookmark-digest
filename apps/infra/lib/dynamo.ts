@@ -13,7 +13,12 @@ let _docClient: DynamoDBDocumentClient | null = null;
 function getDocClient() {
   if (!_docClient) {
     const client = new DynamoDBClient({});
-    _docClient = DynamoDBDocumentClient.from(client);
+    // Nested optional fields (e.g. digest Spec elements) can carry explicit
+    // `undefined` values; the marshaller throws on those unless told to drop
+    // them instead.
+    _docClient = DynamoDBDocumentClient.from(client, {
+      marshallOptions: { removeUndefinedValues: true },
+    });
   }
   return _docClient;
 }

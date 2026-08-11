@@ -21,6 +21,7 @@ import { Prerequisites } from "../components/digestBlocks/Prerequisites/Prerequi
 import { Prose } from "../components/digestBlocks/Prose/Prose";
 import { ProsCons } from "../components/digestBlocks/ProsCons/ProsCons";
 import { QuoteBlock } from "../components/digestBlocks/QuoteBlock/QuoteBlock";
+import { SectionContainer } from "../components/digestBlocks/SectionContainer/SectionContainer";
 import { StatCard } from "../components/digestBlocks/StatCard/StatCard";
 import { Step } from "../components/digestBlocks/Step/Step";
 import { Terminal } from "../components/digestBlocks/Terminal/Terminal";
@@ -43,6 +44,7 @@ export const blockComponents = {
   Prose,
   ProsCons,
   QuoteBlock,
+  SectionContainer,
   StatCard,
   Step,
   Terminal,
@@ -58,4 +60,4 @@ const components = iterateComponents(
     },
 );
 
-export const registry = defineRegistry(catalog, { components });
+export const { registry } = defineRegistry(catalog, { components });

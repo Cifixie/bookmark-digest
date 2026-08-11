@@ -9,7 +9,7 @@
  *   DynamoDB Tables (Sources + Digests) for persistent storage
  *   ingest-url Lambda → dedup + Firecrawl fetch → DynamoDB Sources
  *   embed-source Lambda → triggered via DynamoDB Stream → Bedrock embedding → DynamoDB Sources
- *   generate-digest Lambda → Bedrock (Claude) → DigestBlock[] → DynamoDB Digests
+ *   generate-digest Lambda → Gemini → json-render Spec tree → DynamoDB Digests
  *   API Gateway routes: /sources, /digest-goals, /digests
  *
  * NOTE: Aurora has been replaced by DynamoDB (see plans/dynamodb-migration.md).
@@ -256,10 +256,12 @@ export class BookmarkDigest extends cdk.Stack {
       config.GEMINI_API_KEY_SECRET_NAME
     );
 
-    // generate-digest: call Gemini for structured output
-    const generateDigestFn = new lambdaNodejs.NodejsFunction(this, "GenerateDigestFunction", {
+    // generate-digest-worker: does the actual Gemini call + validation retries.
+    // Not exposed via API Gateway — invoked asynchronously by generateDigestFn
+    // below, so it's free of API Gateway's 29s integration timeout.
+    const generateDigestWorkerFn = new lambdaNodejs.NodejsFunction(this, "GenerateDigestWorkerFunction", {
       entry: "lambdas/generate-digest/handler.ts",
-      handler: "handler",
+      handler: "workerHandler",
       runtime: cdk.aws_lambda.Runtime.NODEJS_24_X,
       timeout: cdk.Duration.minutes(10),
       environment: {
@@ -273,9 +275,33 @@ export class BookmarkDigest extends cdk.Stack {
       },
     });
 
-    sourcesTable.grantReadData(generateDigestFn);
+    sourcesTable.grantReadData(generateDigestWorkerFn);
+    digestsTable.grantReadWriteData(generateDigestWorkerFn);
+    geminiApiKeySecret.grantRead(generateDigestWorkerFn);
+
+    // generate-digest: thin HTTP-facing Lambda behind POST /digests.
+    // API Gateway REST APIs hard-cap the integration timeout at 29s, well
+    // under how long Gemini generation (with retries) can take. So this
+    // just validates the request and writes the "pending" row, then invokes
+    // generateDigestWorkerFn asynchronously (InvocationType: Event) and
+    // returns immediately. Kept as a separate function (rather than having
+    // it invoke itself) because a self-referential grantInvoke() tangles
+    // this function's IAM policy with API Gateway's deployment dependency
+    // graph and CDK reports a circular dependency.
+    const generateDigestFn = new lambdaNodejs.NodejsFunction(this, "GenerateDigestFunction", {
+      entry: "lambdas/generate-digest/handler.ts",
+      handler: "handler",
+      runtime: cdk.aws_lambda.Runtime.NODEJS_24_X,
+      timeout: cdk.Duration.seconds(30),
+      environment: {
+        DIGESTS_TABLE_NAME: digestsTable.tableName,
+        GENERATE_DIGEST_WORKER_FUNCTION_NAME: generateDigestWorkerFn.functionName,
+        CATALOG_VERSION: "0.0.0",
+      },
+    });
+
     digestsTable.grantReadWriteData(generateDigestFn);
-    geminiApiKeySecret.grantRead(generateDigestFn);
+    generateDigestWorkerFn.grantInvoke(generateDigestFn);
 
     // =====================================================================
     // Phase-1: Static/config Lambdas

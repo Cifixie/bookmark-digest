@@ -37,6 +37,11 @@ export * from "./sourceVariants";
 // --- Page shell ---
 export * from "./page";
 
+// --- Digest block props map + validation ---
+export { digestBlockProps } from "./digestBlockProps";
+export { validateDigestSpec } from "./validateDigestSpec";
+export { type Spec } from "@json-render/core";
+
 // --- Non-catalog (standalone) schemas ---
 export * from "./nonCatalog/RelatedFromYourBookmarks.schema";
 export * from "./nonCatalog/MyNote.schema";
@@ -72,6 +77,7 @@ type DigestBlockTypeLiteral =
   | "Prose"
   | "ProsCons"
   | "QuoteBlock"
+  | "SectionContainer"
   | "StatCard"
   | "Step"
   | "Terminal"
@@ -80,7 +86,8 @@ type DigestBlockTypeLiteral =
 /**
  * The DigestBlock union — all LLM-authored content blocks.
  * Each block is { type: "<BlockName>", props: <BlockProps> }.
- * Used in DigestSection.content: DigestBlock[].
+ * Kept for the standalone per-block discriminator (digestBlockSchema);
+ * DigestSection itself now holds a json-render Spec tree, not DigestBlock[].
  */
 export type DigestBlock = {
   type: DigestBlockTypeLiteral;
@@ -108,6 +115,7 @@ export const digestBlockSchema = z.object({
     "Prose",
     "ProsCons",
     "QuoteBlock",
+    "SectionContainer",
     "StatCard",
     "Step",
     "Terminal",
@@ -117,26 +125,35 @@ export const digestBlockSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
-// DigestPage — the full typed page tree
+// DigestPage — the full typed page tree (json-render Spec format)
 // ---------------------------------------------------------------------------
+
+import type { Spec } from "@json-render/core";
+
+/** DigestPage section — a titled section with a json-render Spec tree. */
+export interface DigestSection {
+  /** Section heading (e.g. "Key Takeaways", "Background"). */
+  heading: string;
+  /** Optional descriptive subtitle. */
+  subtitle?: string | null;
+  /** Anchor ID for deep-linking to this section. */
+  anchorId?: string;
+  /** json-render Spec tree for this section. */
+  spec: Spec;
+}
 
 /**
  * The complete DigestPage shape.
- * Flattened (not a json-render spec) — the page shell renderer maps this
- * to React components directly.
+ * Uses json-render's native tree Spec format — each section contains a
+ * compiled Spec with keyed elements and children references.
  */
 export interface DigestPage {
   /** Where the digest came from (written article or temporal media). */
   source: SourceVariant;
   /** AI-generated metadata about the digest. */
   meta: DigestMeta;
-  /** Content sections, each with a heading and an array of DigestBlocks. */
-  sections: Array<{
-    heading: string;
-    subtitle?: string | null;
-    anchorId?: string;
-    content: DigestBlock[];
-  }>;
+  /** Content sections, each with a heading and a json-render Spec tree. */
+  sections: DigestSection[];
   /** Optional accent color for theming the page. */
   accentColor?: string;
 }
@@ -160,6 +177,7 @@ export type { PrerequisitesProps } from "./digestBlocks/Prerequisites.catalog";
 export type { ProseProps } from "./digestBlocks/Prose.catalog";
 export type { ProsConsProps } from "./digestBlocks/ProsCons.catalog";
 export type { QuoteBlockProps } from "./digestBlocks/QuoteBlock.catalog";
+export type { SectionContainerProps } from "./digestBlocks/SectionContainer.catalog";
 export type { StatCardProps } from "./digestBlocks/StatCard.catalog";
 export type { StepProps } from "./digestBlocks/Step.catalog";
 export type { TerminalProps } from "./digestBlocks/Terminal.catalog";

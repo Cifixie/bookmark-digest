@@ -13,6 +13,7 @@ export * as Prerequisites from "./Prerequisites.catalog";
 export * as Prose from "./Prose.catalog";
 export * as ProsCons from "./ProsCons.catalog";
 export * as QuoteBlock from "./QuoteBlock.catalog";
+export * as SectionContainer from "./SectionContainer.catalog";
 export * as StatCard from "./StatCard.catalog";
 export * as Step from "./Step.catalog";
 export * as Terminal from "./Terminal.catalog";

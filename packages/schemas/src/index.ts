@@ -7,6 +7,21 @@ import { z } from "zod";
  * built on top of these once Phase-0's plumbing is validated.
  */
 
+// ---------------------------------------------------------------------------
+// Digest Spec shape — used for digest output fields
+// ---------------------------------------------------------------------------
+
+/** Zod schema matching json-render's Spec shape (root + keyed elements). */
+const specOutputSchema = z.object({
+  root: z.string(),
+  elements: z.record(z.string(), z.object({
+    type: z.string(),
+    props: z.record(z.string(), z.unknown()),
+    children: z.array(z.string()),
+    visible: z.unknown().optional(),
+  })),
+});
+
 export const jobStatus = z.enum(["received", "processing", "done", "failed"]);
 export type JobStatus = z.infer<typeof jobStatus>;
 
@@ -84,13 +99,13 @@ export const digestStatus = z.enum(["pending", "generating", "done", "failed"]);
 export type DigestStatus = z.infer<typeof digestStatus>;
 
 /** Digest goal: what the user asked the system to generate. */
-export const digestGoalSchema = z.enum(["summary", "tl_dr", "notes", "action_items", "key_points"]); // Kept for compatibility with DB constraint; prefer DIGEST_GOALS from apps/infra/lib/digest-goals.ts
+export const digestGoalSchema = z.enum(["summary", "tl_dr", "notes", "action_items", "key_points", "understand"]); // Kept for compatibility with DB constraint; prefer DIGEST_GOALS from apps/infra/lib/digest-goals.ts
 export type DigestGoal = z.infer<typeof digestGoalSchema>;
 
 /**
  * Phase-1 digest row. Represents a generated digest for a source,
- * containing structured output (DigestBlock[]) validated against
- * @bookmark-digest/catalog's digestBlockSchema.
+ * containing structured output (json-render Spec) validated against
+ * @bookmark-digest/catalog's catalog and per-type props schemas.
  */
 export const digestSchema = z.object({
   id: z.string(),
@@ -99,8 +114,8 @@ export const digestSchema = z.object({
   modifiers: z.record(z.string(), z.any()).default({}),
   paramsVersion: z.string(),
   status: digestStatus,
-  /** DigestBlock[] from @bookmark-digest/catalog. */
-  output: z.array(z.record(z.string(), z.unknown())).nullable(),
+  /** json-render Spec tree (root + keyed elements). */
+  output: specOutputSchema.nullable(),
   error: z.string().nullable(),
   model: z.string().nullable(),
   createdAt: z.iso.datetime(),
@@ -136,7 +151,7 @@ export const fetchDigestResponseSchema = z.object({
   digestGoal: z.string(),
   modifiers: z.record(z.string(), z.any()),
   status: digestStatus,
-  output: z.array(z.record(z.string(), z.unknown())).nullable(),
+  output: specOutputSchema.nullable(),
   error: z.string().nullable(),
   model: z.string().nullable(),
   createdAt: z.iso.datetime(),
@@ -159,7 +174,6 @@ export const digestGoalSchemaApi = z.object({
   goal: z.string(),
   label: z.string(),
   description: z.string(),
-  allowedBlockTypes: z.array(z.string()),
   modifiers: z.array(digestGoalModifierSchema),
 });
 export type DigestGoalApi = z.infer<typeof digestGoalSchemaApi>;

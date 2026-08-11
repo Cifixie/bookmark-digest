@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { DigestPage } from "../components/page/DigestPage";
-import type { DigestPage as DigestPageType } from "@bookmark-digest/catalog";
+import type { DigestPage as DigestPageType, Spec } from "@bookmark-digest/catalog";
 
 const meta = {
   title: "Digest/Page",
@@ -13,6 +13,23 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+/** Helper: build a minimal Spec from an array of block definitions.
+ * First block becomes root; auto-wrapped in SectionContainer if needed. */
+function buildSpec(blocks: Array<{ type: string; props: Record<string, unknown> }>, rootType = "SectionContainer"): Spec {
+  const elements: Record<string, { type: string; props: Record<string, unknown>; children: string[] }> = {};
+  const contentKeys: string[] = [];
+  blocks.forEach((b, i) => {
+    const key = `el-${i}`;
+    contentKeys.push(key);
+    elements[key] = { type: b.type, props: b.props, children: [] };
+  });
+  const rootKey = rootType === "SectionContainer" ? "container" : contentKeys[0];
+  if (rootType === "SectionContainer") {
+    elements[rootKey] = { type: "SectionContainer", props: {}, children: contentKeys };
+  }
+  return { root: rootKey, elements };
+}
 
 const sampleWrittenPage: DigestPageType & {
   myNote?: { text: string; createdAt: string };
@@ -33,22 +50,22 @@ const sampleWrittenPage: DigestPageType & {
   sections: [
     {
       heading: "TL;DR",
-      content: [
+      spec: buildSpec([
         { type: "TLDR", props: { points: ["Key insight 1", "Key insight 2", "Key insight 3"] } },
-      ],
+      ]),
     },
     {
       heading: "Deep Dive",
-      content: [
+      spec: buildSpec([
         { type: "Prose", props: { paragraphs: ["This is some body text explaining the core concepts in a digest. It flows naturally without any card chrome or background styling."] } },
         { type: "Callout", props: { variant: "tip", text: "Always validate your schemas before passing them to the LLM." } },
-      ],
+      ]),
     },
     {
       heading: "Code Example",
-      content: [
+      spec: buildSpec([
         { type: "CodeBlock", props: { language: "typescript", code: "import { z } from 'zod';\n\nconst schema = z.object({ name: z.string() });", caption: "Schema definition" } },
-      ],
+      ]),
     },
   ],
 };
@@ -85,15 +102,15 @@ const sampleTemporalPage: DigestPageType & {
   sections: [
     {
       heading: "Summary",
-      content: [
+      spec: buildSpec([
         { type: "TLDR", props: { points: ["RSCs are a new paradigm", "Server components can't use hooks"] } },
-      ],
+      ]),
     },
     {
       heading: "Key Quotes",
-      content: [
+      spec: buildSpec([
         { type: "QuoteBlock", props: { quote: "The future is server components.", attribution: "Speaker A" } },
-      ],
+      ]),
     },
   ],
 };

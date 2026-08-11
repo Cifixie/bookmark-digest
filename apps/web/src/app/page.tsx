@@ -3,11 +3,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuthenticator } from "@aws-amplify/ui-react";
 import { fetchWithAuth } from "@/utils/fetchApi";
-import { blockComponents } from "@/lib/registry";
-
-import type {
-  DigestBlock,
-} from "@bookmark-digest/catalog";
+import Link from "next/link";
+import {
+  ActionProvider,
+  Renderer,
+  StateProvider,
+  VisibilityProvider,
+} from "@json-render/react";
+import { registry } from "@/lib/registry";
+import type { Spec } from "@bookmark-digest/catalog";
 import {
   listDigestGoalsResponseSchema,
   type DigestGoalApi as DigestGoal,
@@ -36,7 +40,7 @@ interface DigestResponse {
   modifiers: Record<string, unknown>;
   paramsVersion: string;
   status: string;
-  output: unknown[] | null;
+  output: Spec | null;
   error: string | null;
   model: string | null;
   createdAt: string;
@@ -53,31 +57,20 @@ interface IngestResponse {
 // Components
 // ---------------------------------------------------------------------------
 
-/** Renders all blocks from a digest output through the shared catalog registry. */
-function DigestBlockList({ blocks }: { blocks: DigestBlock[] }) {
-  if (!blocks || blocks.length === 0) {
+/** Renders a digest Spec through json-render's Renderer. */
+function DigestSpecRenderer({ spec }: { spec: Spec | null }) {
+  if (!spec || !spec.elements || Object.keys(spec.elements).length === 0) {
     return <p style={{ color: "#999", fontSize: 13 }}>No output</p>;
   }
 
   return (
-    <div>
-      {blocks.map((block, i) => {
-        const type = String((block as { type: unknown }).type ?? "unknown");
-        const Comp = (blockComponents as Record<string, any>)[type];
-        const props = (block as { props: Record<string, unknown> }).props;
-        if (Comp && props) {
-          return <Comp key={`${i}-${type}`} {...props} />;
-        }
-        return (
-          <div key={`${i}-${type}`} style={{ borderLeft: "3px solid #4a90d9", paddingLeft: 12, marginBottom: 8 }}>
-            <strong style={{ fontSize: 13, color: "#4a90d9" }}>{type}</strong>
-            <pre style={{ margin: "4px 0 0 0", fontSize: 12, color: "#666" }}>
-              {JSON.stringify(props, null, 2)}
-            </pre>
-          </div>
-        );
-      })}
-    </div>
+    <StateProvider>
+      <VisibilityProvider>
+        <ActionProvider>
+          <Renderer spec={spec} registry={registry as any} />
+        </ActionProvider>
+      </VisibilityProvider>
+    </StateProvider>
   );
 }
 
@@ -99,7 +92,13 @@ function SourceCard({ source }: { source: SourceResponse }) {
         marginTop: 16,
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <h3 style={{ margin: 0 }}>Source</h3>
         <span
           style={{
@@ -114,10 +113,25 @@ function SourceCard({ source }: { source: SourceResponse }) {
           {source.status}
         </span>
       </div>
-      <p style={{ margin: "8px 0 0 0", fontSize: 13, color: "#666", wordBreak: "break-all" }}>
+      <p
+        style={{
+          margin: "8px 0 0 0",
+          fontSize: 13,
+          color: "#666",
+          wordBreak: "break-all",
+        }}
+      >
         {source.url}
       </p>
-      <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 12, color: "#999" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 16,
+          marginTop: 8,
+          fontSize: 12,
+          color: "#999",
+        }}
+      >
         <span>{source.contentType}</span>
         <span>fetched {source.fetchedAt}</span>
         <span>hash: {source.sourceHash.slice(0, 12)}…</span>
@@ -150,7 +164,14 @@ function GoalPicker({
         background: selected ? "#f0f7ff" : "white",
       }}
     >
-      <label style={{ display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer" }}>
+      <label
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 8,
+          cursor: "pointer",
+        }}
+      >
         <input
           type="checkbox"
           checked={selected}
@@ -176,7 +197,10 @@ function GoalPicker({
               <select
                 defaultValue={mod.default || mod.options[0]}
                 onChange={(e) =>
-                  setModifiers((prev) => ({ ...prev, [mod.key]: e.target.value }))
+                  setModifiers((prev) => ({
+                    ...prev,
+                    [mod.key]: e.target.value,
+                  }))
                 }
                 style={{
                   display: "block",
@@ -218,9 +242,6 @@ function GoalPicker({
           >
             {generating ? "Generating…" : "Generate"}
           </button>
-          <span style={{ marginLeft: 8, fontSize: 12, color: "#999" }}>
-            Blocks: {goal.allowedBlockTypes.join(", ")}
-          </span>
         </div>
       )}
     </div>
@@ -261,8 +282,16 @@ function DigestResultCard({
         marginTop: 12,
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h4 style={{ margin: 0, textTransform: "capitalize" }}>{digest.digestGoal}</h4>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <h4 style={{ margin: 0, textTransform: "capitalize" }}>
+          {digest.digestGoal}
+        </h4>
         <span
           style={{
             fontSize: 12,
@@ -278,9 +307,11 @@ function DigestResultCard({
       </div>
 
       {digest.status === "done" && digest.output ? (
-        <DigestBlockList blocks={digest.output as DigestBlock[]} />
+        <DigestSpecRenderer spec={digest.output} />
       ) : digest.error ? (
-        <p style={{ color: "#ef4444", fontSize: 13, margin: "8px 0 0 0" }}>{digest.error}</p>
+        <p style={{ color: "#ef4444", fontSize: 13, margin: "8px 0 0 0" }}>
+          {digest.error}
+        </p>
       ) : (
         <p style={{ color: "#999", fontSize: 13, margin: "8px 0 0 0" }}>
           {digest.status === "pending" ? "Queued…" : "Generating…"}
@@ -316,7 +347,9 @@ export default function Home() {
 
   // Digests
   const [digests, setDigests] = useState<DigestResponse[]>([]);
-  const [generatingGoals, setGeneratingGoals] = useState<Record<string, boolean>>({});
+  const [generatingGoals, setGeneratingGoals] = useState<
+    Record<string, boolean>
+  >({});
 
   // Loaded goals on mount
   useEffect(() => {
@@ -395,7 +428,10 @@ export default function Home() {
     poll();
   }
 
-  async function handleGenerateGoal(goal: DigestGoal, modifiers: Record<string, unknown>) {
+  async function handleGenerateGoal(
+    goal: DigestGoal,
+    modifiers: Record<string, unknown>,
+  ) {
     if (!source || !source.sourceHash) return;
 
     setGeneratingGoals((prev) => ({ ...prev, [goal.goal]: true }));
@@ -463,9 +499,28 @@ export default function Home() {
       }}
     >
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Bookmark Digest</h1>
-      <p style={{ color: "#666", fontSize: 13, marginBottom: 16 }}>
-        Signed in as: {user?.username || "unknown"}
-      </p>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 16,
+        }}
+      >
+        <p style={{ color: "#666", fontSize: 13, marginBottom: 0 }}>
+          Signed in as: {user?.username || "unknown"}
+        </p>
+        <Link
+          href="/digests"
+          style={{
+            fontSize: 13,
+            color: "#4a90d9",
+            textDecoration: "none",
+          }}
+        >
+          View digests
+        </Link>
+      </div>
       <button
         onClick={() => signOut()}
         style={{
@@ -539,7 +594,9 @@ export default function Home() {
               />
             ))
           ) : (
-            <p style={{ color: "#999", fontSize: 13 }}>No digest goals available</p>
+            <p style={{ color: "#999", fontSize: 13 }}>
+              No digest goals available
+            </p>
           )}
         </div>
       )}

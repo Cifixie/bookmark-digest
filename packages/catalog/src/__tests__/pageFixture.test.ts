@@ -1,5 +1,16 @@
 import { describe, it, expect } from "vitest";
-import { digestBlockSchema, type DigestPage } from "../index";
+import { type Spec } from "@json-render/core";
+import { type DigestPage } from "../index";
+
+/** Helper: build a minimal Spec from an array of DigestBlock-like objects. */
+function buildSpec(blocks: Array<{ type: string; props: Record<string, unknown> }>): Spec {
+  const elements: Record<string, { type: string; props: Record<string, unknown>; children: string[] }> = {};
+  blocks.forEach((b, i) => {
+    elements[`el-${i}`] = { type: b.type, props: b.props, children: [] };
+  });
+  const root = blocks.length > 0 ? "el-0" : "";
+  return { root, elements };
+}
 
 describe("DigestPage fixture", () => {
   it("parses a valid written DigestPage", () => {
@@ -19,16 +30,16 @@ describe("DigestPage fixture", () => {
       sections: [
         {
           heading: "TL;DR",
-          content: [
+          spec: buildSpec([
             { type: "TLDR", props: { points: ["Key insight 1", "Key insight 2"] } },
-          ],
+          ]),
         },
         {
           heading: "Deep Dive",
-          content: [
+          spec: buildSpec([
             { type: "Prose", props: { paragraphs: ["Some text here."] } },
             { type: "Callout", props: { variant: "tip", text: "Don't forget!" } },
-          ],
+          ]),
         },
       ],
     };
@@ -36,16 +47,15 @@ describe("DigestPage fixture", () => {
     // Verify structure holds
     expect(page.source.kind).toBe("written");
     expect(page.sections).toHaveLength(2);
-    expect(page.sections[0].content).toHaveLength(1);
-    expect(page.sections[0].content[0].type).toBe("TLDR");
-    expect(page.sections[1].content[1].type).toBe("Callout");
+    expect(page.sections[0].spec.elements).toHaveProperty("el-0");
+    expect(page.sections[0].spec.elements["el-0"].type).toBe("TLDR");
+    expect(page.sections[1].spec.elements["el-1"].type).toBe("Callout");
 
-    // Each block validates against digestBlockSchema
+    // Specs are valid Spec shapes
     for (const section of page.sections) {
-      for (const block of section.content) {
-        const validated = digestBlockSchema.parse(block);
-        expect(validated.type).toBe(block.type);
-      }
+      expect(section.spec).toHaveProperty("root");
+      expect(section.spec).toHaveProperty("elements");
+      expect(Object.keys(section.spec?.elements ?? {}).length).toBeGreaterThan(0);
     }
   });
 
@@ -71,18 +81,18 @@ describe("DigestPage fixture", () => {
       sections: [
         {
           heading: "Summary",
-          content: [
+          spec: buildSpec([
             { type: "TLDR", props: { points: ["Important points"] } },
-          ],
+          ]),
         },
         {
           heading: "Key Quotes",
-          content: [
+          spec: buildSpec([
             {
               type: "QuoteBlock",
               props: { quote: "The future is server components.", attribution: "Speaker A" },
             },
-          ],
+          ]),
         },
       ],
     };

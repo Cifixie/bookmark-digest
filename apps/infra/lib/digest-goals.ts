@@ -5,10 +5,8 @@
  *
  * Imported by:
  *   - apps/infra/lambdas/digest-goals/handler.ts  (GET /digest-goals)
- *   - apps/infra/lambdas/generate-digest/handler.ts (prompt assembly)
+ *   - apps/infra/lambdas/generate-digest/handler.ts (goal config lookup)
  */
-
-import type { DigestBlock } from "@bookmark-digest/catalog";
 
 export interface DigestGoalModifier {
   key: string;
@@ -23,7 +21,6 @@ export interface DigestGoalConfig {
   label: string;
   description: string;
   promptTemplate: string;
-  allowedBlockTypes: DigestBlock["type"][];
   modifiers: DigestGoalModifier[];
 }
 
@@ -33,7 +30,6 @@ export const DIGEST_GOALS: DigestGoalConfig[] = [
     label: "Summary",
     description: "A concise prose summary of the source content.",
     promptTemplate: "Provide a concise summary of the following content. Keep it under 200 words.",
-    allowedBlockTypes: ["Prose"],
     modifiers: [],
   },
   {
@@ -41,7 +37,6 @@ export const DIGEST_GOALS: DigestGoalConfig[] = [
     label: "TL;DR",
     description: "Ultra-short bullet-point summary.",
     promptTemplate: "Give a TL;DR — 3-5 bullet points capturing the core message.",
-    allowedBlockTypes: ["TLDR", "List"],
     modifiers: [],
   },
   {
@@ -49,7 +44,6 @@ export const DIGEST_GOALS: DigestGoalConfig[] = [
     label: "Notes",
     description: "Structured notes from the content.",
     promptTemplate: "Extract structured notes from the following content.",
-    allowedBlockTypes: ["List", "Card", "GlossaryTerm"],
     modifiers: [
       {
         key: "format",
@@ -72,7 +66,6 @@ export const DIGEST_GOALS: DigestGoalConfig[] = [
     label: "Action Items",
     description: "Extracted next steps or action items.",
     promptTemplate: "Extract concrete action items or next steps from the following content.",
-    allowedBlockTypes: ["NextSteps", "ChecklistItem"],
     modifiers: [],
   },
   {
@@ -80,7 +73,16 @@ export const DIGEST_GOALS: DigestGoalConfig[] = [
     label: "Key Points",
     description: "The most important standalone points.",
     promptTemplate: "List the key points from the following content.",
-    allowedBlockTypes: ["List", "StatCard", "Callout"],
+    modifiers: [],
+  },
+  {
+    goal: "understand",
+    label: "Understand",
+    description: "A beginner-friendly explanation, assuming no prior knowledge.",
+    promptTemplate:
+      "Explain the following content like you would to a child who has no previous knowledge of any of this. " +
+      "Avoid jargon; when a technical term is unavoidable, define it in plain language before using it. " +
+      "Use simple analogies and short sentences to build understanding from the ground up.",
     modifiers: [],
   },
 ];

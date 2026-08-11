@@ -46,6 +46,7 @@ const sampleWrittenPage: DigestPageType & {
     digestType: "article",
     tone: "conversational",
     length: "medium",
+    subject: "engineering",
   },
   sections: [
     {
@@ -98,6 +99,8 @@ const sampleTemporalPage: DigestPageType & {
     digestType: "video",
     tone: "beginner-friendly",
     length: "long",
+    subject: "ai-ml",
+    tags: ["React"],
   },
   sections: [
     {

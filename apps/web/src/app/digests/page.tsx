@@ -12,7 +12,6 @@ interface DigestItem {
   id: string;
   sourceHash: string;
   digestGoal: string;
-  modifiers: Record<string, unknown>;
   status: string;
   error: string | null;
   model: string | null;

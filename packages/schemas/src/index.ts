@@ -111,7 +111,6 @@ export const digestSchema = z.object({
   id: z.string(),
   sourceHash: z.string(),
   digestGoal: digestGoalSchema,
-  modifiers: z.record(z.string(), z.any()).default({}),
   paramsVersion: z.string(),
   status: digestStatus,
   /** json-render Spec tree (root + keyed elements). */
@@ -134,7 +133,6 @@ export type IngestUrlRequest = z.infer<typeof ingestUrlRequestSchema>;
 export const requestDigestRequestSchema = z.object({
   sourceHash: z.string(),
   digestGoal: digestGoalSchema,
-  modifiers: z.record(z.string(), z.any()).optional().default({}),
 });
 export type RequestDigestRequest = z.infer<typeof requestDigestRequestSchema>;
 
@@ -149,7 +147,6 @@ export type RequestDigestResponse = z.infer<typeof requestDigestResponseSchema>;
 export const fetchDigestResponseSchema = z.object({
   id: z.string(),
   digestGoal: z.string(),
-  modifiers: z.record(z.string(), z.any()),
   status: digestStatus,
   output: specOutputSchema.nullable(),
   error: z.string().nullable(),
@@ -159,22 +156,11 @@ export const fetchDigestResponseSchema = z.object({
 });
 export type FetchDigestResponse = z.infer<typeof fetchDigestResponseSchema>;
 
-/** Modifier option for a digest goal. */
-export const digestGoalModifierSchema = z.object({
-  key: z.string(),
-  label: z.string(),
-  description: z.string(),
-  options: z.array(z.string()),
-  default: z.string().optional(),
-});
-export type DigestGoalModifier = z.infer<typeof digestGoalModifierSchema>;
-
 /** Single digest goal definition. */
 export const digestGoalSchemaApi = z.object({
   goal: z.string(),
   label: z.string(),
   description: z.string(),
-  modifiers: z.array(digestGoalModifierSchema),
 });
 export type DigestGoalApi = z.infer<typeof digestGoalSchemaApi>;
 

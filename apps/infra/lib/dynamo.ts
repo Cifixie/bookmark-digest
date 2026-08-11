@@ -114,7 +114,6 @@ export async function digestsPut(item: {
   id: string;
   sourceHash: string;
   digestGoal: string;
-  modifiers: Record<string, unknown>;
   paramsVersion: string;
   status: string;
   output?: unknown[];

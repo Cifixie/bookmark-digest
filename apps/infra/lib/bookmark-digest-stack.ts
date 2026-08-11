@@ -60,7 +60,6 @@ export interface FetchDigestResponse {
   id: string;
   sourceHash: string;
   digestGoal: string;
-  modifiers: Record<string, unknown>;
   status: string;
   output: unknown[] | null;
   error: string | null;
@@ -203,7 +202,7 @@ export class BookmarkDigest extends cdk.Stack {
       config.GEMINI_API_KEY_SECRET_NAME
     );
 
-    // generate-digest-worker: does the actual Gemini call + validation retries.
+    // generate-digest-worker: does the actual Gemini call + validation, single attempt.
     // Not exposed via API Gateway — invoked asynchronously by generateDigestFn
     // below, so it's free of API Gateway's 29s integration timeout.
     const generateDigestWorkerFn = new lambdaNodejs.NodejsFunction(this, "GenerateDigestWorkerFunction", {
@@ -216,8 +215,8 @@ export class BookmarkDigest extends cdk.Stack {
         DIGESTS_TABLE_NAME: digestsTable.tableName,
         GEMINI_MODEL: config.GEMINI_MODEL_ID,
         GEMINI_API_KEY_SECRET_ARN: geminiApiKeySecret.secretArn,
-        DIGEST_MAX_RETRIES: String(config.DIGEST_MAX_RETRIES),
         DIGEST_MAX_TOKENS: String(config.DIGEST_MAX_TOKENS),
+        BEDROCK_HAIKU_INFERENCE_PROFILE_ID: config.BEDROCK_HAIKU_INFERENCE_PROFILE_ID,
         CATALOG_VERSION: "0.0.0",
       },
     });
@@ -225,6 +224,20 @@ export class BookmarkDigest extends cdk.Stack {
     sourcesTable.grantReadData(generateDigestWorkerFn);
     digestsTable.grantReadWriteData(generateDigestWorkerFn);
     geminiApiKeySecret.grantRead(generateDigestWorkerFn);
+
+    // Bedrock Claude Haiku fallback — used when the Gemini free-tier quota
+    // is exhausted. Inference-profile invocation needs both the profile ARN
+    // and the underlying foundation-model ARN (wildcard region — the
+    // profile may route within its geography).
+    generateDigestWorkerFn.role?.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        actions: ["bedrock:InvokeModel"],
+        resources: [
+          `arn:aws:bedrock:${this.region}:${this.account}:inference-profile/${config.BEDROCK_HAIKU_INFERENCE_PROFILE_ID}`,
+          config.BEDROCK_HAIKU_FOUNDATION_MODEL_ARN,
+        ],
+      })
+    );
 
     // generate-digest: thin HTTP-facing Lambda behind POST /digests.
     // API Gateway REST APIs hard-cap the integration timeout at 29s, well

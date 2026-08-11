@@ -21,7 +21,6 @@ interface DigestResponse {
   id: string;
   sourceHash: string;
   digestGoal: string;
-  modifiers: Record<string, unknown>;
   paramsVersion: string;
   status: string;
   output: Spec | null;
@@ -166,24 +165,6 @@ export default function DigestPage({
         <p style={{ color: "#ef4444", fontSize: 13, margin: "8px 0" }}>
           {digest.error}
         </p>
-      )}
-
-      {digest?.modifiers && Object.keys(digest.modifiers).length > 0 && (
-        <details style={{ marginTop: 16, fontSize: 12, color: "#999" }}>
-          <summary style={{ cursor: "pointer" }}>Modifiers</summary>
-          <pre
-            style={{
-              background: "#f9fafb",
-              padding: 8,
-              borderRadius: 4,
-              marginTop: 4,
-              overflow: "auto",
-              fontSize: 11,
-            }}
-          >
-            {JSON.stringify(digest.modifiers, null, 2)}
-          </pre>
-        </details>
       )}
     </main>
   );

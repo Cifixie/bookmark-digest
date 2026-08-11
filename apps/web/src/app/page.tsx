@@ -37,7 +37,6 @@ interface DigestResponse {
   id: string;
   sourceHash: string;
   digestGoal: string;
-  modifiers: Record<string, unknown>;
   paramsVersion: string;
   status: string;
   output: Spec | null;
@@ -141,18 +140,17 @@ function SourceCard({ source }: { source: SourceResponse }) {
   );
 }
 
-/** Goal picker with modifiers. */
+/** Goal picker. */
 function GoalPicker({
   goal,
   onGenerate,
   generating,
 }: {
   goal: DigestGoal;
-  onGenerate: (goal: DigestGoal, modifiers: Record<string, unknown>) => void;
+  onGenerate: (goal: DigestGoal) => void;
   generating: boolean;
 }) {
   const [selected, setSelected] = useState(false);
-  const [modifiers, setModifiers] = useState<Record<string, unknown>>({});
 
   return (
     <div
@@ -175,10 +173,7 @@ function GoalPicker({
         <input
           type="checkbox"
           checked={selected}
-          onChange={(e) => {
-            setSelected(e.target.checked);
-            setModifiers({});
-          }}
+          onChange={(e) => setSelected(e.target.checked)}
           style={{ marginTop: 3 }}
         />
         <div>
@@ -189,45 +184,10 @@ function GoalPicker({
         </div>
       </label>
 
-      {selected && goal.modifiers.length > 0 && (
-        <div style={{ marginTop: 8, paddingLeft: 28 }}>
-          {goal.modifiers.map((mod) => (
-            <div key={mod.key} style={{ marginBottom: 8 }}>
-              <label style={{ fontSize: 12, color: "#666" }}>{mod.label}</label>
-              <select
-                defaultValue={mod.default || mod.options[0]}
-                onChange={(e) =>
-                  setModifiers((prev) => ({
-                    ...prev,
-                    [mod.key]: e.target.value,
-                  }))
-                }
-                style={{
-                  display: "block",
-                  marginTop: 2,
-                  padding: "4px 8px",
-                  borderRadius: 4,
-                  border: "1px solid #d1d5db",
-                  fontSize: 13,
-                  width: "100%",
-                  maxWidth: 240,
-                }}
-              >
-                {mod.options.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ))}
-        </div>
-      )}
-
       {selected && (
         <div style={{ marginTop: 8, paddingLeft: 28 }}>
           <button
-            onClick={() => onGenerate(goal, modifiers)}
+            onClick={() => onGenerate(goal)}
             disabled={generating}
             style={{
               padding: "6px 16px",
@@ -428,10 +388,7 @@ export default function Home() {
     poll();
   }
 
-  async function handleGenerateGoal(
-    goal: DigestGoal,
-    modifiers: Record<string, unknown>,
-  ) {
+  async function handleGenerateGoal(goal: DigestGoal) {
     if (!source || !source.sourceHash) return;
 
     setGeneratingGoals((prev) => ({ ...prev, [goal.goal]: true }));
@@ -440,7 +397,6 @@ export default function Home() {
       const res = await fetchWithAuth("POST", "/digests", {
         sourceHash: source.sourceHash,
         digestGoal: goal.goal,
-        modifiers,
       });
 
       if (!res.ok) {

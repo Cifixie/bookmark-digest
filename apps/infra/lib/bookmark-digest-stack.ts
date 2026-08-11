@@ -33,6 +33,10 @@ import * as sns from "aws-cdk-lib/aws-sns";
 import * as subs from "aws-cdk-lib/aws-sns-subscriptions";
 import * as lambdaEvents from "aws-cdk-lib/aws-lambda-event-sources";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
+import * as s3 from "aws-cdk-lib/aws-s3";
+import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
+import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
+import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as config from "./config";
 
 // ---------------------------------------------------------------------------
@@ -469,9 +473,64 @@ export class BookmarkDigest extends cdk.Stack {
     eventBridgeRule.addTarget(new LambdaFunction(checkEmbedFailuresFn));
 
     // =====================================================================
+    // Web hosting — Vite SPA (apps/web/dist) served via S3 + CloudFront.
+    // Every page is a client component fetching the API above directly, so
+    // no SSR runtime is needed.
+    // =====================================================================
+
+    const webBucket = new s3.Bucket(this, "WebBucket", {
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+    });
+
+    // SPA fallback: extensionless URIs (no static file) are served as
+    // /index.html so the React router handles them client-side.
+    // Asset URLs (containing ".") pass through unchanged.
+    const webUrlRewriteFn = new cloudfront.Function(this, "WebUrlRewriteFunction", {
+      code: cloudfront.FunctionCode.fromInline(`
+function handler(event) {
+  var request = event.request;
+  var uri = request.uri;
+
+  // Serve only index.html for SPA routes (no file extension)
+  if (uri.indexOf(".") === -1) {
+    request.uri = "/index.html";
+  }
+  return request;
+}
+      `),
+    });
+
+    const webDistribution = new cloudfront.Distribution(this, "WebDistribution", {
+      defaultRootObject: "index.html",
+      defaultBehavior: {
+        origin: origins.S3BucketOrigin.withOriginAccessControl(webBucket),
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        functionAssociations: [
+          {
+            function: webUrlRewriteFn,
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+          },
+        ],
+      },
+      errorResponses: [
+        { httpStatus: 404, responseHttpStatus: 200, responsePagePath: "/404.html" },
+      ],
+    });
+
+    new s3deploy.BucketDeployment(this, "WebDeployment", {
+      sources: [s3deploy.Source.asset("../web/dist")],
+      destinationBucket: webBucket,
+      distribution: webDistribution,
+      distributionPaths: ["/*"],
+    });
+
+    // =====================================================================
     // Phase-1: CDK outputs
     // =====================================================================
 
+    new cdk.CfnOutput(this, "WebUrl", { value: `https://${webDistribution.domainName}` });
     new cdk.CfnOutput(this, "ApiUrl", { value: api.url });
     new cdk.CfnOutput(this, "UserPoolId", { value: userPool.userPoolId });
     new cdk.CfnOutput(this, "UserPoolClientId", {

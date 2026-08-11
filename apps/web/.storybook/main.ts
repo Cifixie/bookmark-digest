@@ -1,4 +1,5 @@
-import type { StorybookConfig } from '@storybook/nextjs-vite';
+import type { StorybookConfig } from "@storybook/react-vite";
+import path from "path";
 
 const config: StorybookConfig = {
   stories: [
@@ -13,22 +14,28 @@ const config: StorybookConfig = {
     "@storybook/addon-mcp",
   ],
   framework: {
-    name: "@storybook/nextjs-vite",
-    options: {
-      nextConfig: "./next.config.ts",
-    },
+    name: "@storybook/react-vite",
+    options: {},
   },
   viteFinal: async (config) => {
-    // Resolve workspace packages
-    const { alias } = config.resolve || {};
+    const alias = config.resolve?.alias || {};
     config.resolve = {
       ...config.resolve,
       alias: {
-        ...(alias || {}),
-        "@": "<rootDir>/src",
-        "@bookmark-digest/catalog": "<rootDir>/../../packages/catalog/src",
-        "@bookmark-digest/schemas": "<rootDir>/../../packages/schemas/src",
-        "@bookmark-digest/shared": "<rootDir>/../../packages/shared/src",
+        ...(alias as Record<string, string>),
+        "@": path.resolve(__dirname, "../src"),
+        "@bookmark-digest/catalog": path.resolve(
+          __dirname,
+          "../../packages/catalog/src",
+        ),
+        "@bookmark-digest/schemas": path.resolve(
+          __dirname,
+          "../../packages/schemas/src",
+        ),
+        "@bookmark-digest/shared": path.resolve(
+          __dirname,
+          "../../packages/shared/src",
+        ),
       },
     };
     return config;

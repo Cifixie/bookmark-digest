@@ -1,9 +1,7 @@
-"use client";
-
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useAuthenticator } from "@aws-amplify/ui-react";
 import { fetchWithAuth } from "@/utils/fetchApi";
-import Link from "next/link";
 import {
   ActionProvider,
   Renderer,
@@ -56,7 +54,6 @@ interface IngestResponse {
 // Components
 // ---------------------------------------------------------------------------
 
-/** Renders a digest Spec through json-render's Renderer. */
 function DigestSpecRenderer({ spec }: { spec: Spec | null }) {
   if (!spec || !spec.elements || Object.keys(spec.elements).length === 0) {
     return <p style={{ color: "#999", fontSize: 13 }}>No output</p>;
@@ -73,7 +70,6 @@ function DigestSpecRenderer({ spec }: { spec: Spec | null }) {
   );
 }
 
-/** Source status card. */
 function SourceCard({ source }: { source: SourceResponse }) {
   const statusColor =
     source.status === "ready"
@@ -140,7 +136,6 @@ function SourceCard({ source }: { source: SourceResponse }) {
   );
 }
 
-/** Goal picker. */
 function GoalPicker({
   goal,
   onGenerate,
@@ -208,7 +203,6 @@ function GoalPicker({
   );
 }
 
-/** Digest result card. */
 function DigestResultCard({
   digest,
   onRefresh,
@@ -225,7 +219,6 @@ function DigestResultCard({
           ? "#ef4444"
           : "#9ca3af";
 
-  // Poll for status updates if still generating
   useEffect(() => {
     if (digest.status === "generating" || digest.status === "pending") {
       const interval = setInterval(onRefresh, 3000);
@@ -288,30 +281,22 @@ function DigestResultCard({
 }
 
 // ---------------------------------------------------------------------------
-// Main page
+// Page
 // ---------------------------------------------------------------------------
 
 export default function Home() {
   const { user, signOut } = useAuthenticator((context) => [context.user]);
 
-  // Input
   const [url, setUrl] = useState("");
-
-  // State
   const [source, setSource] = useState<SourceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  // Goals
   const [goals, setGoals] = useState<DigestGoal[]>([]);
   const [goalsLoading, setGoalsLoading] = useState(false);
-
-  // Digests
   const [digests, setDigests] = useState<DigestResponse[]>([]);
   const [generatingGoals, setGeneratingGoals] = useState<
     Record<string, boolean>
   >({});
 
-  // Loaded goals on mount
   useEffect(() => {
     loadGoals();
   }, []);
@@ -319,7 +304,7 @@ export default function Home() {
   async function loadGoals() {
     setGoalsLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const apiUrl = import.meta.env.VITE_PUBLIC_API_URL;
       if (apiUrl) {
         const res = await fetch(`${apiUrl}/digest-goals`);
         if (res.ok) {
@@ -358,7 +343,6 @@ export default function Home() {
         fetchedBy: "firecrawl",
       });
 
-      // Poll for source readiness
       pollSource(data.sourceHash);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -374,14 +358,13 @@ export default function Home() {
           setSource(data);
 
           if (data.status === "ready" || data.status === "failed") {
-            return; // Stop polling
+            return;
           }
         }
       } catch {
         // Continue polling
       }
 
-      // Keep polling every 3s until ready
       setTimeout(poll, 3000);
     };
 
@@ -405,7 +388,6 @@ export default function Home() {
       }
 
       const data = await res.json();
-      // Poll for digest result
       pollDigest(data.digestId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
@@ -432,7 +414,7 @@ export default function Home() {
           });
 
           if (data.status === "done" || data.status === "failed") {
-            return; // Stop polling
+            return;
           }
         }
       } catch {
@@ -446,53 +428,9 @@ export default function Home() {
   }
 
   return (
-    <main
-      style={{
-        maxWidth: 640,
-        margin: "2rem auto",
-        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        padding: "0 16px",
-      }}
-    >
+    <>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Bookmark Digest</h1>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 16,
-        }}
-      >
-        <p style={{ color: "#666", fontSize: 13, marginBottom: 0 }}>
-          Signed in as: {user?.username || "unknown"}
-        </p>
-        <Link
-          href="/digests"
-          style={{
-            fontSize: 13,
-            color: "#4a90d9",
-            textDecoration: "none",
-          }}
-        >
-          View digests
-        </Link>
-      </div>
-      <button
-        onClick={() => signOut()}
-        style={{
-          padding: "4px 12px",
-          fontSize: 13,
-          marginBottom: 16,
-          cursor: "pointer",
-          background: "#f3f4f6",
-          border: "1px solid #d1d5db",
-          borderRadius: 6,
-        }}
-      >
-        Sign out
-      </button>
 
-      {/* URL submit */}
       <form onSubmit={handleSubmit}>
         <input
           type="url"
@@ -531,10 +469,8 @@ export default function Home() {
         <p style={{ color: "#ef4444", fontSize: 13, marginTop: 12 }}>{error}</p>
       )}
 
-      {/* Source card */}
       {source && <SourceCard source={source} />}
 
-      {/* Digest goals */}
       {source?.status === "ready" && (
         <div style={{ marginTop: 24 }}>
           <h3 style={{ fontSize: 16, marginBottom: 8 }}>Digest Goals</h3>
@@ -557,7 +493,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Digest results */}
       {digests.length > 0 && (
         <div style={{ marginTop: 24 }}>
           <h3 style={{ fontSize: 16, marginBottom: 8 }}>Results</h3>
@@ -574,6 +509,17 @@ export default function Home() {
           ))}
         </div>
       )}
-    </main>
+
+      {digests.length > 0 && (
+        <p style={{ marginTop: 16 }}>
+          <Link
+            to="/digests"
+            style={{ fontSize: 13, color: "#4a90d9", textDecoration: "none" }}
+          >
+            View all digests →
+          </Link>
+        </p>
+      )}
+    </>
   );
 }

@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/react";
 import { DigestPage } from "../components/page/DigestPage";
 import type { DigestPage as DigestPageType, Spec } from "@bookmark-digest/catalog";
 

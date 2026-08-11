@@ -1,6 +1,6 @@
 import { fetchAuthSession } from "aws-amplify/auth";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
+const apiUrl = import.meta.env.VITE_PUBLIC_API_URL ?? "";
 
 async function getAuthToken() {
   const session = await fetchAuthSession();

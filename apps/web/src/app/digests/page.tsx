@@ -1,8 +1,6 @@
-"use client";
-
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { fetchWithAuth } from "@/utils/fetchApi";
-import Link from "next/link";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -52,16 +50,9 @@ export default function DigestsPage() {
   }
 
   return (
-    <main
-      style={{
-        maxWidth: 640,
-        margin: "2rem auto",
-        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        padding: "0 16px",
-      }}
-    >
+    <>
       <Link
-        href="/"
+        to="/"
         style={{
           fontSize: 13,
           color: "#4a90d9",
@@ -142,7 +133,7 @@ export default function DigestsPage() {
           <DigestListItem key={d.id} digest={d} />
         ))}
       </div>
-    </main>
+    </>
   );
 }
 
@@ -157,7 +148,7 @@ function DigestListItem({ digest }: { digest: DigestItem }) {
 
   return (
     <Link
-      href={`/digests/${digest.id}`}
+      to={`/digests/${digest.id}`}
       style={{
         display: "block",
         border: "1px solid #e5e7eb",

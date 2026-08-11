@@ -32,6 +32,20 @@ export function bedrockModelArn(modelId: string): string {
 
 export const BEDROCK_EMBEDDING_MODEL_ARN = bedrockModelArn(BEDROCK_EMBEDDING_MODEL_ID);
 
+// Claude Haiku only supports invocation via a cross-region inference
+// profile, not the bare foundation-model ID (on-demand throughput isn't
+// supported for this model). "eu." keeps inference within the EU, matching
+// the eu-north-1 default region.
+export const BEDROCK_HAIKU_INFERENCE_PROFILE_ID =
+  process.env.BEDROCK_HAIKU_INFERENCE_PROFILE_ID ?? "eu.anthropic.claude-haiku-4-5-20251001-v1:0";
+
+// IAM policies for inference-profile invocation must grant both the
+// profile ARN (built in the stack, where the account ID is available) and
+// this underlying foundation-model ARN — wildcard region, since the
+// profile may route to any region in its geography.
+export const BEDROCK_HAIKU_FOUNDATION_MODEL_ARN =
+  "arn:aws:bedrock:*::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0";
+
 // ---------------------------------------------------------------------------
 // Gemini (generate-digest) — personal API key, not Bedrock
 // ---------------------------------------------------------------------------
@@ -66,11 +80,14 @@ export const RELATED_MAX_COUNT =
 // Generate digest tuning
 // ---------------------------------------------------------------------------
 
-export const DIGEST_MAX_RETRIES =
-  parseInt(process.env.DIGEST_MAX_RETRIES ?? "3", 10);
-
+// Output-length ceiling for the generateText call, not an input/context
+// limit — the source content (e.g. a 2-hour transcript) goes in as the
+// prompt and is bounded by the model's context window instead. Kept as an
+// explicit cap for cost/runaway-output safety, set high enough that a rich
+// digest of a long source shouldn't hit it; the worker Lambda's 10-minute
+// timeout has plenty of room for it.
 export const DIGEST_MAX_TOKENS =
-  parseInt(process.env.DIGEST_MAX_TOKENS ?? "4096", 10);
+  parseInt(process.env.DIGEST_MAX_TOKENS ?? "32768", 10);
 
 // ---------------------------------------------------------------------------
 // Firecrawl

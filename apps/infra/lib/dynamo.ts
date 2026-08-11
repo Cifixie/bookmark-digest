@@ -113,6 +113,7 @@ export async function digestsGet(id: string) {
 export async function digestsPut(item: {
   id: string;
   sourceHash: string;
+  sourceHashes?: string[]; // multi-source digests — array of all source hashes
   digestGoal: string;
   paramsVersion: string;
   status: string;

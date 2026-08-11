@@ -85,8 +85,9 @@ const corsHeaders = {
 
 interface WorkerEvent {
   digestId: string;
-  sourceHash: string;
+  sourceHashes: string[];
   digestGoal: string;
+  multiSource?: boolean;
 }
 
 type HandlerResult = { statusCode: number; headers: Record<string, string>; body: string };
@@ -106,9 +107,21 @@ export async function handler(event: any): Promise<HandlerResult> {
   }
 
   const sourceHash = body.sourceHash;
+  const sourceHashes = body.sourceHashes;
   const digestGoal = body.digestGoal;
 
-  if (!sourceHash) return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: "sourceHash required" }) };
+  // Accept either single-source (sourceHash) or multi-source (sourceHashes)
+  // Multi-source takes precedence; falls back to legacy format for backward compat.
+  let hashes: string[];
+  if (sourceHashes && Array.isArray(sourceHashes) && sourceHashes.length > 0) {
+    hashes = sourceHashes;
+  } else if (sourceHash) {
+    hashes = [sourceHash];
+  } else {
+    return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: "sourceHash or sourceHashes required" }) };
+  }
+
+  const multiSource = sourceHashes && Array.isArray(sourceHashes) && sourceHashes.length > 1;
   if (!digestGoal) {
     return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: "digestGoal required" }) };
   }
@@ -120,12 +133,21 @@ export async function handler(event: any): Promise<HandlerResult> {
   }
 
   try {
-    // Check for existing pending digest (SourceHashIndex GSI query)
-    const existingResult = await digestsQueryBySourceHash(sourceHash, digestGoal);
-    const existingItems = existingResult?.Items;
-    const existingPending = existingItems?.find(
-      (item: any) => item.status === "pending" || item.status === "generating"
-    );
+    // Dedup check — multi-source digests can't use the GSI (sourceHash is scalar),
+    // so we scan matching rows and compare sourceHashes arrays.
+    const existingResult = await digestsQueryBySourceHash(hashes[0], digestGoal);
+    const existingItems = existingResult?.Items as any[] | undefined;
+    const existingPending = existingItems?.find((item: any) => {
+      if (item.status !== "pending" && item.status !== "generating") return false;
+      if (multiSource) {
+        // Compare full sourceHashes array for multi-source digests
+        const existingHashes: string[] = item.sourceHashes;
+        if (!existingHashes || existingHashes.length !== hashes.length) return false;
+        return hashes.every((h) => existingHashes.includes(h));
+      }
+      // Single-source: GSI-level match is sufficient
+      return item.sourceHash === hashes[0];
+    });
 
     if (existingPending) {
       return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ digestId: existingPending.id, status: "accepted" }) };
@@ -138,7 +160,8 @@ export async function handler(event: any): Promise<HandlerResult> {
 
     await digestsPut({
       id: digestId,
-      sourceHash,
+      sourceHash: hashes[0],
+      sourceHashes: hashes,
       digestGoal,
       paramsVersion,
       status: "pending",
@@ -146,7 +169,7 @@ export async function handler(event: any): Promise<HandlerResult> {
       updatedAt: now,
     });
 
-    const workerEvent: WorkerEvent = { digestId, sourceHash, digestGoal };
+    const workerEvent: WorkerEvent = { digestId, sourceHashes: hashes, digestGoal, multiSource };
     await lambdaClient.send(
       new InvokeCommand({
         FunctionName: process.env.GENERATE_DIGEST_WORKER_FUNCTION_NAME,
@@ -163,21 +186,27 @@ export async function handler(event: any): Promise<HandlerResult> {
 }
 
 /** Runs the actual Gemini generation and writes the result. Invoked async from `handler`. */
-async function runGeneration({ digestId, sourceHash, digestGoal }: WorkerEvent): Promise<void> {
+async function runGeneration({ digestId, sourceHashes, digestGoal, multiSource }: WorkerEvent): Promise<void> {
   const now = new Date().toISOString();
 
   try {
     const goalConfig = getDigestGoal(digestGoal);
 
-    // Fetch source content
-    const sourceResult = await sourcesGet(sourceHash);
-    const sourceItem = sourceResult?.Item as any;
-    const content = sourceItem?.content;
+    // Fetch content from all sources
+    const sourceResults = await Promise.all(
+      sourceHashes.map(async (hash) => {
+        const result = await sourcesGet(hash);
+        const item = result?.Item as any;
+        return { hash, content: item?.content ?? null, url: item?.url ?? "", fetchedAt: item?.fetchedAt ?? "" };
+      }),
+    );
 
-    if (!content) {
+    // Check that all sources have content
+    const missing = sourceResults.filter((r) => !r.content);
+    if (missing.length > 0) {
       await digestsUpdate(digestId, "SET #s = :status, #e = :err, #m = :model, #ca = :at", {
         ":status": "failed",
-        ":err": "No content",
+        ":err": `${missing.length} of ${sourceHashes.length} sources missing content`,
         ":model": GENERATION_MODEL,
         ":at": now,
         "#s": "status",
@@ -209,6 +238,24 @@ async function runGeneration({ digestId, sourceHash, digestGoal }: WorkerEvent):
 
     const systemPrompt = [goalConfig.promptTemplate, catalogPrompt].filter(Boolean).join("\n");
 
+    // Build the content prompt — single or multi-source.
+    // Multi-source digests instruct the model to compare/synthesize across
+    // sources and attribute claims back to their origin.
+    let contentPrompt: string;
+    if (multiSource) {
+      const sourcesSection = sourceResults
+        .map(
+          (r, i) =>
+            `--- Source ${i + 1} ---\nURL: ${r.url}\nFetched: ${r.fetchedAt}\nContent:\n${r.content}`,
+        )
+        .join("\n\n");
+      contentPrompt = `You are synthesizing a digest from ${sourceHashes.length} distinct sources. Compare, contrast, and synthesize the information across all sources. Attribute specific claims or quotes back to their source (e.g., "According to Source 1, …").
+
+${sourcesSection}`;
+    } else {
+      contentPrompt = `Content:\n${sourceResults[0].content}`;
+    }
+
     // Single attempt per model — generateText + compileSpecStream turns the
     // model's JSONL patch stream into a Spec, then validateDigestSpec
     // enforces structure + per-type props. The free-tier Gemini quota is
@@ -225,7 +272,7 @@ async function runGeneration({ digestId, sourceHash, digestGoal }: WorkerEvent):
       result = await generateText({
         model: google(GENERATION_MODEL),
         system: systemPrompt,
-        prompt: `Content:\n${content}`,
+        prompt: contentPrompt,
         maxOutputTokens: MAX_TOKENS,
         temperature: 0.3,
       });
@@ -251,7 +298,7 @@ async function runGeneration({ digestId, sourceHash, digestGoal }: WorkerEvent):
         result = await generateText({
           model: bedrock(FALLBACK_MODEL),
           system: systemPrompt,
-          prompt: `Content:\n${content}`,
+          prompt: contentPrompt,
           maxOutputTokens: MAX_TOKENS,
           temperature: 0.3,
         });

@@ -303,6 +303,19 @@ export class BookmarkDigest extends cdk.Stack {
 
     sourcesTable.grantReadData(fetchSourceFn);
 
+    // GET /sources: list all ingested sources (Phase-2 multi-source picker)
+    const listSourcesFn = new lambdaNodejs.NodejsFunction(this, "ListSourcesFunction", {
+      entry: "lambdas/list-sources/handler.ts",
+      handler: "handler",
+      runtime: cdk.aws_lambda.Runtime.NODEJS_24_X,
+      timeout: cdk.Duration.seconds(30),
+      environment: {
+        SOURCES_TABLE_NAME: sourcesTable.tableName,
+      },
+    });
+
+    sourcesTable.grantReadData(listSourcesFn);
+
     // GET /sources/{sourceHash}/related: brute-force cosine-similarity search
     // over embeddings (see plans/dynamodb-migration.md §2 — the pgvector replacement)
     const relatedSourcesFn = new lambdaNodejs.NodejsFunction(this, "RelatedSourcesFunction", {
@@ -380,6 +393,16 @@ export class BookmarkDigest extends cdk.Stack {
     related.addMethod(
       "GET",
       new apigw.LambdaIntegration(relatedSourcesFn, { proxy: true }),
+      {
+        authorizer,
+        authorizationType: apigw.AuthorizationType.COGNITO,
+      }
+    );
+
+    // GET /sources (list all) — must come before /sources/{sourceHash}
+    sources.addMethod(
+      "GET",
+      new apigw.LambdaIntegration(listSourcesFn, { proxy: true }),
       {
         authorizer,
         authorizationType: apigw.AuthorizationType.COGNITO,

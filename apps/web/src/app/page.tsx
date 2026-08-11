@@ -19,6 +19,17 @@ import {
 // Types
 // ---------------------------------------------------------------------------
 
+interface SourceItem {
+  sourceHash: string;
+  url: string;
+  contentType: string;
+  fetchedAt: string;
+  fetchedBy: string | null;
+  status: string;
+  embedding?: number[] | null;
+  embeddingModel?: string | null;
+}
+
 interface SourceResponse {
   sourceHash: string;
   url: string;
@@ -70,7 +81,15 @@ function DigestSpecRenderer({ spec }: { spec: Spec | null }) {
   );
 }
 
-function SourceCard({ source }: { source: SourceResponse }) {
+function SourceCard({
+  source,
+  checked,
+  onChange,
+}: {
+  source: SourceItem;
+  checked?: boolean;
+  onChange?: (hash: string) => void;
+}) {
   const statusColor =
     source.status === "ready"
       ? "#22c55e"
@@ -81,11 +100,13 @@ function SourceCard({ source }: { source: SourceResponse }) {
   return (
     <div
       style={{
-        border: "1px solid #e5e7eb",
+        border: checked ? "2px solid #4a90d9" : "1px solid #e5e7eb",
         borderRadius: 8,
         padding: 16,
         marginTop: 16,
+        cursor: onChange ? "pointer" : "default",
       }}
+      onClick={() => onChange?.(source.sourceHash)}
     >
       <div
         style={{
@@ -94,7 +115,18 @@ function SourceCard({ source }: { source: SourceResponse }) {
           alignItems: "center",
         }}
       >
-        <h3 style={{ margin: 0 }}>Source</h3>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {onChange && (
+            <input
+              type="checkbox"
+              checked={checked ?? false}
+              onChange={() => onChange(source.sourceHash)}
+              onClick={(e) => e.stopPropagation()}
+              style={{ marginTop: 0 }}
+            />
+          )}
+          <h3 style={{ margin: 0 }}>Source</h3>
+        </div>
         <span
           style={{
             fontSize: 12,
@@ -140,10 +172,12 @@ function GoalPicker({
   goal,
   onGenerate,
   generating,
+  sourceHash,
 }: {
   goal: DigestGoal;
-  onGenerate: (goal: DigestGoal) => void;
+  onGenerate: (goal: DigestGoal, sourceHash: string) => void;
   generating: boolean;
+  sourceHash: string;
 }) {
   const [selected, setSelected] = useState(false);
 
@@ -182,7 +216,7 @@ function GoalPicker({
       {selected && (
         <div style={{ marginTop: 8, paddingLeft: 28 }}>
           <button
-            onClick={() => onGenerate(goal)}
+            onClick={() => onGenerate(goal, sourceHash)}
             disabled={generating}
             style={{
               padding: "6px 16px",
@@ -244,6 +278,12 @@ function DigestResultCard({
       >
         <h4 style={{ margin: 0, textTransform: "capitalize" }}>
           {digest.digestGoal}
+          {digest.sourceHash !== digest.sourceHash ? (
+            <span style={{ fontSize: 11, color: "#999", fontWeight: 400 }}>
+              {" "}
+              (multi-source)
+            </span>
+          ) : null}
         </h4>
         <span
           style={{
@@ -288,7 +328,8 @@ export default function Home() {
   const { user, signOut } = useAuthenticator((context) => [context.user]);
 
   const [url, setUrl] = useState("");
-  const [source, setSource] = useState<SourceResponse | null>(null);
+  const [sources, setSources] = useState<SourceItem[]>([]);
+  const [selectedSourceHashes, setSelectedSourceHashes] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [goals, setGoals] = useState<DigestGoal[]>([]);
   const [goalsLoading, setGoalsLoading] = useState(false);
@@ -296,9 +337,16 @@ export default function Home() {
   const [generatingGoals, setGeneratingGoals] = useState<
     Record<string, boolean>
   >({});
+  const [generatingMulti, setGeneratingMulti] = useState(false);
+  const [loadingSources, setLoadingSources] = useState(false);
 
   useEffect(() => {
     loadGoals();
+  }, []);
+
+  useEffect(() => {
+    // Load all existing sources on mount
+    loadAllSources();
   }, []);
 
   async function loadGoals() {
@@ -319,10 +367,35 @@ export default function Home() {
     }
   }
 
+  async function loadAllSources() {
+    setLoadingSources(true);
+    try {
+      const res = await fetchWithAuth("GET", "/sources");
+      if (res.ok) {
+        const data = await res.json();
+        const items = (data.sources as SourceItem[]) ?? [];
+        setSources(items);
+      }
+    } catch {
+      console.warn("Failed to load sources");
+    } finally {
+      setLoadingSources(false);
+    }
+  }
+
+  function toggleSource(hash: string) {
+    setSelectedSourceHashes((prev) =>
+      prev.includes(hash) ? prev.filter((h) => h !== hash) : [...prev, hash],
+    );
+  }
+
+  function toggleAllSources(checked: boolean) {
+    setSelectedSourceHashes(checked ? sources.map((s) => s.sourceHash) : []);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setSource(null);
     setDigests([]);
 
     try {
@@ -334,15 +407,18 @@ export default function Home() {
       }
 
       const data: IngestResponse = await res.json();
-      setSource({
-        sourceHash: data.sourceHash,
-        url,
-        status: "fetched",
-        contentType: "article",
-        fetchedAt: new Date().toISOString(),
-        fetchedBy: "firecrawl",
-      });
-
+      // Add to sources list
+      setSources((prev) => [
+        ...prev.filter((s) => s.sourceHash !== data.sourceHash),
+        {
+          sourceHash: data.sourceHash,
+          url,
+          status: "fetched",
+          contentType: "article",
+          fetchedAt: new Date().toISOString(),
+          fetchedBy: "firecrawl",
+        },
+      ]);
       pollSource(data.sourceHash);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -355,7 +431,18 @@ export default function Home() {
         const res = await fetchWithAuth("GET", `/sources/${sourceHash}`);
         if (res.ok) {
           const data: SourceResponse = await res.json();
-          setSource(data);
+          setSources((prev) =>
+            prev.map((s) =>
+              s.sourceHash === sourceHash
+                ? {
+                    ...s,
+                    status: data.status,
+                    embedding: data.embedding,
+                    embeddingModel: data.embeddingModel,
+                  }
+                : s,
+            ),
+          );
 
           if (data.status === "ready" || data.status === "failed") {
             return;
@@ -371,14 +458,15 @@ export default function Home() {
     poll();
   }
 
-  async function handleGenerateGoal(goal: DigestGoal) {
-    if (!source || !source.sourceHash) return;
-
+  async function handleGenerateGoal(
+    goal: DigestGoal,
+    sourceHash: string,
+  ) {
     setGeneratingGoals((prev) => ({ ...prev, [goal.goal]: true }));
 
     try {
       const res = await fetchWithAuth("POST", "/digests", {
-        sourceHash: source.sourceHash,
+        sourceHash,
         digestGoal: goal.goal,
       });
 
@@ -393,6 +481,31 @@ export default function Home() {
       setError(err instanceof Error ? err.message : "Generation failed");
     } finally {
       setGeneratingGoals((prev) => ({ ...prev, [goal.goal]: false }));
+    }
+  }
+
+  async function handleGenerateMulti() {
+    if (selectedSourceHashes.length < 2) return;
+    setGeneratingMulti(true);
+    setError(null);
+
+    try {
+      const res = await fetchWithAuth("POST", "/digests", {
+        sourceHashes: selectedSourceHashes,
+        digestGoal: "summary", // default goal; could be configurable
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? `Request failed: ${res.status}`);
+      }
+
+      const data = await res.json();
+      pollDigest(data.digestId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Multi-source generation failed");
+    } finally {
+      setGeneratingMulti(false);
     }
   }
 
@@ -426,6 +539,8 @@ export default function Home() {
 
     poll();
   }
+
+  const readySources = sources.filter((s) => s.status === "ready");
 
   return (
     <>
@@ -461,7 +576,7 @@ export default function Home() {
             fontWeight: 500,
           }}
         >
-          Submit
+          Submit URL
         </button>
       </form>
 
@@ -469,30 +584,120 @@ export default function Home() {
         <p style={{ color: "#ef4444", fontSize: 13, marginTop: 12 }}>{error}</p>
       )}
 
-      {source && <SourceCard source={source} />}
-
-      {source?.status === "ready" && (
+      {/* --- Single-source: show last submitted source --- */}
+      {sources.length > 0 && (
         <div style={{ marginTop: 24 }}>
-          <h3 style={{ fontSize: 16, marginBottom: 8 }}>Digest Goals</h3>
-          {goalsLoading ? (
-            <p style={{ color: "#999", fontSize: 13 }}>Loading goals…</p>
-          ) : goals.length > 0 ? (
-            goals.map((goal) => (
-              <GoalPicker
-                key={goal.goal}
-                goal={goal}
-                onGenerate={handleGenerateGoal}
-                generating={!!generatingGoals[goal.goal]}
-              />
-            ))
-          ) : (
-            <p style={{ color: "#999", fontSize: 13 }}>
-              No digest goals available
-            </p>
+          <h3 style={{ fontSize: 16, marginBottom: 8 }}>
+            Latest Source
+          </h3>
+          <SourceCard source={sources[0]} />
+          {sources[0].status === "ready" && (
+            <div style={{ marginTop: 16 }}>
+              <h4 style={{ fontSize: 14, marginBottom: 8 }}>
+                Digest Goals
+              </h4>
+              {goalsLoading ? (
+                <p style={{ color: "#999", fontSize: 13 }}>
+                  Loading goals…
+                </p>
+              ) : goals.length > 0 ? (
+                goals.map((goal) => (
+                  <GoalPicker
+                    key={goal.goal}
+                    goal={goal}
+                    onGenerate={handleGenerateGoal}
+                    generating={!!generatingGoals[goal.goal]}
+                    sourceHash={sources[0].sourceHash}
+                  />
+                ))
+              ) : (
+                <p style={{ color: "#999", fontSize: 13 }}>
+                  No digest goals available
+                </p>
+              )}
+            </div>
           )}
         </div>
       )}
 
+      {/* --- Multi-source: select from saved sources --- */}
+      {readySources.length > 0 && (
+        <div style={{ marginTop: 24 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 8,
+            }}
+          >
+            <h3 style={{ fontSize: 16, margin: 0 }}>
+              Compare / Synthesize ({readySources.length} saved sources)
+            </h3>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <label
+                style={{
+                  fontSize: 12,
+                  color: "#666",
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={
+                    selectedSourceHashes.length === readySources.length &&
+                    readySources.length > 0
+                  }
+                  onChange={(e) => toggleAllSources(e.target.checked)}
+                  style={{ marginRight: 4 }}
+                />
+                {selectedSourceHashes.length > 0
+                  ? `${selectedSourceHashes.length} selected`
+                  : "Select all"}
+              </label>
+              {selectedSourceHashes.length >= 2 && (
+                <button
+                  onClick={handleGenerateMulti}
+                  disabled={generatingMulti}
+                  style={{
+                    padding: "6px 16px",
+                    background: generatingMulti ? "#9ca3af" : "#4a90d9",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 6,
+                    cursor: generatingMulti ? "not-allowed" : "pointer",
+                    fontSize: 13,
+                    fontWeight: 500,
+                  }}
+                >
+                  {generatingMulti
+                    ? "Generating…"
+                    : `Generate digest (${selectedSourceHashes.length})`}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {loadingSources && (
+            <p style={{ color: "#999", fontSize: 13, margin: "4px 0" }}>
+              Loading…
+            </p>
+          )}
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {readySources.map((source) => (
+              <SourceCard
+                key={source.sourceHash}
+                source={source}
+                checked={selectedSourceHashes.includes(source.sourceHash)}
+                onChange={toggleSource}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* --- Results --- */}
       {digests.length > 0 && (
         <div style={{ marginTop: 24 }}>
           <h3 style={{ fontSize: 16, marginBottom: 8 }}>Results</h3>

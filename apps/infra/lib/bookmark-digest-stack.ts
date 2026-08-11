@@ -18,11 +18,9 @@
 
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
-import * as s3 from "aws-cdk-lib/aws-s3";
 import * as lambdaNodejs from "aws-cdk-lib/aws-lambda-nodejs";
 import { StartingPosition, FilterRule, FilterCriteria } from "aws-cdk-lib/aws-lambda";
 import * as apigw from "aws-cdk-lib/aws-apigateway";
-import * as sfn from "aws-cdk-lib/aws-stepfunctions";
 import * as cognito from "aws-cdk-lib/aws-cognito";
 import { Rule, Schedule } from "aws-cdk-lib/aws-events";
 import { LambdaFunction } from "aws-cdk-lib/aws-events-targets";
@@ -75,37 +73,6 @@ export class BookmarkDigest extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // =====================================================================
-    // Phase-0: Existing resources (keep for backward compatibility)
-    // =====================================================================
-
-    const rawContentBucket = new s3.Bucket(this, "RawContentBucket", {
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-    });
-
-    const ingestFn = new lambdaNodejs.NodejsFunction(this, "IngestFunction", {
-      entry: "lambdas/ingest/handler.ts",
-      handler: "handler",
-      runtime: cdk.aws_lambda.Runtime.NODEJS_24_X,
-      environment: {
-        RAW_CONTENT_BUCKET: rawContentBucket.bucketName,
-      },
-    });
-
-    rawContentBucket.grantWrite(ingestFn);
-
-    const receivedState = new sfn.Pass(this, "Received");
-    const processingState = new sfn.Pass(this, "Processing");
-    const doneState = new sfn.Pass(this, "Done");
-
-    const definition = receivedState.next(processingState).next(doneState);
-
-    const stateMachine = new sfn.StateMachine(this, "IngestStateMachine", {
-      definitionBody: sfn.DefinitionBody.fromChainable(definition),
-      timeout: cdk.Duration.minutes(5),
-    });
-
     const userPool = new cognito.UserPool(this, "UserPool", {
       userPoolName: "bookmark-digest-users",
       selfSignUpEnabled: false,
@@ -135,26 +102,6 @@ export class BookmarkDigest extends cdk.Stack {
       restApiName: "bookmark-digest-api",
       deployOptions: { stageName: "dev" },
     });
-
-    // Phase-0 route: POST /bookmarks
-    const bookmarks = api.root.addResource("bookmarks", {
-      defaultCorsPreflightOptions: {
-        allowOrigins: apigw.Cors.ALL_ORIGINS,
-        allowMethods: ["POST"],
-        allowHeaders: ["Content-Type", "Authorization"],
-      },
-    });
-
-    bookmarks.addMethod(
-      "POST",
-      new apigw.LambdaIntegration(ingestFn, { proxy: true }),
-      {
-        authorizer,
-        authorizationType: apigw.AuthorizationType.COGNITO,
-      }
-    );
-
-    stateMachine.grantStartExecution(ingestFn);
 
     // =====================================================================
     // Phase-1: DynamoDB Tables
@@ -513,9 +460,6 @@ export class BookmarkDigest extends cdk.Stack {
     // =====================================================================
 
     new cdk.CfnOutput(this, "ApiUrl", { value: api.url });
-    new cdk.CfnOutput(this, "StateMachineArn", {
-      value: stateMachine.stateMachineArn,
-    });
     new cdk.CfnOutput(this, "UserPoolId", { value: userPool.userPoolId });
     new cdk.CfnOutput(this, "UserPoolClientId", {
       value: userPoolClient.userPoolClientId,

@@ -91,9 +91,6 @@ export default function DigestPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  console.log("Fetching digest with ID:", digestId);
-  console.log("digest", digest);
-
   useEffect(() => {
     (async () => {
       try {

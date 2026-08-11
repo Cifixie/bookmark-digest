@@ -1,6 +1,6 @@
 # Phase 2 Handoff — Multi-source digests
 
-**Last session:** Step 4 partially done (DynamoDB vector search code ready, CDK stack blocked on type definitions).
+**Status: complete.** Step 4 (CDK vector index) finished — see below.
 
 ## Completed
 
@@ -21,66 +21,29 @@
 - **TimelineEvent**: props `items[]` (date, label, text, sourceIndex?), `narrative?`
 - Multi-source prompt updated to suggest TimelineEvent for evolution shape
 
-### Step 4 (partial): DynamoDB K-NN vector search (commit `95840c7`)
+### Step 4: DynamoDB K-NN vector search (commits `95840c7`, CDK wiring below)
 - `sourcesKnnQuery()` in `dynamo.ts` — raw DynamoDB client with `KnnConfig`
 - `related-sources` Lambda: K-NN first, brute-force fallback
-- **UNFINISHED**: CDK stack still uses `TableV2` — `EmbeddingVectorIndex` GSI with `VectorIndexConfiguration` not yet added (CDK v2.264.0 type definitions don't include `vectorIndexConfiguration` on `GlobalSecondaryIndexProperty`)
-
-## Remaining Work
-
-### 4a. Add EmbeddingVectorIndex GSI to CDK stack
-The K-NN query code is ready (`dynamo.ts::sourcesKnnQuery`), but the GSI doesn't exist yet.
-
-**Two approaches — pick one:**
-
-#### Option A: Replace TableV2 with CfnTable (faster)
-```typescript
-const sourcesTableCfn = new cdk.aws_dynamodb.CfnTable(this, "SourcesTable", {
-  tableName: "bookmark-digest-sources",
-  keySchema: [{ attributeName: "contentHash", keyType: "HASH" }],
-  attribute: [{ name: "contentHash", type: "S" }, { name: "url", type: "S" }],
-  billingMode: "PAY_PER_REQUEST",
-  globalSecondaryIndexes: [
-    {
-      indexName: "UrlIndex",
-      keySchema: [{ attributeName: "url", keyType: "HASH" }],
-      projection: { projectionType: "ALL" },
-    },
-    {
-      indexName: "EmbeddingVectorIndex",
-      keySchema: [
-        { attributeName: "embedding", keyType: "HASH" },
-        { attributeName: "contentHash", keyType: "RANGE" },
-      ],
-      projection: {
-        projectionType: "INCLUDE",
-        nonKeyAttributes: ["url", "status", "contentType", "fetchedAt"],
-      },
-      vectorIndexConfiguration: {
-        name: "embeddingVectorIndexConfig",
-        fieldPath: "embedding",
-        knnL2Configuration: {
-          dimension: 1024,  // or config.BEDROCK_EMBEDDING_DIMENSIONS
-          numberOfVectorsPerDimension: 5000,
-        },
-      } as any,  // CDK v2.264.0 types don't include this yet
-    },
-  ],
-  streamSpecification: { streamViewType: "NEW_IMAGE" },
-  pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: true },
-  deletionProtectionEnabled: true,
-});
-```
-Then fix all `sourcesTable.grant*Data(fn)` calls → `fn.role?.addToPrincipalPolicy(...)` with direct IAM statements for `dynamodb:GetItem`, `dynamodb:Query`, `dynamodb:Scan`, etc. on `${tableArn}` and `${tableArn}/index/*`.
-
-This is what was in the working tree before the handoff — several `s/.*sourcesTable.*/sourcesTableCfn/` substitutions already applied, grant helpers in `config.ts` were written but not wired up.
-
-#### Option B: Keep TableV2, add GSI via CfnGlobalSecondaryIndex (wrong resource type)
-`CfnGlobalSecondaryIndex` doesn't exist in CDK — it must be a GSI property on `CfnTable`. So Option A is the only viable path.
-
-### 4b. Verify CDK synth + deploy
-- Run `cdk synth` — should produce template with `AWS::DynamoDB::Table` containing `VectorIndexConfiguration` on the `EmbeddingVectorIndex` GSI
-- Deploy and verify K-NN query works (or falls back gracefully)
+- **CDK stack**: `SourcesTable` is now a `CfnTable` (Option A from the original
+  handoff draft) with `EmbeddingVectorIndex` GSI. Since `VectorIndexConfiguration`
+  isn't in CDK v2.263.0's `GlobalSecondaryIndexProperty` type (and, worse, gets
+  silently stripped by the generated L1 property renderer if just typed past
+  with `as any` in the props object), it's added post-construction via
+  `sourcesTableCfn.addPropertyOverride("GlobalSecondaryIndexes.1.VectorIndexConfiguration", {...})`
+  — the standard CDK escape hatch that writes straight into the synthesized
+  template, bypassing the renderer. Confirmed present in `cdk synth` output.
+  `cdk synth` also emits two template-validation *warnings* (not errors) for
+  `VectorIndexConfiguration` and the `embedding` attribute's `L` type, since
+  the local CFN schema doesn't recognize this preview feature yet — expected,
+  not a blocker.
+- All `sourcesTable.grant*Data(fn)` calls replaced with `grantSourcesTableRead`/
+  `grantSourcesTableReadWrite` helpers (local to the stack file) that add
+  direct IAM policy statements on `${tableArn}` + `${tableArn}/index/*`, since
+  `CfnTable` doesn't implement `ITable`.
+- The DynamoDB Streams trigger (`embedSourceFn`) also needed rewiring: `CfnTable`
+  can't be passed to `lambdaEventSources.DynamoEventSource` (needs `ITable`), so
+  it's now a plain `lambda.EventSourceMapping` against `sourcesTableCfn.attrStreamArn`,
+  with the stream-read IAM actions added manually.
 
 ### 5. Suggested-bundle UX (later)
 Once vector search works, the "suggested bundle" flow from `phase-2-scope.md` can be built:
@@ -107,13 +70,14 @@ pnpm --filter catalog test
 cd apps/infra && npx cdk synth
 ```
 
-## Blockers (from last session)
-1. **CDK types missing `vectorIndexConfiguration`** — worked around with `as any` cast
-2. **CfnTable doesn't implement ITable** — no `grantReadWriteData()` etc. — use direct IAM grants
-3. **Embedding attribute not declared on CfnTable** — needs to be in `attribute` list (currently only `contentHash` and `url` are listed; `embedding` will be added at index creation time since it's in the GSI key schema)
+## Blockers (resolved)
+1. **CDK types missing `vectorIndexConfiguration`** — resolved via `addPropertyOverride` (see Step 4 above), not a type cast — casts on the props object get dropped by the L1 renderer before synth.
+2. **CfnTable doesn't implement ITable** — resolved via local `grantSourcesTableRead`/`grantSourcesTableReadWrite` helpers using direct IAM statements.
+3. **Embedding attribute not declared on CfnTable** — resolved: `{ attributeName: "embedding", attributeType: "L" }` added to `attributeDefinitions`.
+4. **DynamoDB Streams trigger used `lambdaEventSources.DynamoEventSource(sourcesTable, ...)`** — that construct requires `ITable`, which `CfnTable` doesn't implement. Resolved via `lambda.EventSourceMapping` targeting `sourcesTableCfn.attrStreamArn` directly.
 
 ## Key Files
-- `apps/infra/lib/bookmark-digest-stack.ts` — CDK stack (modifying TableV2 → CfnTable)
+- `apps/infra/lib/bookmark-digest-stack.ts` — CDK stack (`SourcesTable` is now `CfnTable`)
 - `apps/infra/lib/dynamo.ts` — K-NN query function ready
 - `apps/infra/lambdas/related-sources/handler.ts` — K-NN first, brute-force fallback
 - `apps/infra/lib/similarity.ts` — brute-force cosine similarity (kept as fallback)

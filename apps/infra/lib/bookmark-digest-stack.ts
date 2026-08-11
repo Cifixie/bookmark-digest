@@ -25,7 +25,6 @@ import * as cognito from "aws-cdk-lib/aws-cognito";
 import { Rule, Schedule } from "aws-cdk-lib/aws-events";
 import { LambdaFunction } from "aws-cdk-lib/aws-events-targets";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
-import * as lambdaEventSources from "aws-cdk-lib/aws-lambda-event-sources";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import { SqsDlq } from "aws-cdk-lib/aws-lambda-event-sources";
@@ -110,16 +109,91 @@ export class BookmarkDigest extends cdk.Stack {
     // Phase-1: DynamoDB Tables
     // =====================================================================
 
-    const sourcesTable = new dynamodb.TableV2(this, "SourcesTable", {
-      partitionKey: { name: "contentHash", type: dynamodb.AttributeType.STRING },
-      billing: dynamodb.Billing.onDemand(),
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-      dynamoStream: dynamodb.StreamViewType.NEW_IMAGE,
+    // Use CfnTable directly so we can define the EmbeddingVectorIndex GSI with
+    // VectorIndexConfiguration. TableV2.addGlobalSecondaryIndex() creates a
+    // separate CFN resource and doesn't support vector index props.
+    const sourcesTableCfn = new cdk.aws_dynamodb.CfnTable(this, "SourcesTable", {
+      tableName: "bookmark-digest-sources",
+      keySchema: [{ attributeName: "contentHash", keyType: "HASH" }],
+      attributeDefinitions: [
+        { attributeName: "contentHash", attributeType: "S" },
+        { attributeName: "url", attributeType: "S" },
+        // Vector attribute for the K-NN GSI below. Not a real DynamoDB
+        // ScalarAttributeType (S/N/B) — CloudFormation's vector-search
+        // preview accepts this as-is; matches how items store it (a List
+        // of Numbers, see dynamo.ts::sourcesKnnQuery).
+        { attributeName: "embedding", attributeType: "L" },
+      ],
+      billingMode: "PAY_PER_REQUEST",
+      globalSecondaryIndexes: [
+        {
+          indexName: "UrlIndex",
+          keySchema: [{ attributeName: "url", keyType: "HASH" }],
+          projection: { projectionType: "ALL" },
+        },
+        {
+          indexName: "EmbeddingVectorIndex",
+          keySchema: [
+            { attributeName: "embedding", keyType: "HASH" },
+            { attributeName: "contentHash", keyType: "RANGE" },
+          ],
+          projection: {
+            projectionType: "INCLUDE",
+            nonKeyAttributes: ["url", "status", "contentType", "fetchedAt"],
+          },
+        },
+      ],
+      streamSpecification: { streamViewType: "NEW_IMAGE" },
+      pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: true },
+      deletionProtectionEnabled: true,
     });
-    sourcesTable.addGlobalSecondaryIndex({
-      indexName: "UrlIndex",
-      partitionKey: { name: "url", type: dynamodb.AttributeType.STRING },
+
+    // VectorIndexConfiguration is a CloudFormation-only property not yet
+    // reflected in CDK v2.263.0's GlobalSecondaryIndexProperty type — putting
+    // it directly in the `globalSecondaryIndexes` prop above gets silently
+    // dropped by the generated L1 property renderer (only known keys survive
+    // it). addPropertyOverride writes straight into the synthesized template
+    // at the raw CFN property path, bypassing that renderer entirely — the
+    // standard CDK escape hatch for CFN properties the installed L1 doesn't
+    // model yet. Index 1 = EmbeddingVectorIndex (2nd entry above).
+    sourcesTableCfn.addPropertyOverride("GlobalSecondaryIndexes.1.VectorIndexConfiguration", {
+      Name: "embeddingVectorIndexConfig",
+      FieldPath: "embedding",
+      KnnL2Configuration: {
+        Dimension: config.BEDROCK_EMBEDDING_DIMENSIONS,
+        NumberOfVectorsPerDimension: 5000,
+      },
     });
+
+    // CfnTable doesn't implement ITable, so it has no grantReadData() /
+    // grantReadWriteData() helpers — grant directly via IAM statements
+    // scoped to the table and its indexes instead.
+    const sourcesTableArns = [sourcesTableCfn.attrArn, `${sourcesTableCfn.attrArn}/index/*`];
+    function grantSourcesTableRead(fn: lambdaNodejs.NodejsFunction) {
+      fn.role?.addToPrincipalPolicy(
+        new iam.PolicyStatement({
+          actions: ["dynamodb:GetItem", "dynamodb:Query", "dynamodb:Scan", "dynamodb:BatchGetItem"],
+          resources: sourcesTableArns,
+        })
+      );
+    }
+    function grantSourcesTableReadWrite(fn: lambdaNodejs.NodejsFunction) {
+      fn.role?.addToPrincipalPolicy(
+        new iam.PolicyStatement({
+          actions: [
+            "dynamodb:GetItem",
+            "dynamodb:Query",
+            "dynamodb:Scan",
+            "dynamodb:BatchGetItem",
+            "dynamodb:PutItem",
+            "dynamodb:UpdateItem",
+            "dynamodb:DeleteItem",
+            "dynamodb:BatchWriteItem",
+          ],
+          resources: sourcesTableArns,
+        })
+      );
+    }
 
     const digestsTable = new dynamodb.TableV2(this, "DigestsTable", {
       partitionKey: { name: "id", type: dynamodb.AttributeType.STRING },
@@ -143,13 +217,13 @@ export class BookmarkDigest extends cdk.Stack {
       runtime: cdk.aws_lambda.Runtime.NODEJS_24_X,
       timeout: cdk.Duration.minutes(5),
       environment: {
-        SOURCES_TABLE_NAME: sourcesTable.tableName,
+        SOURCES_TABLE_NAME: sourcesTableCfn.ref,
         FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY ?? "",
         FIRECRAWL_API_URL: config.FIRECRAWL_API_URL,
       },
     });
 
-    sourcesTable.grantReadWriteData(ingestUrlFn);
+    grantSourcesTableReadWrite(ingestUrlFn);
 
     // embed-source: triggered via DynamoDB Stream on SourcesTable (NEW_IMAGE)
     // No direct invoke needed — the stream handles delivery automatically.
@@ -159,7 +233,7 @@ export class BookmarkDigest extends cdk.Stack {
       runtime: cdk.aws_lambda.Runtime.NODEJS_24_X,
       timeout: cdk.Duration.minutes(15),
       environment: {
-        SOURCES_TABLE_NAME: sourcesTable.tableName,
+        SOURCES_TABLE_NAME: sourcesTableCfn.ref,
         BEDROCK_EMBEDDING_MODEL: config.BEDROCK_EMBEDDING_MODEL_ID,
         BEDROCK_EMBEDDING_DIMENSIONS: String(config.BEDROCK_EMBEDDING_DIMENSIONS),
       },
@@ -176,7 +250,7 @@ export class BookmarkDigest extends cdk.Stack {
 
     // DynamoEventSource only grants stream-read actions (GetRecords, etc.) —
     // it does not grant table access, which the handler needs for UpdateItem.
-    sourcesTable.grantReadWriteData(embedSourceFn);
+    grantSourcesTableReadWrite(embedSourceFn);
 
     // embed-source DLQ — captures batch-level failures that Lambda can't retry
     const embedDlq = new sqs.Queue(this, "EmbedDlq", {
@@ -185,8 +259,21 @@ export class BookmarkDigest extends cdk.Stack {
       enforceSSL: true,
     });
 
-    // Wire embed-source as DynamoDB Stream consumer on SourcesTable
-    embedSourceFn.addEventSource(new lambdaEventSources.DynamoEventSource(sourcesTable, {
+    // Wire embed-source as DynamoDB Stream consumer on SourcesTable.
+    // CfnTable doesn't implement ITable, so the higher-level DynamoEventSource
+    // construct (which needs tableStreamArn from that interface) can't target
+    // it — use the lower-level EventSourceMapping construct against the
+    // stream ARN directly, and grant the stream-read permissions it would
+    // otherwise add.
+    embedSourceFn.role?.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        actions: ["dynamodb:DescribeStream", "dynamodb:GetRecords", "dynamodb:GetShardIterator", "dynamodb:ListStreams"],
+        resources: [sourcesTableCfn.attrStreamArn],
+      })
+    );
+    new cdk.aws_lambda.EventSourceMapping(this, "EmbedSourceStreamMapping", {
+      target: embedSourceFn,
+      eventSourceArn: sourcesTableCfn.attrStreamArn,
       startingPosition: StartingPosition.LATEST,
       batchSize: 5,
       retryAttempts: 0, // no auto-retry; batch-level failures go to DLQ
@@ -196,7 +283,7 @@ export class BookmarkDigest extends cdk.Stack {
         }),
       ],
       onFailure: new SqsDlq(embedDlq),
-    }));
+    });
 
     // Personal Gemini API key — created out-of-band (not by this stack) so the
     // key never enters the CloudFormation template or cdk.out assets.
@@ -215,7 +302,7 @@ export class BookmarkDigest extends cdk.Stack {
       runtime: cdk.aws_lambda.Runtime.NODEJS_24_X,
       timeout: cdk.Duration.minutes(10),
       environment: {
-        SOURCES_TABLE_NAME: sourcesTable.tableName,
+        SOURCES_TABLE_NAME: sourcesTableCfn.ref,
         DIGESTS_TABLE_NAME: digestsTable.tableName,
         GEMINI_MODEL: config.GEMINI_MODEL_ID,
         GEMINI_API_KEY_SECRET_ARN: geminiApiKeySecret.secretArn,
@@ -225,7 +312,7 @@ export class BookmarkDigest extends cdk.Stack {
       },
     });
 
-    sourcesTable.grantReadData(generateDigestWorkerFn);
+    grantSourcesTableRead(generateDigestWorkerFn);
     digestsTable.grantReadWriteData(generateDigestWorkerFn);
     geminiApiKeySecret.grantRead(generateDigestWorkerFn);
 
@@ -297,11 +384,11 @@ export class BookmarkDigest extends cdk.Stack {
       runtime: cdk.aws_lambda.Runtime.NODEJS_24_X,
       timeout: cdk.Duration.seconds(30),
       environment: {
-        SOURCES_TABLE_NAME: sourcesTable.tableName,
+        SOURCES_TABLE_NAME: sourcesTableCfn.ref,
       },
     });
 
-    sourcesTable.grantReadData(fetchSourceFn);
+    grantSourcesTableRead(fetchSourceFn);
 
     // GET /sources: list all ingested sources (Phase-2 multi-source picker)
     const listSourcesFn = new lambdaNodejs.NodejsFunction(this, "ListSourcesFunction", {
@@ -310,11 +397,11 @@ export class BookmarkDigest extends cdk.Stack {
       runtime: cdk.aws_lambda.Runtime.NODEJS_24_X,
       timeout: cdk.Duration.seconds(30),
       environment: {
-        SOURCES_TABLE_NAME: sourcesTable.tableName,
+        SOURCES_TABLE_NAME: sourcesTableCfn.ref,
       },
     });
 
-    sourcesTable.grantReadData(listSourcesFn);
+    grantSourcesTableRead(listSourcesFn);
 
     // GET /sources/{sourceHash}/related: brute-force cosine-similarity search
     // over embeddings (see plans/dynamodb-migration.md §2 — the pgvector replacement)
@@ -324,11 +411,11 @@ export class BookmarkDigest extends cdk.Stack {
       runtime: cdk.aws_lambda.Runtime.NODEJS_24_X,
       timeout: cdk.Duration.seconds(30),
       environment: {
-        SOURCES_TABLE_NAME: sourcesTable.tableName,
+        SOURCES_TABLE_NAME: sourcesTableCfn.ref,
       },
     });
 
-    sourcesTable.grantReadData(relatedSourcesFn);
+    grantSourcesTableRead(relatedSourcesFn);
 
     // GET /digests/{digestId}: fetch a digest result from DynamoDB
     const fetchDigestFn = new lambdaNodejs.NodejsFunction(this, "FetchDigestFunction", {
@@ -491,12 +578,12 @@ export class BookmarkDigest extends cdk.Stack {
       runtime: cdk.aws_lambda.Runtime.NODEJS_24_X,
       timeout: cdk.Duration.seconds(30),
       environment: {
-        SOURCES_TABLE_NAME: sourcesTable.tableName,
+        SOURCES_TABLE_NAME: sourcesTableCfn.ref,
         ALERT_TOPIC_ARN: embedAlertTopic.topicArn,
       },
     });
 
-    sourcesTable.grantReadData(checkEmbedFailuresFn);
+    grantSourcesTableRead(checkEmbedFailuresFn);
     embedAlertTopic.grantPublish(checkEmbedFailuresFn);
 
     // Run daily via EventBridge (cron: every day at 06:00 UTC)
@@ -570,7 +657,7 @@ function handler(event) {
     new cdk.CfnOutput(this, "UserPoolClientId", {
       value: userPoolClient.userPoolClientId,
     });
-    new cdk.CfnOutput(this, "SourcesTableName", { value: sourcesTable.tableName });
+    new cdk.CfnOutput(this, "SourcesTableName", { value: sourcesTableCfn.ref });
     new cdk.CfnOutput(this, "DigestsTableName", { value: digestsTable.tableName });
   }
 }

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>After the AI Hype — Beginner's Summary</title>
+    <link rel="stylesheet" href="../summary.css" />
+  </head>
+  <body>
+    <div class="page">
+
+      <header class="hero">
+        <span class="hero-badge">Beginner's Summary</span>
+        <h1>After the AI Hype: What's Real, and What's Next</h1>
+        <p class="hero-hook">
+          We are deep inside a hype cycle. The good news is that hype cycles end —
+          and the technology underneath is genuinely useful if you choose the right problems.
+        </p>
+        <a class="source-link" href="https://www.youtube.com/watch?v=uWnUnMphmPM" target="_blank">
+          Watch the keynote on YouTube →
+        </a>
+      </header>
+
+      <div class="big-idea">
+        <div class="big-idea-label">The Big Idea</div>
+        <p>
+          "Artificial intelligence" is a 70-year-old marketing term invented to win military
+          funding, and we have never stopped paying the price for it. The current LLM wave is
+          genuinely impressive technology wrapped in a classic hype cycle: irrational investment,
+          impossible promises, and a coming collapse in expectations. But underneath the noise,
+          tools like AlphaFold have already changed medicine forever. Our job is to separate the
+          real from the hype and keep solving real problems.
+        </p>
+      </div>
+
+      <section class="section">
+        <h2>A 70-Year History of Hype and Reality</h2>
+        <p class="section-sub">Every wave of AI follows the same pattern — scientists coin a dramatic name, investors pile in, expectations overshoot, money dries up.</p>
+
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <strong>1950s — The Name Is Invented</strong>
+              <p>A group of scientists coined "artificial intelligence" to raise money from the US military.
+              They got it, wrote some useful logistics software, and then the money dried up.
+              This first "AI winter" would not be the last.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <strong>1960s — Eliza and Human Gullibility</strong>
+              <p>Joseph Weizenbaum built Eliza, a mainframe program that just repeated your words back as questions.
+              His secretary refused to stop using it. Weizenbaum intended it as a joke;
+              instead it proved we are <em>hardwired</em> to perceive intelligence in other things —
+              an evolutionary trait left over from hunting prey on the savanna.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <strong>1968–2010s — Science Fiction Takes Over</strong>
+              <p>The public first heard "AI" from HAL 9000 in <em>2001: A Space Odyssey</em>.
+              Then the Terminator. Then Ultron. Then Jarvis. Most people's mental model of AI
+              comes entirely from movies where it tries to kill everyone.
+              That misconception is still doing damage today.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">4</div>
+            <div class="step-body">
+              <strong>2012 — The Real Breakthrough</strong>
+              <p>Geoffrey Hinton and his students (including Ilya Sutskever) entered the ImageNet
+              competition — 14 million labeled images — using deep neural nets on modern GPUs.
+              Previous best: 30–40% accuracy. Their first attempt: 75%. Within two years: 100%.
+              Image recognition was suddenly a solved problem, and your phone now does it
+              without you thinking about it.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">5</div>
+            <div class="step-body">
+              <strong>2011–2015 — Siri, Google Brain, and OpenAI</strong>
+              <p>Stanford Research Institute used similar techniques for voice recognition and
+              built it into an iPhone app — Apple bought it and added an "i" to the name.
+              Google recruited Hinton's whole group into Google Brain.
+              Worried tech billionaires (Altman, Musk, Thiel, Hoffman) founded OpenAI in 2015
+              with the public goal of "doing AI in public" and the private goal of
+              poaching scientists from Google. It worked.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">6</div>
+            <div class="step-body">
+              <strong>2019–2020 — GPT and the Scaling Bet</strong>
+              <p>OpenAI released GPT-2 (1.5 billion parameters) and, after Microsoft's
+              $1 billion investment, GPT-3 (175 billion parameters — 100× bigger).
+              A key paper called the <em>neural scaling laws</em> overturned decades of machine
+              learning wisdom: "Don't avoid overfitting — train on <em>everything</em> and keep
+              making it bigger." That became the justification for every LLM since.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">7</div>
+            <div class="step-body">
+              <strong>Fall 2022 — ChatGPT Changes the Conversation</strong>
+              <p>OpenAI was running out of money again and launched ChatGPT as a cheap way to
+              get users to do training data for them. A hundred million people signed up in
+              two months — the fastest product growth in history (TikTok took nine months).
+              Satya Nadella sent a "Bill Gates letter" demanding every Microsoft team build
+              something with the OpenAI API. The hype cycle ignited.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-num">100M</div>
+          <div class="stat-label">ChatGPT users in 2 months (fastest ever)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">$13B</div>
+          <div class="stat-label">Microsoft's total investment in OpenAI</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">1T</div>
+          <div class="stat-label">Parameters in GPT-4 (up from 175B in GPT-3)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">10</div>
+          <div class="stat-label">Companies representing ~50% of global S&P 500 value</div>
+        </div>
+      </div>
+
+      <section class="section">
+        <h2>Why This Is a Hype Cycle</h2>
+        <p class="section-sub">A Gartner Hype Cycle needs three ingredients — and AI has all of them.</p>
+
+        <div class="card-grid">
+          <div class="card">
+            <span class="tag tag-concept">Mechanism</span>
+            <div class="card-title">Investors Don't Understand It</div>
+            <p>You can tell them any story. "Every job will be replaced in two years."
+            Instead of laughing, they hand you money. AI fits this brilliantly
+            because it sounds like science fiction and most people's mental model
+            comes from the Terminator.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-concept">Mechanism</span>
+            <div class="card-title">Inflated Expectations → Peak</div>
+            <p>Insane promises compound until you hit the "peak of inflated expectations."
+            GPT-4 indexed nearly the entire internet. There's no two-trillion-parameter
+            model coming — there's no more data. Deep Seek showed smaller models
+            get comparable results. The industry quietly ignored both facts.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-concept">Mechanism</span>
+            <div class="card-title">Infrastructure Build Is the Real Story</div>
+            <p>Just like the dot-com boom funded undersea cables and data centers that
+            later powered the modern internet, today's hype is funding a massive
+            data center build-out. Those hyperscalers are distorting the US economy —
+            in 2025 their spending is one of the only things keeping stock markets up.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-risk">Signal</span>
+            <div class="card-title">None of These Companies Are Profitable</div>
+            <p>Not OpenAI. Not any of the standalone AI companies. Not even the big tech
+            giants in this line of business. They report "user engagement" to investors
+            because they can't report profit. Campbell checks every month: the promises
+            are the same month after month. "They've learned to fill the pipeline with noise."</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-risk">Signal</span>
+            <div class="card-title">Self-Dealing and Over-Ordering</div>
+            <p>Nvidia invests $500M in a tiny AI company. That company uses the money
+            to order $500M of Nvidia chips. Nvidia just turned $500M into $1B on paper.
+            Meanwhile data center builders are ordering chips like Taylor Swift tickets —
+            ten orders for every one they might actually build.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-risk">Signal</span>
+            <div class="card-title">Memory Companies Said No</div>
+            <p>In late 2024, TSMC, Micron, and the other memory manufacturers told the
+            hyperscalers: "We're not doubling RAM production. We don't think you'll
+            be around in three to five years to need it." That was the moment the peak
+            was hit. The projection for compute demand can no longer be fulfilled.</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="quote-block">
+        "A hype cycle always needs to have certain elements distinct to it: it helps if the investor
+        does NOT understand what they are investing in, so you can tell them stories.
+        And AI fits that category brilliantly." — Richard Campbell
+      </div>
+
+      <section class="section">
+        <h2>Real Harms Happening Right Now</h2>
+        <p class="section-sub">Software designed to maximize engagement is doing damage — and the companies building it know.</p>
+
+        <div class="caution-list">
+          <div class="caution-item">
+            <div class="caution-title">⚠️ ChatGPT Psychosis</div>
+            <p>Jeff Lewis, a partner at a major VC fund (Bedrock Investments), developed a psychotic
+            episode after spending too much time with a chatbot. He posted videos about invisible
+            governmental forces targeting him. He's getting help. But people have been killed — and
+            have killed others — partly because of these systems. The companies know.</p>
+          </div>
+          <div class="caution-item">
+            <div class="caution-title">⚠️ Obsequiousness Is a Feature, Not a Bug</div>
+            <p>These models are designed to maximize engagement. Engagement means positive reinforcement:
+            "You're really onto something! That's a great idea! Let's run with it!" — forever, regardless
+            of whether the idea is good. When OpenAI dialed it back in GPT-5, users complained they
+            "missed their buddy." Altman turned the old behavior back on.</p>
+          </div>
+          <div class="caution-item">
+            <div class="caution-title">⚠️ Deep Fakes Are Easy Now</div>
+            <p>The first deep fake (Obama, voiced by Jordan Peele) took a university team months to make.
+            Now anyone can generate one in seconds off the back of a phone. The public is more skeptical
+            than it was in 2017, but regulation is lagging badly. The EU is leading; enforcement
+            remains weak everywhere.</p>
+          </div>
+          <div class="caution-item">
+            <div class="caution-title">⚠️ It Is Software, Not a Friend</div>
+            <p>Between the "artificial intelligence" branding and the science-fiction backstory,
+            people forget they are talking to software. Campbell is deliberate: never anthropomorphize
+            it, never call it "he" or "she," never treat its output as a person's opinion.
+            "It's not your therapist. Go touch some grass."</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Where AI Has Already Changed the World</h2>
+        <p class="section-sub">Before dismissing it all: one project has already saved more lives than we can count.</p>
+
+        <div class="pillars">
+          <div class="pillar">
+            <h3>AlphaFold: From Games to Medicine</h3>
+            <p>DeepMind's Demis Hassabis started by training a model to play video games (Breakout, then Go).
+            AlphaGo beat the world's best human player. AlphaZero went further: it played against itself
+            with no human data and developed a style no human had ever invented.</p>
+            <p>Then he aimed at protein folding — working out how amino acid chains twist into 3D shapes.
+            This is one of the hardest problems in biology. The world's best scientists had solved
+            roughly 150 protein structures over 60 years. The possible combinations number 10<sup>35</sup>.</p>
+          </div>
+          <div class="pillar">
+            <h3>200 Million Structures, Published Free</h3>
+            <p>By 2020, AlphaFold was at 90% accuracy on protein folding. By 2022, effectively perfect.
+            Hassabis then computed the 200 million most common protein fold sets the world might ever need —
+            and published them all for free.</p>
+            <p>The results are already real: a new leukemia treatment. A new malaria vaccine.
+            Three new antibiotics. These came directly from that dataset. Medicine is fundamentally changed —
+            and we won't even know everything we gained for decades. <strong>This was only possible with
+            adversarial generative AI.</strong></p>
+          </div>
+          <div class="pillar">
+            <h3>The Radiology Lesson</h3>
+            <p>In 2016, Hinton predicted radiology was a dead career — computers would do all medical imaging.
+            The opposite happened. Because software made radiologists faster, demand for medical imaging
+            <em>exploded</em>. Radiologists can't keep up with demand even while working far faster.
+            We are training more of them, not fewer.</p>
+            <p>Automation opens a door to more productivity — which increases demand — which creates more
+            jobs. This pattern repeats everywhere AI genuinely works.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Are We Netscape or Google?</h2>
+        <p class="section-sub">The dot-com boom parallel tells us what to expect — but not which companies survive.</p>
+
+        <div class="examples-row">
+          <div class="example-card">
+            <span class="tag tag-example">Then</span>
+            <div class="example-name">Netscape (1995–2003)</div>
+            <p>The IPO that triggered the dot-com boom. A zero-marginal-cost company
+            when that was unthinkable. Attracted insane money. Couldn't survive.
+            Acquired by AOL, which also didn't survive. Most people don't remember it.</p>
+          </div>
+          <div class="example-card">
+            <span class="tag tag-example">Then</span>
+            <div class="example-name">Google (1998–today)</div>
+            <p>Also born during the dot-com boom. Survived the bust. IPO'd in 2004.
+            Became one of the most valuable companies in history. One Google out of
+            thousands of Netscapes.</p>
+          </div>
+          <div class="example-card">
+            <span class="tag tag-future">Now</span>
+            <div class="example-name">OpenAI vs. Anthropic</div>
+            <p>Campbell's best guess for the Google equivalent right now: Anthropic.
+            Their public stand against the DoD gave them reputational capital.
+            Their Claude models are producing real developer results. But ask again next month —
+            everything is moving.</p>
+          </div>
+          <div class="example-card">
+            <span class="tag tag-future">Now</span>
+            <div class="example-name">The Real Legacy</div>
+            <p>Whether individual companies survive, the data center infrastructure will remain —
+            just as the dot-com bust left cheap cables that powered the call center revolution.
+            The compute built during this hype cycle will be used by whoever comes next.</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="quote-block">
+        "Our job was never to write code. It was to solve people's problems.
+        They couldn't code their way out of the protein folding problem — so instead they built
+        a model that solved it." — Richard Campbell
+      </div>
+
+      <div class="takeaway">
+        <div class="takeaway-label">Key Takeaway</div>
+        <p>
+          The hype cycle will end — it always does. What survives is the genuine work.
+          <strong>Pick the right problems</strong> (AlphaFold-level problems, not chatbot companions),
+          stay skeptical of promises that never change from month to month,
+          and remember that it is software. Clever software. But software.
+          When the noise clears, the people who focused on real value will still be here doing real work.
+        </p>
+      </div>
+
+      <footer>
+        Based on <em><a href="https://www.youtube.com/watch?v=uWnUnMphmPM" target="_blank">
+        Keynote: After the AI Hype – What's Real, and What's Next</a></em> —
+        Richard Campbell, NDC Conferences (NDC Copenhagen 2026).
+      </footer>
+
+    </div>
+  </body>
+</html>

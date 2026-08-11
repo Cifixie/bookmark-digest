@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stop Trusting AI Code Blindly — Beginner's Summary</title>
+    <link rel="stylesheet" href="../summary.css" />
+  </head>
+  <body>
+    <div class="page">
+
+      <header class="hero">
+        <span class="hero-badge">Beginner's Summary</span>
+        <h1>Stop Trusting AI Code Blindly</h1>
+        <p class="hero-hook">
+          AI can write React code that runs perfectly — and still be a maintenance disaster waiting to happen.
+        </p>
+        <a class="source-link" href="https://www.freecodecamp.org/news/stop-trusting-ai-code-blindly-a-react-code-refactoring-case-study/" target="_blank">Read the original on freeCodeCamp →</a>
+      </header>
+
+      <div class="big-idea">
+        <div class="big-idea-label">The Big Idea</div>
+        <p>
+          AI tools like ChatGPT and Copilot generate code that works — but "it works" and "it's production-ready" are not the same thing.
+          A working demo can hide serious structural problems that will slow you down for months once the codebase grows.
+          Your job as a developer isn't to reject AI output or to ship it unchanged — it's to <em>refactor</em> it into something maintainable.
+          That requires real fundamentals: design principles, type safety, and the judgment to spot what the AI missed.
+        </p>
+      </div>
+
+      <section class="section">
+        <h2>What Is "Vibe Coding"?</h2>
+        <p class="section-sub">Understanding the new workflow that makes AI-generated bugs so easy to miss.</p>
+        <div class="card-grid">
+          <div class="card">
+            <span class="tag tag-concept">Concept</span>
+            <div class="card-title">Describe it, don't code it</div>
+            <p>You write a plain-English description of what you want ("a dashboard with stats cards and a video table"), and the AI writes the full component. No boilerplate, no setup — just results.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-risk">Risk</span>
+            <div class="card-title">It looks finished</div>
+            <p>The AI output runs, renders, and even handles loading states. Nothing breaks on first glance, so developers ship it. The problems only surface weeks later when someone tries to reuse or extend it.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-concept">Concept</span>
+            <div class="card-title">Non-deterministic output</div>
+            <p>Ask the same AI the same question twice and you get different code. There is no single "right" output — which means there is no shortcut for reviewing what you actually got.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>The Four Problems in AI-Generated Code</h2>
+        <p class="section-sub">These are the structural flaws that appear most often — and that most developers ship without noticing.</p>
+        <div class="card-grid">
+          <div class="card">
+            <span class="tag tag-risk">Risk</span>
+            <div class="card-title">The God Component</div>
+            <p>One enormous component that fetches data, manages all state, and renders every pixel on the screen. It does everything, so nothing can be reused. Add authentication or sorting and it balloons past 1,000 lines.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-risk">Risk</span>
+            <div class="card-title">State Soup</div>
+            <p>Five or more separate <code>useState</code> declarations scattered around the component. When a bug appears, you cannot tell which state change caused which re-render. Debugging becomes guesswork.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-risk">Risk</span>
+            <div class="card-title">The useEffect Anti-Pattern</div>
+            <p>Fetching data inside <code>useEffect</code> works in a toy demo, but gives you no caching, no retry logic, and no cache invalidation. Navigate away and back and the app refetches everything from scratch every time.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-risk">Risk</span>
+            <div class="card-title">No TypeScript</div>
+            <p>Without types, you have no idea what properties a <code>video</code> object contains. The IDE cannot autocomplete or warn you. Bugs caused by a typo or wrong field name only show up at runtime — in production.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>The Refactoring Playbook</h2>
+        <p class="section-sub">How to take a working-but-fragile AI component and turn it into something you'd actually want to maintain.</p>
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <strong>Break the monolith into focused components</strong>
+              <p>Each component should do exactly one thing. A <code>StatCard</code> displays a stat. A <code>VideoTable</code> displays videos. A <code>Sidebar</code> renders navigation. None of them know about each other's data.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <strong>Add TypeScript interfaces for your data shapes</strong>
+              <p>Define what a <code>VideoStats</code> object looks like: an <code>id</code> (string), a <code>title</code> (string), <code>views</code> (number), a <code>publishedAt</code> date. Now the IDE catches mistakes before you run anything.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <strong>Move data fetching into a custom hook</strong>
+              <p>A <code>useDashboardData()</code> hook owns all the fetching, loading, and error state. Components just call the hook and render what comes back. The logic is reusable anywhere in the app.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">4</div>
+            <div class="step-body">
+              <strong>Replace useEffect with modern patterns</strong>
+              <p>Use Suspense and Error Boundary patterns, or a library like TanStack Query. You get caching (the data survives navigation), automatic retries, and proper loading/error UI — for free.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>What the Refactored Code Looks Like</h2>
+        <p class="section-sub">Concrete components created during the case study — each one small, typed, and independently reusable.</p>
+        <div class="examples-row">
+          <div class="example-card">
+            <span class="tag tag-example">Component</span>
+            <div class="example-name">StatCard</div>
+            <p>Accepts a <code>label</code> and a <code>value</code>. That's it. Typed with an interface. Reusable on any page that shows a number.</p>
+          </div>
+          <div class="example-card">
+            <span class="tag tag-example">Component</span>
+            <div class="example-name">VideoTable</div>
+            <p>Renders a list of typed <code>VideoStats</code> objects. Handles its own empty state. Knows nothing about how the data was fetched.</p>
+          </div>
+          <div class="example-card">
+            <span class="tag tag-example">Component</span>
+            <div class="example-name">RecentCommentList</div>
+            <p>Displays typed <code>Comment</code> objects. Independent from the video data. Can be moved to any page without changes.</p>
+          </div>
+          <div class="example-card">
+            <span class="tag tag-example">Custom Hook</span>
+            <div class="example-name">useDashboardData</div>
+            <p>Returns stats, videos, comments, a loading flag, and an error value. All data logic lives here — zero <code>useEffect</code> calls scattered through UI components.</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="quote-block">
+        "Our job isn't to reject AI's output. Instead, it's to refactor its output to make it production-ready."
+      </div>
+
+      <section class="section">
+        <h2>Why This Matters at Scale</h2>
+        <p class="section-sub">The problems that look minor in a demo become serious once real features get added.</p>
+        <div class="caution-list">
+          <div class="caution-item">
+            <div class="caution-title">⚠️ God components explode in size</div>
+            <p>The demo component worked fine at 200 lines. Add authentication, real-time updates, sorting, and filtering — which any real product needs — and it grows past 1,000 lines with no way to split it without a full rewrite.</p>
+          </div>
+          <div class="caution-item">
+            <div class="caution-title">⚠️ Missing types mean silent data bugs</div>
+            <p>If an API starts returning <code>videoCount</code> instead of <code>views</code>, untyped code shows an empty column with no error. TypeScript turns that into a build-time failure you can't miss.</p>
+          </div>
+          <div class="caution-item">
+            <div class="caution-title">⚠️ useEffect data fetching hurts real users</div>
+            <p>Every time a user navigates away and returns to the dashboard, the app refetches everything from scratch. With a real backend, that's slow. With a slow connection, it's painful. Caching fixes this — but useEffect doesn't cache.</p>
+          </div>
+          <div class="caution-item">
+            <div class="caution-title">⚠️ Strong fundamentals are not optional</div>
+            <p>You can only spot these problems if you know what good looks like. AI-generated code that passes code review only because no one knew to look for God Components is still a time bomb.</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="takeaway">
+        <div class="takeaway-label">Key Takeaway</div>
+        <p>
+          AI-generated code is a <strong>first draft</strong>, not a finished product. It solves the blank-page problem brilliantly — but it regularly violates the Single Responsibility Principle, skips TypeScript, and uses data-fetching patterns that don't scale. Before any AI code reaches production, review it against the basics: is it broken into focused components, does it have types, and is the data logic reusable? <strong>You are the guardrail</strong> — and that job requires real engineering judgment, not just a working demo.
+        </p>
+      </div>
+
+      <footer>
+        Based on <em><a href="https://www.freecodecamp.org/news/stop-trusting-ai-code-blindly-a-react-code-refactoring-case-study/" target="_blank">Stop Trusting AI Code Blindly: A React Code Refactoring Case Study</a></em> —
+        freeCodeCamp.
+      </footer>
+
+    </div>
+  </body>
+</html>

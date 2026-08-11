@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Effective Context Engineering for AI Agents — Beginner's Summary</title>
+  <link rel="stylesheet" href="../summary.css">
+</head>
+<body>
+<div class="page">
+
+  <!-- 1. Hero -->
+  <header class="hero">
+    <div class="hero-badge">Beginner's Summary</div>
+    <h1>Effective Context Engineering for AI Agents</h1>
+    <p class="hero-hook">The next big skill in AI isn't writing better prompts — it's deciding what information the AI gets to see, when, and how much of it.</p>
+    <p>Source: <a class="source-link" href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" target="_blank">Anthropic Engineering Blog</a>
+      — Prithvi Rajasekaran, Ethan Dixon, Carly Ryan &amp; Jeremy Hadfield (Sept 29, 2025)</p>
+  </header>
+
+  <!-- 2. Big Idea -->
+  <div class="big-idea">
+    <div class="big-idea-label">The Big Idea</div>
+    <p>
+      Every AI model has a limited "context window" — the finite space it can read and think about at once. As AI agents tackle longer, more complex tasks, they risk filling that space with the wrong information and losing track of what matters. Context engineering is the craft of deciding exactly what goes into that space so the AI stays accurate, focused, and useful — even across thousands of steps.
+    </p>
+  </div>
+
+  <!-- 3. Core Concepts: What is Context? -->
+  <section class="section">
+    <h2>What Exactly Is a "Context Window"?</h2>
+    <p class="section-sub">Before we can engineer context, we need to understand why it matters — and why filling it carelessly breaks AI performance.</p>
+    <div class="card-grid">
+      <div class="card">
+        <span class="tag tag-concept">Concept</span>
+        <div class="card-title">The Context Window</div>
+        <p>Think of the AI's context window like a whiteboard. It can only hold so much — previous messages, instructions, tool outputs, and retrieved data all compete for the same limited space.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-risk">Risk</span>
+        <div class="card-title">Context Rot</div>
+        <p>As a conversation grows longer, AI models quietly lose accuracy. They don't crash — they just become less precise at recalling earlier details. More text doesn't mean better answers.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-concept">Concept</span>
+        <div class="card-title">Attention Budget</div>
+        <p>Every token in the window "costs" the model some attention. Transformers — the architecture behind modern AI — must compare every word to every other word, so more text means more strain.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-concept">Concept</span>
+        <div class="card-title">From Prompts to Context</div>
+        <p>Prompt engineering was about writing good instructions once. Context engineering manages the whole evolving state across many turns — instructions, tools, history, and live data all at once.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3b. Core Concepts: Anatomy of Good Context -->
+  <section class="section">
+    <h2>What Goes Into a Well-Designed Context?</h2>
+    <p class="section-sub">A thoughtfully built context has three moving parts — and each one can be a source of bloat or a source of power.</p>
+    <div class="card-grid">
+      <div class="card">
+        <span class="tag tag-practice">Practice</span>
+        <div class="card-title">System Prompts at the Right Altitude</div>
+        <p>Instructions shouldn't be so detailed they become brittle, or so vague they give no guidance. Organize them with clear headers, and aim for the minimal set that fully describes the expected behavior.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-practice">Practice</span>
+        <div class="card-title">Lean Tool Sets</div>
+        <p>Giving an agent 50 tools is like handing a new employee a phone book and saying "figure it out." If a human can't confidently pick which tool to use, neither can the AI. Keep tool sets small and unambiguous.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-practice">Practice</span>
+        <div class="card-title">Curated Examples</div>
+        <p>A few well-chosen examples showing the desired behavior beat a long list of edge-case rules. Think of examples as pictures worth a thousand words — choose diverse, canonical ones, not an exhaustive catalogue.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3c. Core Concepts: Smart Retrieval -->
+  <section class="section">
+    <h2>Loading Information at the Right Moment</h2>
+    <p class="section-sub">Not all information needs to be in the context upfront — smart agents fetch things only when they need them, just like humans use bookmarks instead of memorizing entire websites.</p>
+    <div class="card-grid">
+      <div class="card">
+        <span class="tag tag-practice">Practice</span>
+        <div class="card-title">Just-in-Time Retrieval</div>
+        <p>Instead of loading a whole database, the agent stores lightweight pointers (file paths, search queries) and fetches the actual data only when needed. Lean context, sharp focus.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-concept">Concept</span>
+        <div class="card-title">Progressive Disclosure</div>
+        <p>Agents explore their environment incrementally — reading file names, folder structures, and timestamps to decide what's worth loading next. Self-guided discovery keeps the context from filling with irrelevant material.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-practice">Practice</span>
+        <div class="card-title">Hybrid Retrieval</div>
+        <p>Some things load upfront for speed (like critical config files); others the agent pursues on its own as the task unfolds. The right balance depends on how predictable and stable the data is.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Numbered list: Three Techniques for Long Tasks -->
+  <section class="section">
+    <h2>Three Techniques for Very Long Tasks</h2>
+    <p class="section-sub">When a task stretches over thousands of steps, the context window fills up. These three strategies let agents work far beyond that limit.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <strong>Compaction — Summarize and Restart</strong>
+          <p>When the context nears its limit, compress the conversation into a tight summary preserving key decisions, open bugs, and important findings. Discard redundant outputs. Then restart with the summary as the new foundation. Start by capturing everything, then tighten until only the essentials remain.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <strong>Structured Note-Taking — Persistent Memory Outside the Window</strong>
+          <p>Agents write notes to an external file or memory store and pull them back in only when needed. This gives the agent reliable long-term memory without spending precious context on everything at once. Think of it like a developer keeping a running text file of decisions while they code.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <strong>Sub-Agent Architectures — Divide and Conquer</strong>
+          <p>A main agent delegates focused sub-tasks to specialist agents, each with a fresh, clean context. Each sub-agent explores deeply but returns a compact summary (typically 1,000–2,000 tokens) to the main agent. Complex research or analysis tasks see major gains from this pattern.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Real examples -->
+  <section class="section">
+    <h2>Real-World Examples</h2>
+    <p class="section-sub">These aren't hypothetical — here's how the techniques play out in actual Anthropic products and experiments.</p>
+    <div class="examples-row">
+      <div class="example-card">
+        <span class="tag tag-example">Example</span>
+        <div class="example-name">Claude Code</div>
+        <p>Stores lightweight file paths and grep queries instead of full file contents. Loads only relevant snippets using commands like <code>head</code> and <code>tail</code>. Pre-loads the CLAUDE.md config file on startup, then navigates the rest of the codebase just-in-time.</p>
+      </div>
+      <div class="example-card">
+        <span class="tag tag-example">Example</span>
+        <div class="example-name">Claude Plays Pokémon</div>
+        <p>Over thousands of game steps spanning hours, Claude maintains a persistent memory file that tracks Pokémon levels, explored maps, key achievements, and battle strategies — updating it across context resets so nothing important is lost.</p>
+      </div>
+      <div class="example-card">
+        <span class="tag tag-example">Example</span>
+        <div class="example-name">Multi-Agent Research System</div>
+        <p>Complex research questions are split across specialist sub-agents that each explore independently. They return condensed summaries to a coordinating agent, enabling far deeper analysis than a single agent ever could.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Cautions -->
+  <section class="section">
+    <h2>Honest Caveats</h2>
+    <p class="section-sub">The authors are upfront about what context engineering can't fully solve — knowing the limits is just as important as knowing the techniques.</p>
+    <div class="caution-list">
+      <div class="caution-item">
+        <strong>⚠️ Bigger windows don't fix the core problem</strong>
+        <p>Even as context windows grow, "context pollution and information relevance concerns" are expected to persist for the foreseeable future. More space doesn't mean smarter use of space.</p>
+      </div>
+      <div class="caution-item">
+        <strong>⚠️ Aggressive compaction can lose subtle clues</strong>
+        <p>Over-summarizing risks discarding context whose importance only becomes clear later. A detail that seemed minor at step 200 might be critical at step 2,000. Tune compaction carefully.</p>
+      </div>
+      <div class="caution-item">
+        <strong>⚠️ Just-in-time retrieval is slower</strong>
+        <p>Letting an agent discover data at runtime is more flexible, but slower than loading it upfront. Without good tools and heuristics, agents can waste time chasing dead ends.</p>
+      </div>
+      <div class="caution-item">
+        <strong>⚠️ There's no universal right answer</strong>
+        <p>The best strategy — compaction, note-taking, or sub-agents — depends entirely on the specific task. The authors acknowledge "the decision boundary for the 'right' level of autonomy depends on the task."</p>
+      </div>
+      <div class="caution-item">
+        <strong>⚠️ Models trained on shorter texts struggle at scale</strong>
+        <p>Because most training data consists of shorter texts, models have fewer parameters tuned for very long sequences. They can handle them — but with less precision than at shorter lengths.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. Key Takeaway -->
+  <div class="takeaway">
+    <div class="takeaway-label">Key Takeaway</div>
+    <p>
+      Context engineering is not about tricking the AI — it's about treating the context window as a <strong>precious, finite resource</strong>. The goal is always "the smallest set of high-signal information that maximizes the chance of the right outcome." As models improve, they'll need less hand-holding — but <strong>thoughtful context design</strong> will remain the difference between an agent that works and one that wanders.
+    </p>
+  </div>
+
+  <!-- 8. Footer -->
+  <footer>
+    <p>Summarized from "<a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents" target="_blank">Effective Context Engineering for AI Agents</a>"
+    by Prithvi Rajasekaran, Ethan Dixon, Carly Ryan &amp; Jeremy Hadfield — Anthropic Engineering, September 2025.</p>
+  </footer>
+
+</div>
+</body>
+</html>

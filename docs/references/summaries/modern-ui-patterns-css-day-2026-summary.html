@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Modern UI Patterns — Beginner's Summary</title>
+    <link rel="stylesheet" href="../summary.css" />
+  </head>
+  <body>
+    <div class="page">
+
+      <header class="hero">
+        <span class="hero-badge">Beginner's Summary · CSS Day 2026</span>
+        <h1>Modern UI Patterns</h1>
+        <p class="hero-hook">
+          CSS has already shipped the tools to make the web feel as smooth and polished as native apps — we just need to use them.
+        </p>
+        <a class="source-link" href="https://www.youtube.com/watch?v=8FSLsVAJj2w" target="_blank">Watch on YouTube →</a>
+      </header>
+
+      <div class="big-idea">
+        <div class="big-idea-label">The Big Idea</div>
+        <p>
+          The web has long felt slightly "jankier" than native apps, but that gap is now a choice. Modern browsers have shipped scroll state queries, anchor positioning, view transitions, interest invokers, and powerful color theming — all the raw material for premium, app-quality UX. Una Kravets from the Chrome team argues that the question for web developers today isn't how to build things, but <em>what</em> to build and <em>why</em>, with deliberate attention to user experience guiding every decision.
+        </p>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-num">~40%</div>
+          <div class="stat-label">of iPhone screen real estate lost to app-download banners and sticky headers on typical sites</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">6 months</div>
+          <div class="stat-label">one team spent making hover tooltips accessible — before interest invokers existed</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">5</div>
+          <div class="stat-label">UX principles that define a premium web experience, from theming to form factor</div>
+        </div>
+      </div>
+
+      <section class="section">
+        <h2>The Five Principles</h2>
+        <p class="section-sub">These principles frame every decision — from which CSS property to reach for to how you structure your whole page.</p>
+
+        <div class="pillars">
+          <div class="pillar">
+            <h3>1. Respect User Preferences</h3>
+            <p>Let users co-design the experience. Respond to their color scheme, motion tolerance, and contrast needs without making them dig into settings.</p>
+          </div>
+          <div class="pillar">
+            <h3>2. Maximize Content, Reduce Noise</h3>
+            <p>Banners, cookie prompts, and sticky headers steal screen space. Hide or shrink UI chrome as users scroll to keep focus on what actually matters.</p>
+          </div>
+          <div class="pillar">
+            <h3>3. Implement Natural Interactions</h3>
+            <p>Transitions should feel physics-based — things animate from where they came from, respond to touch, and give instant visual feedback on every action.</p>
+          </div>
+          <div class="pillar">
+            <h3>4. Provide Guided Navigation</h3>
+            <p>Help users understand where they are and where they're going. Scroll markers, morphing transitions, and anchor followers all make space feel navigable.</p>
+          </div>
+          <div class="pillar">
+            <h3>5. Adapt to the Form Factor</h3>
+            <p>Don't design only for a 1440px desktop. Touch devices expect swipe-to-close, larger tap targets, and layouts that feel native on a phone.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Principle 1 — Respecting User Preferences</h2>
+        <p class="section-sub">These CSS features let you build adaptive, personalized color themes without JavaScript.</p>
+
+        <div class="card-grid">
+          <div class="card">
+            <span class="tag tag-concept">Concept</span>
+            <div class="card-title">Custom light-dark() via CSS functions</div>
+            <p>The built-in <code>light-dark()</code> only works on color values. With CSS custom functions and <code>if()</code>, you can write your own version that also swaps non-color properties like font weight — making your theme system much more expressive.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-concept">Concept</span>
+            <div class="card-title">contrast-color()</div>
+            <p>Now landed in all stable browsers, this returns black or white depending on which has better WCAG2 contrast against a given background. Treat it as a boolean and use style queries to map it to any color you want — unlimited theme combinations.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-practice">Practice</span>
+            <div class="card-title">Dual-value box-shadow trick</div>
+            <p>Use <code>light-dark()</code> with <code>transparent</code> to toggle between a subtle drop shadow in light mode and a glowing neon border in dark mode — all in a single CSS property with no JavaScript. Works in every stable browser today.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Principle 2 — Reducing Noise</h2>
+        <p class="section-sub">Scroll state queries and smart popovers let you hide UI chrome exactly when users don't need it.</p>
+
+        <div class="card-grid">
+          <div class="card">
+            <span class="tag tag-concept">Concept</span>
+            <div class="card-title">Scroll State Queries</div>
+            <p>Like media queries, but for scroll position. <code>stuck</code> detects sticky elements, <code>snapped</code> detects carousel position, <code>scrollable</code> toggles scroll indicators, and <code>scrolled</code> (Chrome only) detects scroll direction.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-practice">Practice</span>
+            <div class="card-title">The Hidey Bar</div>
+            <p>Use <code>scroll-state(scrolled: bottom)</code> to translate a sticky header off-screen as users scroll down, and <code>scroll-state(scrolled: top)</code> to slide it back when they scroll up. Zero JavaScript. Works as a progressive enhancement in unsupported browsers.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-concept">Concept</span>
+            <div class="card-title">Popover API</div>
+            <p>Built-in browser behavior for free: light dismiss (clicking outside closes it), Escape key binding, and focus management. Add <code>position-try flip-block</code> and the popover automatically repositions itself to stay inside the viewport.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-concept">Concept</span>
+            <div class="card-title">Interest Invokers</div>
+            <p>Open a tooltip or popover on hover or keyboard focus without JavaScript. Set <code>interesttarget</code> on a link or button and the browser handles accessibility, keyboard interactions, and mobile long-press. Currently Chrome-only with a polyfill available.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-practice">Practice</span>
+            <div class="card-title">Snappy interest timing</div>
+            <p>The default hover delay is 0.5s — too slow once a user is already moving through a toolbar. Use <code>:has(:interest-source)</code> to detect when a sibling is already open and drop the delay on the rest with <code>interest-delay-start: 0s</code>.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-risk">Risk</span>
+            <div class="card-title">The interest-button controversy</div>
+            <p>On touch devices, browsers may render a small icon next to every interactive element so users can tap to see the tooltip. This badly clutters complex toolbars. The community is debating whether this should be opt-in. Follow WHATWG issue #13980 and share your opinion.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Principle 3 — Natural Interactions</h2>
+        <p class="section-sub">Animation should feel like physics — things move from where they came from, at speeds that match how objects behave in the real world.</p>
+
+        <div class="card-grid">
+          <div class="card">
+            <span class="tag tag-practice">Practice</span>
+            <div class="card-title">Spring easings with linear()</div>
+            <p>CSS has no built-in spring animations, but <code>linear()</code> can approximate them with many tiny steps that mimic stiffness, damping, and bounce. Build a small conversion tool to translate design-tool spring values into CSS <code>linear()</code> curves.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-practice">Practice</span>
+            <div class="card-title">Scale-down on press</div>
+            <p>Scale a button to <code>0.98</code> when pressed. Never more than a 0.5 scale change. One CSS line that makes every button feel physically real. Small effort, massive perceived quality improvement.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-practice">Practice</span>
+            <div class="card-title">Motion blur with Gaussian blur</div>
+            <p>The web doesn't have real motion blur yet, but adding a short Gaussian blur during a translate animation hints at it convincingly. Apply mid-animation only — not at rest — so the element feels like it's coming from somewhere.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-concept">Concept</span>
+            <div class="card-title">Staggered entry with sibling-index</div>
+            <p>Multiply each element's <code>animation-delay</code> by its <code>sibling-index</code> to make a list animate in one item at a time. Each element enters slightly after the one before it, guiding the user's eye through the content without any JavaScript.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-concept">Concept</span>
+            <div class="card-title">Scroll-driven animations</div>
+            <p>Link an animation's progress directly to scroll position using <code>animation-timeline: scroll()</code> or <code>view()</code>. Items animate in as they enter the viewport, each at their own rate — no IntersectionObserver needed. Coming cross-browser via Interop 2026.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-future">Future</span>
+            <div class="card-title">Scroll-triggered animations (Chrome 146)</div>
+            <p>Different from scroll-driven animations: instead of tying progress to scroll, these fire a full time-based keyframe animation once when an element reaches a scroll threshold. Great for reveal effects that need to play completely regardless of scroll speed.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Principle 4 — Guided Navigation</h2>
+        <p class="section-sub">View transitions and anchor positioning turn flat pages into spaces that users can orient themselves within.</p>
+
+        <div class="card-grid">
+          <div class="card">
+            <span class="tag tag-concept">Concept</span>
+            <div class="card-title">View Transitions</div>
+            <p>Morph between two states — a button into a form, an icon into a label, one number into another — by giving them the same <code>view-transition-name</code>. The browser automatically crossfades and scales the old element into the new one.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-future">Future</span>
+            <div class="card-title">Scoped View Transitions (Chrome 147)</div>
+            <p>Previously, view transitions locked the entire page during the animation. Scoped transitions run in a subtree, leaving the rest of the page interactive. Ideal for micro-interactions like expanding a card or toggling an icon inside a dashboard.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-practice">Practice</span>
+            <div class="card-title">Direction-aware number changes</div>
+            <p>When a count goes up, slide the old number out upward and the new one in from below. When it goes down, reverse direction. Store the direction in a CSS custom property set by a few lines of JavaScript, then reference it in your view transition keyframes.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-concept">Concept</span>
+            <div class="card-title">Scroll markers</div>
+            <p>Set <code>scroll-target-group: auto</code> on a nav element and its children become scroll markers. Use <code>:target-current</code> to style the active section link automatically — a synchronized table of contents with no JavaScript.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-concept">Concept</span>
+            <div class="card-title">Dynamic re-anchoring</div>
+            <p>A floating indicator (like a "you are here" pointer in a sidebar) can follow the user's hover by updating which anchor it attaches to. Set <code>anchor-name: --hovered</code> on whichever item is hovered, and point the follower at <code>position-anchor: --hovered</code>.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-concept">Concept</span>
+            <div class="card-title">border-shape + shape()</div>
+            <p>Not all UI has to be boxes. <code>border-shape</code> with CSS <code>shape()</code> lets you define geometric outlines — arrows, chevrons, custom polygons. Unlike clip-path, the actual box model follows the shape, so shadows, outlines, and focus rings all work correctly.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Principle 5 — Adapting to the Form Factor</h2>
+        <p class="section-sub">Build for the device in front of your user, not the browser window in front of you.</p>
+
+        <div class="card-grid">
+          <div class="card">
+            <span class="tag tag-practice">Practice</span>
+            <div class="card-title">Free swipe with scroll snapping</div>
+            <p>Turn a sidebar into a horizontal scroller with <code>scroll-snap-type: x mandatory</code> and hide the scrollbar. Scroll to the main section on load. Users can now swipe the sidebar open naturally on touch devices — no JavaScript, no libraries, no third-party gestures.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-future">Future</span>
+            <div class="card-title">Overscroll areas (coming spec)</div>
+            <p>A proposed HTML/CSS API for native swipe gestures. Set an <code>overscroll-container</code> attribute, wire a button with <code>command="toggle-overscroll"</code>, and the browser handles swipe physics. Still under active discussion — open questions include whether a button is required and how CSS should control it.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-risk">Risk</span>
+            <div class="card-title">Test on real devices</div>
+            <p>Desktop dev tools can't fully simulate touch. Sticky headers that look fine in a browser window may eat 40% of the screen on a real iPhone. Not testing on touch devices means shipping hidden UX disasters that only your users will find.</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="quote-block">
+        "The web is the best medium to build on right now. Think about the little big things that bring it all to life — make it feel more human, make it feel better, make it feel more high quality." — Una Kravets
+      </div>
+
+      <div class="caution-list">
+        <div class="caution-item">
+          <div class="caution-title">⚠️ Cross-browser availability varies</div>
+          <p><code>scroll-state(scrolled)</code>, scoped view transitions, and scroll-triggered animations are Chrome-only for now. Use them as progressive enhancements — the experience should degrade gracefully in Firefox and Safari.</p>
+        </div>
+        <div class="caution-item">
+          <div class="caution-title">⚠️ prefers-reduced-motion ≠ no motion</div>
+          <p>Reduced motion means less motion, not none. A fade or a tiny scale change is usually fine. Remove large translates, spinning, and flashing. Always wrap scroll-driven and view transition animations inside <code>@media (prefers-reduced-motion: no-preference)</code>.</p>
+        </div>
+        <div class="caution-item">
+          <div class="caution-title">⚠️ Anchor positioning is in all browsers but not yet baseline</div>
+          <p>Anchor positioning shipped in Chrome, Firefox, and Safari — but with enough edge-case differences that it hasn't been declared baseline. It's usable today, but test carefully across browsers before shipping critical UI that depends on it.</p>
+        </div>
+      </div>
+
+      <div class="takeaway">
+        <div class="takeaway-label">Key Takeaway</div>
+        <p>The tools are already in the browser. <strong>Scroll state queries, view transitions, interest invokers, contrast-color, anchor positioning</strong> — shipped, standardized, and increasingly cross-browser. The gap between "janky web" and "polished app" is now a deliberate choice, not a platform limitation. Raise your expectations, test on real devices, and layer in modern features as progressive enhancements.</p>
+      </div>
+
+      <footer>
+        Based on <em><a href="https://www.youtube.com/watch?v=8FSLsVAJj2w" target="_blank">"Modern UI Patterns"</a></em> by
+        Una Kravets · Web Conferences Amsterdam (CSS Day 2026).
+      </footer>
+
+    </div>
+  </body>
+</html>

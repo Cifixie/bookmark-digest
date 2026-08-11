@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CLAUDE.md: Helpful or Just Expensive Noise? — Summary</title>
+<link rel="stylesheet" href="../summary.css">
+</head>
+<body>
+<main class="page">
+
+  <!-- 1. Hero -->
+  <header class="hero">
+    <span class="hero-badge">Beginner's Summary</span>
+    <h1>CLAUDE.md: Helpful or Just Expensive Noise?</h1>
+    <p class="hero-hook">That config file you write to guide your AI coding assistant? It might be doing less than you think — and sometimes making things worse.</p>
+    <a class="source-link" href="https://thomas-wiegold.com/blog/claude-md-helpful-or-expensive-noise/" target="_blank" rel="noopener">Read the original article by Thomas Wiegold →</a>
+  </header>
+
+  <!-- 2. Big idea -->
+  <div class="big-idea">
+    <div class="big-idea-label">The Big Idea</div>
+    <p>CLAUDE.md is a hint, not a command. When you write instructions in this file, the AI reads them — but then decides for itself how much to care. Research from ETH Zurich found that auto-generated CLAUDE.md files actually make AI assistants <em>slower and more expensive</em>, while even the best hand-written files only barely help. The real lesson: short, specific, and enforced beats long, generic, and wished for.</p>
+  </div>
+
+  <!-- 3a. What CLAUDE.md is -->
+  <section class="section">
+    <h2>What CLAUDE.md Is (and Isn't)</h2>
+    <p class="section-sub">Understanding the gap between what you think you're writing and what the AI actually receives — this changes how you approach the whole thing.</p>
+    <div class="card-grid">
+      <div class="card">
+        <span class="tag tag-concept">Concept</span>
+        <strong>Context, Not Control</strong>
+        <p>CLAUDE.md is a markdown file that loads at the start of each session. But Anthropic's own system prompt wraps its content with language that lets the AI judge whether instructions are "relevant" — and skip them if not.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-concept">Hierarchy</span>
+        <strong>Four Levels of Config</strong>
+        <p>Files exist at enterprise → user → project → local levels. The project-level CLAUDE.md in your repo root is the one most developers write. Nested folders can have their own scoped versions.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-risk">Limitation</span>
+        <strong>Compliance Decay</strong>
+        <p>A developer tracked how well Claude followed CLAUDE.md rules over a conversation: 95%+ at messages 1–2, dropping to 20–60% by message 10. Long conversations mean the AI progressively forgets your rules.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-risk">Budget Squeeze</span>
+        <strong>The Instruction Limit</strong>
+        <p>Frontier LLMs reliably follow about 150–200 instructions. Claude Code's built-in system prompt already uses ~50 of those slots before your CLAUDE.md even loads. A 300-line file can crowd out the AI's own core behavior.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3b. What the research says -->
+  <section class="section">
+    <h2>What the Research Actually Found</h2>
+    <p class="section-sub">A February 2026 ETH Zurich study ran the first rigorous test of whether these config files actually help — the results surprised even enthusiasts.</p>
+    <div class="card-grid">
+      <div class="card">
+        <span class="tag tag-risk">Finding</span>
+        <strong>Auto-Generated Files Hurt</strong>
+        <p>Files created by running Claude's <code>/init</code> command decreased task success rates and raised costs by roughly 20%. Committing the raw output is actively worse than having no file.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-concept">Finding</span>
+        <strong>Human-Written Files Barely Help</strong>
+        <p>Carefully crafted files written by developers showed only a ~4% improvement on one benchmark. On the SWE-bench coding tasks, even developer-written files failed to beat "no file at all."</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-concept">Finding</span>
+        <strong>They're Redundant With Docs</strong>
+        <p>CLAUDE.md helped most when researchers stripped the project of its existing README and documentation. With normal docs in place, the config file added little. The AI can already read your docs folder.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-practice">Exception</span>
+        <strong>Specific Tool Commands Work</strong>
+        <p>One instruction type reliably gets followed: exact tool names. Agents used the <code>uv</code> package manager 160× more often when it was explicitly named. Precise commands outperform general advice every time.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Steps — what to put in / leave out -->
+  <section class="section">
+    <h2>What to Include (and What to Cut)</h2>
+    <p class="section-sub">Following the "60-line rule" means being ruthless. Here's how to decide what earns a spot and what's just wishful thinking in markdown form.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">✓</div>
+        <div class="step-body">
+          <strong>Non-obvious commands with exact flags</strong>
+          <p>If your lint or test command has unusual flags that the AI would never guess (<code>npx vitest run --reporter=verbose</code>), put it in. Generic commands like <code>npm test</code> don't need to be there.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">✓</div>
+        <div class="step-body">
+          <strong>Architecture decisions that contradict the obvious</strong>
+          <p>If your project structure looks weird for a reason — a folder named <code>lib/</code> that's actually the public API, or a <code>utils/</code> you're deliberately not using — explain it briefly. Without context the AI will "fix" it.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">✓</div>
+        <div class="step-body">
+          <strong>Team conventions that differ from standard patterns</strong>
+          <p>Pointers to deeper docs ("see DESIGN.md for token rules") are more durable than copying the rules in. The AI can read linked files; repetition just bloats the budget.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">✗</div>
+        <div class="step-body">
+          <strong>Personality prompts and generic advice</strong>
+          <p>"Act as a senior engineer." "Write clean code." "Think step by step." These are expensive placeholders. The AI already knows how to code; vague encouragement burns instruction budget for zero benefit.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">✗</div>
+        <div class="step-body">
+          <strong>Comprehensive style guides</strong>
+          <p>Don't paste your 200-line style guide in. Linters enforce style deterministically at zero context cost. If a rule matters, automate it — don't just ask nicely.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">✗</div>
+        <div class="step-body">
+          <strong>Directory trees and codebase overviews</strong>
+          <p>Claude Code explores file structure on its own. Pasting a tree snapshot wastes tokens on information the AI will discover (and verify) itself within seconds.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Core quote -->
+  <div class="quote-block">
+    "CLAUDE.md rules are requests. Hooks are laws."
+  </div>
+
+  <!-- 5. Real examples -->
+  <section class="section">
+    <h2>Real-World Benchmarks &amp; Examples</h2>
+    <p class="section-sub">Concrete evidence from researchers and practitioners showing what lengths and approaches actually work in production.</p>
+    <div class="examples-row">
+      <div class="example-card">
+        <div class="example-name">ETH Zurich Study</div>
+        <p>Feb 2026. 300 SWE-bench + 138 AGENTbench tasks. First rigorous empirical test of context files. Found auto-generated files cost 20% more for worse results.</p>
+      </div>
+      <div class="example-card">
+        <div class="example-name">Boris Cherny's Team</div>
+        <p>The creator of Claude Code and his team maintain files of 60–80 lines, updated through actual mistakes — not written upfront from ideals.</p>
+      </div>
+      <div class="example-card">
+        <div class="example-name">HumanLayer</div>
+        <p>Production CLAUDE.md under 60 lines. Community-validated sweet spot that fits inside the reliable instruction budget.</p>
+      </div>
+      <div class="example-card">
+        <div class="example-name">Siddhant Khare</div>
+        <p>Documented the compliance decay curve: 95% at message 2, down to 20–60% by message 10. Gave the community a concrete model for why long files underperform.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Cautions -->
+  <section class="section">
+    <h2>Honest Cautions &amp; Open Questions</h2>
+    <p class="section-sub">Even advocates of CLAUDE.md admit these uncomfortable truths — knowing them helps you use the tool without being fooled by it.</p>
+    <div class="caution-list">
+      <div class="caution-item">
+        <strong class="caution-title">⚠️ The AI can ignore you by design</strong>
+        <p>Anthropic wraps your CLAUDE.md content with language that lets Claude treat your instructions as optional when it decides they're not relevant. You are not issuing commands — you are making suggestions to something with its own judgment.</p>
+      </div>
+      <div class="caution-item">
+        <strong class="caution-title">⚠️ More detail often means worse results</strong>
+        <p>A 300-line CLAUDE.md can crowd out Claude's own core behavioral instructions. The AI has a limited "instruction budget," and yours competes with Anthropic's. Counterintuitively, adding more rules can make the AI break its own guardrails.</p>
+      </div>
+      <div class="caution-item">
+        <strong class="caution-title">⚠️ The community and the research disagree</strong>
+        <p>Developers report CLAUDE.md as indispensable; ETH Zurich's data says it's mostly redundant overhead for well-documented projects. Both are right — they're measuring different things. The file helps most in messy, undocumented repos.</p>
+      </div>
+      <div class="caution-item">
+        <strong class="caution-title">⚠️ Auto-generating your config is worse than nothing</strong>
+        <p>Running <code>/init</code> and committing the output is one of the most common mistakes. The research shows this pattern consistently underperforms having no file. Treat <code>/init</code> as a first draft to edit down, not a finished product to ship.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- The hooks argument -->
+  <section class="section">
+    <h2>The Better Alternative: Hooks</h2>
+    <p class="section-sub">For rules that genuinely matter, there's a mechanism that never forgets, never deprioritizes, and costs zero context budget — and most developers aren't using it.</p>
+    <div class="card-grid">
+      <div class="card">
+        <span class="tag tag-concept">What Hooks Are</span>
+        <strong>Code That Runs Automatically</strong>
+        <p>Claude Code hooks let you run real shell commands at specific moments — after every file edit, before a commit, after a test run. They're not suggestions; they execute whether the AI "remembers" them or not.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-practice">Example</span>
+        <strong>Linting That Actually Works</strong>
+        <p>Putting "always format with Prettier" in CLAUDE.md fails over long sessions. A post-edit hook that runs <code>prettier --write</code> on every file change enforces it deterministically — at zero context cost.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-practice">Decision Rule</span>
+        <strong>The PR Test</strong>
+        <p>If you'd reject a teammate's pull request for violating a rule, that rule belongs in a hook — not in markdown. Hooks are for non-negotiables. CLAUDE.md is for things where best-effort is acceptable.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. Key takeaway -->
+  <div class="takeaway">
+    <div class="takeaway-label">Key Takeaway</div>
+    <p>CLAUDE.md is a useful tool when <strong>kept short, specific, and maintained through real failures</strong> — not written upfront from ideals. For rules you actually can't live without, skip the markdown and use a hook instead. And if your project already has solid documentation, the file may be adding cost without adding value.</p>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>Summary of "<a href="https://thomas-wiegold.com/blog/claude-md-helpful-or-expensive-noise/" target="_blank" rel="noopener">CLAUDE.md: Helpful or Just Expensive Noise?</a>" by Thomas Wiegold</p>
+  </footer>
+
+</main>
+</body>
+</html>

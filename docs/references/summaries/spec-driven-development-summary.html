@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spec-Driven Development — Beginner's Summary</title>
+    <link rel="stylesheet" href="../summary.css" />
+    <style>
+      :root {
+        --accent: #0d9488;
+        --accent-light: #ccfbf1;
+        --accent-dark: #0f766e;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+
+      <header class="hero">
+        <span class="hero-badge">Beginner's Summary</span>
+        <h1>Spec-Driven Development for AI Workflows</h1>
+        <p class="hero-hook">
+          Before you let an AI write a single line of code, write down exactly what you want — in a structured doc the AI reads first.
+        </p>
+        <a class="source-link" href="https://www.youtube.com/watch?v=IddXPepIAS4" target="_blank">Source: AI Engineer on YouTube →</a>
+      </header>
+
+      <div class="big-idea">
+        <div class="big-idea-label">The Big Idea</div>
+        <p>
+          Spec-driven development means writing structured specification documents — requirements, architecture, task lists — <em>before</em> any code is written.
+          You hand those docs to your AI coding assistant, and it implements your plan instead of improvising one.
+          The result is higher-quality code, fewer surprise detours, and a human who stays in control throughout.
+        </p>
+      </div>
+
+      <div class="quote-block">
+        "If you give AI coding assistants just a little bit of leeway, they will go off the rails. Spec-driven development helps guide them in the right direction." — Erik Hanchett, AWS
+      </div>
+
+      <section class="section">
+        <h2>Why AI Needs a Spec</h2>
+        <p class="section-sub">Think of your AI assistant as a very eager intern — talented but dangerous without direction.</p>
+
+        <div class="card-grid">
+          <div class="card">
+            <span class="tag tag-concept">Analogy</span>
+            <div class="card-title">The Eager Intern Problem</div>
+            <p>A VP drops an idea on an intern. The intern drops everything and builds it — without checking with their actual manager. AI coding assistants do the same thing: they grab your prompt and run with it, skipping the "should I even do this?" step.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-concept">Context Gap</span>
+            <div class="card-title">Models Are Good, Not Perfect</div>
+            <p>Even frontier models improve with more context. As software requirements shift and new paradigms emerge, you need to actively guide your assistant — the model won't automatically know your project's constraints and history.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-practice">The Fix</span>
+            <div class="card-title">Write the Plan First</div>
+            <p>Spec-driven development puts you back in the driver's seat. You review and approve the requirements and design before the AI ever touches code, so it implements <em>your</em> plan rather than a hallucinated one.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>The Three-Document Workflow</h2>
+        <p class="section-sub">Each document passes context forward — the next one builds on the last.</p>
+
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <strong>Requirements document</strong>
+              <p>Written in EARS format (Easy Approach to Requirements Syntax). Captures user stories and precise functional requirements — for example: "When the application initialises, the filter engine shall load the movie data." The AI can generate a first draft from your prompt; you review it, correct any hallucinations, and add your own domain knowledge.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <strong>Design document</strong>
+              <p>A higher-level architecture overview: component diagrams, sequence diagrams (often as Mermaid diagrams or ASCII art), technology choices, and data flows. You can start with design first or requirements first — both orders work. Stop here and update it with your own expertise before moving on.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <strong>Implementation task list</strong>
+              <p>A numbered list of concrete coding tasks derived from the requirements and design docs. Each task is small enough for the AI to implement in one shot. A pro tip: ask the AI to identify the top four tasks that deliver a working MVP, and tackle those first so you can see the project running early.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Three Things to Keep in Mind</h2>
+        <p class="section-sub">Spec-driven development is a mindset shift, not just a file format — these pitfalls trip people up early.</p>
+
+        <div class="card-grid">
+          <div class="card">
+            <span class="tag tag-risk">Context</span>
+            <div class="card-title">The Goldilocks Zone</div>
+            <p>Your <code>CLAUDE.md</code> or <code>agents.md</code> file feeds rules into every AI interaction. Too little and the AI improvises; too much and the AI gets confused by conflicting instructions. Aim for the sweet spot: clear, minimal, unambiguous steering rules.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-tools">Skills</span>
+            <div class="card-title">Use Instruction Files</div>
+            <p>Skills are reusable instruction files you attach to your coding agent. They activate on a keyword or a slash command. You can wire up a skill for "create a requirements doc" or "run property-based tests" so you don't have to re-explain the process each time.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-practice">Accountability</span>
+            <div class="card-title">You Are the Reviewer</div>
+            <p>If something goes wrong, you — not the AI — are responsible. Review every generated document and every pull request. Use your own AI tools to assist with code review, but don't treat the AI's output as automatically correct just because it came from a spec.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Tools That Support This Workflow</h2>
+        <p class="section-sub">You don't need a specific tool — but these make the process much smoother.</p>
+
+        <div class="examples-row">
+          <div class="example-card">
+            <span class="tag tag-example">Tool</span>
+            <div class="example-name">Kiro (AWS)</div>
+            <p>An AI IDE and CLI from AWS with a built-in spec mode. Asks clarifying questions before generating documents, produces mermaid diagrams in the design doc, and runs property-based tests against requirements. Available at kiro.dev.</p>
+          </div>
+          <div class="example-card">
+            <span class="tag tag-example">Tool</span>
+            <div class="example-name">Spec It (GitHub)</div>
+            <p>An open-source project from GitHub that implements the same spec-driven workflow. Can be installed in a variety of AI coding assistants, so you're not locked into one IDE.</p>
+          </div>
+          <div class="example-card">
+            <span class="tag tag-example">Tool</span>
+            <div class="example-name">Manual (Any LLM)</div>
+            <p>You can do this entirely by hand: ask your assistant to generate requirements, review them, ask for the design doc, review that, then ask for the task list. No special tooling needed — just discipline in following the three-document sequence.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Pulling in Real Requirements with MCP</h2>
+        <p class="section-sub">If your team already tracks requirements in Jira or Asana, you don't have to retype them.</p>
+
+        <div class="card-grid">
+          <div class="card">
+            <span class="tag tag-concept">MCP</span>
+            <div class="card-title">Model Context Protocol</div>
+            <p>MCP is a standard that lets AI model providers connect to external data sources — your Jira tickets, Asana tasks, Notion docs, or any project management tool. The spec-driven workflow can pull those requirements in automatically instead of starting from scratch.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-practice">Practical Use</span>
+            <div class="card-title">Product Manager → AI → Code</div>
+            <p>If a product manager has written a requirements document in your PM tool, an MCP server can pipe it into the spec phase. You add a rule to your steering doc: "When creating requirements, pull tickets from this MCP server." The AI grabs the real source of truth instead of inventing one.</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="caution-list">
+        <div class="caution-item">
+          <div class="caution-title">⚠️ Always review for hallucinations</div>
+          <p>Even a well-prompted AI can insert incorrect facts or impossible requirements into a spec. Read the generated markdown before you approve it — especially the design doc, where architectural errors can cascade into all downstream tasks.</p>
+        </div>
+        <div class="caution-item">
+          <div class="caution-title">⚠️ Spec mode isn't just for new projects</div>
+          <p>Spec-driven development works on legacy codebases too. Existing apps can accumulate dozens of spec files over time, one per feature. Don't assume you can only use it for greenfield work.</p>
+        </div>
+        <div class="caution-item">
+          <div class="caution-title">⚠️ Small bugs may not need a full spec</div>
+          <p>For minor bug fixes or trivial changes, writing a full requirements-design-tasks cycle is overkill. Save spec-driven development for in-depth features, complex projects, and anything that needs structured upfront planning.</p>
+        </div>
+      </div>
+
+      <div class="takeaway">
+        <div class="takeaway-label">Key Takeaway</div>
+        <p>
+          Spec-driven development treats AI coding assistants the way good managers treat eager interns: with a clear written brief before they touch anything.
+          <strong>Write the requirements, write the design, write the task list — then let the AI implement.</strong>
+          You stay in control, the AI has the context it needs, and the code reflects decisions <em>you</em> made rather than ones the model guessed at.
+        </p>
+      </div>
+
+      <footer>
+        Based on <em><a href="https://www.youtube.com/watch?v=IddXPepIAS4" target="_blank">Using Spec-Driven Development for Production Workflows</a></em> —
+        Erik Hanchett, AI Engineer on YouTube, 2025.
+      </footer>
+
+    </div>
+  </body>
+</html>

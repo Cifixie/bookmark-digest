@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>10 Tips to Level Up Your AI-Assisted Coding — Beginner's Summary</title>
+    <link rel="stylesheet" href="../summary.css" />
+  </head>
+  <body>
+    <div class="page">
+
+      <header class="hero">
+        <span class="hero-badge">Beginner's Summary · Conference Talk</span>
+        <h1>10 Tips to Level Up Your AI-Assisted Coding</h1>
+        <p class="hero-hook">
+          Your job is no longer writing code — it's describing intent, building skills, and
+          chasing the bottleneck that AI just moved.
+        </p>
+        <a class="source-link" href="https://www.youtube.com/watch?v=K7dBRuSDWTw" target="_blank">
+          Watch on YouTube → NDC AI 2026
+        </a>
+      </header>
+
+      <div class="big-idea">
+        <div class="big-idea-label">The Big Idea</div>
+        <p>
+          Aleksander Stensby stopped writing code in August 2024. He didn't lose his job — he
+          became more productive than ever. His secret: treat every AI session as a
+          <strong>compounding investment</strong>. Every mistake the AI makes becomes a lesson
+          that lives in a skill file, a rule, or a hook, so the same mistake never happens again.
+          The developer who masters this loop doesn't just write faster — they get permanently
+          smarter at it.
+        </p>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-num">9</div>
+          <div class="stat-label">frontier models shipped by Anthropic in 12 months</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">70–80%</div>
+          <div class="stat-label">context window fullness where results start to degrade</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">5</div>
+          <div class="stat-label">levels deep of nested subagents, now supported</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">6</div>
+          <div class="stat-label">GitHub issues fixed by Claude before Alex finished brushing his teeth</div>
+        </div>
+      </div>
+
+      <div class="quote-block">
+        "We used to verify that Claude did the work right. Now, we verify that it's doing the right work."
+        <cite>— Tarik, Claude Code team</cite>
+      </div>
+
+      <section class="section">
+        <h2>The 10 Tips</h2>
+        <p class="section-sub">These aren't isolated tricks — they form a system where each layer builds on the last.</p>
+
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">0</div>
+            <div class="step-body">
+              <strong>Adopt a pair programming mindset</strong>
+              <p>
+                You have a choice: throw a prompt and accept whatever comes out (the lazy way),
+                or actively collaborate (the compound way). The lazy way risks making you passive
+                and dependent. The active way turns every session into a training loop where your
+                AI gets smarter with you, guided by you. Alex calls this
+                <em>compound engineering</em> — like compound interest, but for how well your AI
+                understands your work.
+              </p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num">0b</div>
+            <div class="step-body">
+              <strong>Just ask Claude — constantly recalibrate what's possible</strong>
+              <p>
+                When Boris (Claude Code's creator) was asked "when will it be possible to do X?",
+                he consistently replied: "You can just ask Claude to do that. It can do that."
+                Adults have a fixed mental model of what tools can do. Resist it. What was
+                impossible six months ago might be trivially easy now. The answer to most
+                "can it do this?" questions is: just try.
+              </p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <strong>Context is king — treat it like a scarce resource</strong>
+              <p>
+                Every session fills a glass. System prompts, skill definitions, tool names,
+                your conversation history — it all goes in. Past 70–80% full, results noticeably
+                deteriorate. Keep an eye on your usage (<code>/status</code> shows a battery
+                indicator, <code>/context</code> shows what's consuming space). When you need
+                to compact, guide it explicitly: "Forget the debugging detours, remember
+                everything else." Alex's favorite trick: save a session summary to a markdown
+                file, do <code>/clear</code>, then continue from that file in a fresh session.
+              </p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <strong>Manage your rules — and prune them when a new model arrives</strong>
+              <p>
+                Your <code>CLAUDE.md</code> or <code>agents.md</code> file is scaffolding:
+                it compensates for the model's limitations. But scaffolding built for a weaker
+                model can hold a stronger one back. Every time a major new model ships, point
+                it at your rules and ask: "What here could hold you back? What should we remove?"
+                Rules that were necessary six months ago may now be redundant noise that
+                confuses the model. Also: tip your rules file with a cross-reference like
+                <code>@agents.md</code> so different harnesses can share the same rules.
+              </p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <strong>Build skills — they're your most portable investment</strong>
+              <p>
+                Skills are markdown files that teach AI either your preferences and workflows,
+                or new capabilities it doesn't have by default (e.g., a skill that explains
+                how to call the ElevenLabs API gives your AI a voice). Skills are
+                harness-agnostic: if you switch from Claude Code to another tool next month,
+                your skills come with you. The rule of thumb: if you do something more than
+                once, make it a skill. Don't write skills by hand — do the work, get it
+                right, then say "turn this into a repeatable skill." Check skills into your
+                repo so the whole team benefits.
+              </p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num">4</div>
+            <div class="step-body">
+              <strong>Always start with a plan — and persist it</strong>
+              <p>
+                Plan mode is read-only, which makes it a safe way to explore the codebase
+                and describe work before any files change. Persist the plan to a file
+                (don't rely on it living only in the chat). Why? Two reasons. First, it
+                survives context resets. Second, and more importantly, the AI can later
+                measure its finished work against the original plan — it can verify itself
+                so you don't have to. The plan becomes the source of truth for "what done
+                looks like."
+              </p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num">5</div>
+            <div class="step-body">
+              <strong>Chase the bottleneck — it just moved</strong>
+              <p>
+                All our tools and processes were built when writing code was the bottleneck.
+                That bottleneck is gone. Now the bottleneck is on both ends: describing what
+                you want clearly enough for the AI to act on it, and checking that the
+                output is actually correct. The old process — sprint planning, code reviews,
+                retrospectives — was designed for the old bottleneck. Challenge every
+                meeting, every tool, every ritual: does it still make sense when writing
+                code is no longer the slow part?
+              </p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num">6</div>
+            <div class="step-body">
+              <strong>Give AI the tools to verify its own work</strong>
+              <p>
+                You wouldn't write a line of code, then make someone else open the browser
+                and look for errors for you. Don't make your AI do that either. Give it
+                access to a browser (via MCP or a built-in plugin like Chrome DevTools MCP),
+                give it the ability to run linters, open the dev server, and read console
+                errors. A useful exercise: next time you work in the terminal, write down
+                every time you have to leave it to do your job. Each of those is a tool your
+                AI is missing.
+              </p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num">7</div>
+            <div class="step-body">
+              <strong>Use hooks for hard guardrails — not just Claude.md hopes</strong>
+              <p>
+                Writing "never run <code>rm -rf</code>" in your rules is a polite suggestion.
+                A hook is a guarantee. Hooks fire on specific events (before a tool runs,
+                after a file changes, when a session ends) and can hard-stop the agent or
+                trigger any shell script you want. Use hooks to enforce things that matter:
+                run a linter on every file change, block destructive commands, automatically
+                summarize each session. Hooks also power the "Ralph Wiggum loop" — a
+                <code>stop</code> event hook that says "keep going" so the agent runs
+                indefinitely until the work is done.
+              </p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num">8</div>
+            <div class="step-body">
+              <strong>Use subagents to escape context limits</strong>
+              <p>
+                Each subagent has its own fresh context window, which makes them a way to
+                engineer around the glass-filling problem. The main agent gives each subagent
+                a focused task; the subagents work independently. If a subagent genuinely
+                needs the full history of the session, use <code>context: fork</code> in
+                its definition to clone the parent's context in. With the new five-level
+                nesting now supported, subagents can spin up their own subagents — the
+                possibilities are hard to overstate. But: don't over-specify subagents.
+                Modern models are good at deciding on the fly what agents to spin up.
+              </p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num">9</div>
+            <div class="step-body">
+              <strong>Work in parallel and use /goal for outcome-based tasks</strong>
+              <p>
+                Run multiple agents across multiple worktrees. Assign tasks via GitHub issues
+                by @mentioning Claude in comments. Use remote control to keep agents busy
+                while you're away from the keyboard. And try <code>/goal</code>: instead of
+                telling the AI what to do step by step, tell it what you want to achieve —
+                the outcome, the objective — and let it figure out the path. A separate
+                evaluator agent checks whether the goal was met; if not, the loop restarts.
+                This is the beginning of loop engineering.
+              </p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="step-num">10</div>
+            <div class="step-body">
+              <strong>Compound the learning — run /insights regularly</strong>
+              <p>
+                Every session you've had is stored. <code>/insights</code> analyzes those
+                sessions, finds patterns in your mistakes, surfaces capabilities you didn't
+                know existed, and generates copy-pastable rules and hooks to prevent the
+                same problems from recurring. Run it every few weeks. Pair it with the
+                habit of ending sessions with: "We finally fixed this. What should we add
+                to a skill so we never go down this rabbit hole again?" That's the
+                compound flywheel.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>How the Craft Has Evolved</h2>
+        <p class="section-sub">The vocabulary has shifted as models grew larger and tasks grew longer.</p>
+
+        <div class="pillars">
+          <div class="pillar">
+            <h3>Prompt Engineering</h3>
+            <p>
+              Small context windows, one-shot tasks. The goal was to pack as much
+              information as possible into a single, perfectly-worded prompt.
+            </p>
+          </div>
+          <div class="pillar">
+            <h3>Context Engineering</h3>
+            <p>
+              Larger windows, multi-step tasks. The goal became managing what goes
+              into the context to keep quality high across a long session.
+            </p>
+          </div>
+          <div class="pillar">
+            <h3>Harness Engineering</h3>
+            <p>
+              Context engineering at scale: rules, skills, memory, MCP tools, hooks.
+              Building the scaffolding that keeps the AI on track across many tasks.
+            </p>
+          </div>
+          <div class="pillar">
+            <h3>Loop Engineering</h3>
+            <p>
+              Instead of prompting, you give the AI a goal and a stop condition, then
+              let it run — potentially with hundreds of agents — until the goal is met.
+              Your job is writing the loop, not the code inside it.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Practical Tools Worth Knowing</h2>
+        <p class="section-sub">Specific commands and tools mentioned in the talk that are worth trying immediately.</p>
+
+        <div class="examples-row">
+          <div class="example-card">
+            <span class="tag tag-tools">Command</span>
+            <div class="example-name">/status</div>
+            <p>Shows context window usage as a visual battery indicator. Add it to your status bar.</p>
+          </div>
+          <div class="example-card">
+            <span class="tag tag-tools">Command</span>
+            <div class="example-name">/context</div>
+            <p>Breaks down exactly what is filling your context window and by how much.</p>
+          </div>
+          <div class="example-card">
+            <span class="tag tag-tools">Command</span>
+            <div class="example-name">//usage</div>
+            <p>Shows token consumption by skill and session. Find the culprit when your quota disappears.</p>
+          </div>
+          <div class="example-card">
+            <span class="tag tag-tools">Command</span>
+            <div class="example-name">/insights</div>
+            <p>Analyzes 30 days of sessions and generates an HTML report with learnings and suggested rules.</p>
+          </div>
+          <div class="example-card">
+            <span class="tag tag-tools">Command</span>
+            <div class="example-name">/goal</div>
+            <p>Define an outcome instead of a task. A separate evaluator agent decides if the goal was met.</p>
+          </div>
+          <div class="example-card">
+            <span class="tag tag-tools">Tool</span>
+            <div class="example-name">Superpowers skill</div>
+            <p>A collection of skills covering the whole dev lifecycle. The brainstorm skill can spin up an interactive web UI for architectural choices.</p>
+          </div>
+          <div class="example-card">
+            <span class="tag tag-tools">Tool</span>
+            <div class="example-name">Agentation</div>
+            <p>A toolbar injected into your running app that captures DOM paths, lets you draw annotations, and sends structured feedback directly to your agent.</p>
+          </div>
+          <div class="example-card">
+            <span class="tag tag-tools">Command</span>
+            <div class="example-name">UltraCode</div>
+            <p>Tells Claude to write its own harness on top of Claude Code, orchestrating many agents to tackle very complex problems. Token-intensive — use with intention.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Watch Out For</h2>
+        <p class="section-sub">Common traps that even experienced AI-assisted developers fall into.</p>
+
+        <div class="caution-list">
+          <div class="caution-item">
+            <div class="caution-title">⚠️ Old rules holding back new models</div>
+            <p>
+              Your Claude.md file was written for an older, less capable model. Rules like
+              "always do X in sequence Y" may now constrain a model that found a smarter way.
+              After every major model release, ask the new model to audit your rules.
+            </p>
+          </div>
+          <div class="caution-item">
+            <div class="caution-title">⚠️ Downloading skills from skills.sh without review</div>
+            <p>
+              There are many bad skills online and also meaningful attack vectors. Build
+              skills yourself or use public ones only as inspiration — ask your AI to
+              rewrite them for you rather than pasting them in blindly.
+            </p>
+          </div>
+          <div class="caution-item">
+            <div class="caution-title">⚠️ Saying "yeah, that looks good" to a long markdown plan</div>
+            <p>
+              A boring format leads to passive approval. If you're not really reading the
+              plan, ask the AI to present it as an interactive HTML file instead. Staying
+              engaged at the planning stage is the single best way to avoid expensive
+              mistakes at the verification stage.
+            </p>
+          </div>
+          <div class="caution-item">
+            <div class="caution-title">⚠️ Treating Claude.md rules as guardrails</div>
+            <p>
+              "Never delete files" in Claude.md is a request, not a lock. For anything
+              where a violation would be catastrophic, use a hook on the pre-tool-use
+              event instead. That's a hard stop, not a polite suggestion.
+            </p>
+          </div>
+          <div class="caution-item">
+            <div class="caution-title">⚠️ Reminding the AI it should think like a developer</div>
+            <p>
+              Models are trained on developer content and default to thinking like a
+              developer — writing a regex when they could call an LLM, building a parser
+              when they could use an API. Nudge them: "Remember you're Claude. You can use
+              Claude to solve this." You'll often get a much simpler answer.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div class="takeaway">
+        <div class="takeaway-label">Key Takeaway</div>
+        <p>
+          The bottleneck of software development has shifted — from writing code, to
+          <strong>describing what you want</strong> and <strong>verifying the result</strong>.
+          Every tip in this talk addresses one of those two sides. Invest in skills and
+          plans to make your intent clearer; invest in tools, hooks, and subagents to make
+          verification cheaper. Do that consistently and you don't just go faster — you
+          compound, session by session, into a fundamentally better engineer.
+        </p>
+      </div>
+
+      <footer>
+        Based on <em><a href="https://www.youtube.com/watch?v=K7dBRuSDWTw" target="_blank">10 tips to level up your ai-assisted coding</a></em> —
+        Aleksander Stensby, NDC Conferences, 2026.
+      </footer>
+
+    </div>
+  </body>
+</html>

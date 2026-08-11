@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Agents — Beginner's Summary</title>
+<link rel="stylesheet" href="../summary.css">
+<style>
+  :root { --accent: #4f46e5; --accent-light: #ede9fe; --accent-dark: #4338ca; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <span class="hero-badge">Beginner's Summary</span>
+    <h1>LLM-Powered Autonomous Agents</h1>
+    <p class="hero-hook">What if an AI could plan, remember, and use tools — just like a person solving a problem? This page explains exactly that, in plain language.</p>
+    <a class="source-link" href="https://lilianweng.github.io/posts/2023-06-23-agent/" target="_blank" rel="noopener">Original article by Lilian Weng →</a>
+  </header>
+
+  <div class="big-idea">
+    <div class="big-idea-label">The Big Idea</div>
+    <p>An LLM (like ChatGPT) is normally just a chatbot — you ask, it answers. An <strong>autonomous agent</strong> goes further: it uses the LLM as its "brain" but also gives it the ability to <strong>plan multi-step tasks</strong>, <strong>remember things</strong>, and <strong>use external tools</strong> (search the web, run code, call APIs). The result is an AI that can tackle long, complex goals on its own.</p>
+  </div>
+
+  <section class="section">
+    <h2>The 3 core components</h2>
+    <p class="section-sub">Every autonomous agent is built from three building blocks working together.</p>
+    <div class="pillars">
+
+      <div class="pillar">
+        <div class="icon" aria-hidden="true">🧠</div>
+        <h3>1. Planning</h3>
+        <p>The ability to break a big goal into smaller steps, think ahead, and correct mistakes.</p>
+        <ul>
+          <li><strong>Chain of Thought</strong> — think step by step before answering</li>
+          <li><strong>Tree of Thoughts</strong> — explore multiple paths, pick the best</li>
+          <li><strong>ReAct</strong> — alternate between reasoning and taking action</li>
+          <li><strong>Reflexion</strong> — notice when something went wrong and try again differently</li>
+        </ul>
+      </div>
+
+      <div class="pillar">
+        <div class="icon" aria-hidden="true">💾</div>
+        <h3>2. Memory</h3>
+        <p>Agents need to remember things beyond what fits in a single conversation.</p>
+        <ul>
+          <li><strong>Short-term</strong> — the current conversation context (limited)</li>
+          <li><strong>Long-term</strong> — a database the agent can search and retrieve from (like a notebook)</li>
+          <li><strong>Sensory</strong> — raw inputs like images or text turned into numbers the AI understands</li>
+        </ul>
+      </div>
+
+      <div class="pillar">
+        <div class="icon" aria-hidden="true">🔧</div>
+        <h3>3. Tool Use</h3>
+        <p>Connecting the LLM to the outside world so it can actually do things, not just talk.</p>
+        <ul>
+          <li><strong>Web search</strong> — look up current information</li>
+          <li><strong>Code execution</strong> — run programs and get results</li>
+          <li><strong>External APIs</strong> — call databases, services, etc.</li>
+          <li><strong>Other AI models</strong> — use specialist models for specific tasks</li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Planning — how agents think</h2>
+    <p class="section-sub">These are the main techniques agents use to reason through problems.</p>
+    <div class="card-grid">
+
+      <div class="card">
+        <span class="tag tag-planning">Planning</span>
+        <div class="card-title">Chain of Thought (CoT)</div>
+        <p>Tell the AI to "think step by step." Instead of jumping to an answer, it works through the problem like showing your work in math class. Simple but powerful.</p>
+      </div>
+
+      <div class="card">
+        <span class="tag tag-planning">Planning</span>
+        <div class="card-title">Tree of Thoughts</div>
+        <p>Like CoT but branches out — the AI explores several possible directions at once and evaluates which path looks most promising, then continues down that route.</p>
+      </div>
+
+      <div class="card">
+        <span class="tag tag-planning">Planning</span>
+        <div class="card-title">ReAct</div>
+        <p>A loop: <em>Reason → Act → Observe → Repeat.</em> The agent thinks about what to do, does it, sees the result, then thinks about the next step. Very natural and human-like.</p>
+      </div>
+
+      <div class="card">
+        <span class="tag tag-planning">Planning</span>
+        <div class="card-title">Reflexion</div>
+        <p>The agent keeps a memory of past mistakes. When something fails, it writes a note to itself ("that didn't work because…") and uses that lesson in future attempts.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Memory — how agents remember</h2>
+    <p class="section-sub">Think of it like human memory — there are different types for different purposes.</p>
+    <div class="card-grid">
+
+      <div class="card">
+        <span class="tag tag-memory">Memory</span>
+        <div class="card-title">Sensory Memory</div>
+        <p>Raw inputs (text, images) converted into numbers. Like your eyes taking in light — the very first step before any understanding happens.</p>
+      </div>
+
+      <div class="card">
+        <span class="tag tag-memory">Memory</span>
+        <div class="card-title">Short-Term (Working)</div>
+        <p>Everything in the current conversation window. The AI can only "see" so much text at once — this is a hard limit. Like keeping a few things in mind at once.</p>
+      </div>
+
+      <div class="card">
+        <span class="tag tag-memory">Memory</span>
+        <div class="card-title">Long-Term (Vector Store)</div>
+        <p>An external database the agent can search. Information is stored as vectors (lists of numbers) and retrieved by similarity. Like a searchable notebook that never fills up.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Tool use — how agents take action</h2>
+    <p class="section-sub">These frameworks show how researchers have connected LLMs to real-world tools.</p>
+    <div class="card-grid">
+
+      <div class="card">
+        <span class="tag tag-tools">Tools</span>
+        <div class="card-title">MRKL</div>
+        <p>Routes questions to specialist "expert" modules — some AI-based, some traditional programs (like calculators). The LLM decides who to ask.</p>
+      </div>
+
+      <div class="card">
+        <span class="tag tag-tools">Tools</span>
+        <div class="card-title">Toolformer</div>
+        <p>A model trained to figure out <em>when</em> and <em>how</em> to call external APIs by itself — no manual rules needed. It learned tool use from examples.</p>
+      </div>
+
+      <div class="card">
+        <span class="tag tag-tools">Tools</span>
+        <div class="card-title">HuggingGPT</div>
+        <p>Uses ChatGPT as a "manager" that selects the right specialist AI model from HuggingFace for each sub-task. Like a boss delegating to the right employee.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Real-world examples</h2>
+    <p class="section-sub">Projects that put these ideas into practice.</p>
+    <div class="examples-row">
+
+      <div class="example-card">
+        <div class="example-name">AutoGPT</div>
+        <p>Give it a goal, it figures out the steps, uses tools (files, web, code), and keeps going until done — with minimal human input.</p>
+      </div>
+
+      <div class="example-card">
+        <div class="example-name">GPT-Engineer</div>
+        <p>Describe a software project in plain English. It asks clarifying questions, then writes an entire codebase from scratch.</p>
+      </div>
+
+      <div class="example-card">
+        <div class="example-name">ChemCrow</div>
+        <p>A chemistry agent with 13 specialist tools. Can plan drug synthesis and lab experiments — validated by real chemists.</p>
+      </div>
+
+      <div class="example-card">
+        <div class="example-name">Generative Agents</div>
+        <p>25 AI "people" living in a virtual world. They remember events, form plans, gossip, and even organize parties — all emergent behavior.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Current challenges</h2>
+    <p class="section-sub">Agents are impressive but still have real limitations to be aware of.</p>
+    <div class="caution-list">
+
+      <div class="caution-item">
+        <div class="caution-title">⚠️ Limited context window</div>
+        <p>The AI can only hold so much text in memory at once. Long tasks require clever tricks to compress or retrieve relevant history — it's a fundamental bottleneck.</p>
+      </div>
+
+      <div class="caution-item">
+        <div class="caution-title">⚠️ Poor long-term planning</div>
+        <p>When something unexpected happens mid-task, agents struggle to adapt their overall strategy. They're much better at short plans than 20-step sequences.</p>
+      </div>
+
+      <div class="caution-item">
+        <div class="caution-title">⚠️ Unreliable output format</div>
+        <p>LLMs sometimes return text in the wrong format or forget to follow instructions. Real systems need a lot of error handling and output parsing to stay stable.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="takeaway">
+    <div class="takeaway-label">Key Takeaway</div>
+    <p>An LLM alone is a smart text predictor. Give it <strong>planning</strong>, <strong>memory</strong>, and <strong>tools</strong> and it becomes an agent that can pursue goals, learn from mistakes, and interact with the real world. We're still in early days — but the building blocks are already here.</p>
+  </div>
+
+  <footer>
+    Based on <em><a href="https://lilianweng.github.io/posts/2023-06-23-agent/" target="_blank">LLM Powered Autonomous Agents</a></em> — Lilian Weng, 2023.
+  </footer>
+
+</div>
+</body>
+</html>

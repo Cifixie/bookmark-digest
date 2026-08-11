@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Agent Research Systems — Beginner's Summary</title>
+<link rel="stylesheet" href="../summary.css">
+</head>
+<body>
+<div class="page">
+
+  <!-- ── Hero ── -->
+  <header class="hero">
+    <span class="hero-badge">Beginner's Summary</span>
+    <h1>How Anthropic Built a Multi-Agent Research System</h1>
+    <p class="hero-hook">What happens when you give a team of AI assistants a hard research question and let them work in parallel — and what it takes to actually make that work in production.</p>
+    <a class="source-link" href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank">From Anthropic Engineering →</a>
+  </header>
+
+  <!-- ── Big Idea ── -->
+  <section class="big-idea" aria-label="Central argument">
+    <div class="big-idea-label">The Big Idea</div>
+    <p>
+      When an AI has to research something complex — tracking down board members across 500 companies, or piecing together a market landscape — one AI in one conversation isn't enough. Anthropic's answer: spin up a team of specialized AI agents, each working on their own slice of the problem in parallel, then have a "lead" agent stitch everything together. It sounds simple, but building it to actually work reliably is a very different story.
+    </p>
+  </section>
+
+  <!-- ── Key numbers ── -->
+  <section class="section">
+    <h2>The Numbers That Tell the Story</h2>
+    <p class="section-sub">The performance and cost tradeoffs that define whether this approach is worth it.</p>
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-num">90.2%</div>
+        <div class="stat-label">performance improvement over a single-agent approach on Anthropic's internal research evaluation</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">15×</div>
+        <div class="stat-label">more tokens (and cost) a multi-agent system uses compared to regular chat</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">90%</div>
+        <div class="stat-label">reduction in research time when agents call multiple tools at once instead of one at a time</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">80%</div>
+        <div class="stat-label">of performance differences explained by one factor alone: how many tokens the system is allowed to use</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── How it works ── -->
+  <section class="section">
+    <h2>How the System Works</h2>
+    <p class="section-sub">Think of it like a research firm: a senior analyst breaks down the project, hands off pieces to junior researchers, then synthesizes everything at the end.</p>
+    <div class="card-grid">
+      <div class="card">
+        <span class="tag tag-concept">Architecture</span>
+        <div class="card-title">The Lead Researcher</div>
+        <p>A "lead" AI agent reads the question, figures out a research strategy, and writes a plan to memory so it doesn't forget it when conversations get long. It then spins up several specialized subagents to do the actual digging.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-concept">Architecture</span>
+        <div class="card-title">Subagents Working in Parallel</div>
+        <p>Each subagent gets a specific slice of the task — think "find all funding rounds for AI startups in Europe" vs. "find all acquisitions." They work at the same time, in separate conversations, without stepping on each other.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-concept">Architecture</span>
+        <div class="card-title">The Citation Agent</div>
+        <p>Before the final answer goes out, a dedicated "citation agent" reads all the gathered documents and makes sure every claim is properly sourced. No hallucinated references.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-practice">Design</span>
+        <div class="card-title">Dynamic Search, Not Static Lookup</div>
+        <p>Instead of searching a pre-built database (called RAG), the system does live, multi-step web searches — adjusting its approach based on what it finds, just like a human researcher would.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── When to use it ── -->
+  <section class="section">
+    <h2>When Multi-Agent Makes Sense (and When It Doesn't)</h2>
+    <p class="section-sub">The 15× cost premium means this approach only earns its keep on the right kinds of problems.</p>
+    <div class="card-grid">
+      <div class="card">
+        <span class="tag tag-practice">Good fit</span>
+        <div class="card-title">Lots of parallel work</div>
+        <p>If the task naturally splits into independent chunks — researching many companies, checking many sources — parallelism actually helps.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-practice">Good fit</span>
+        <div class="card-title">Too much to fit in one chat</div>
+        <p>A single AI conversation has a limit (~200,000 words). Anything bigger needs to be split across multiple agents, each with their own conversation.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-risk">Bad fit</span>
+        <div class="card-title">Tightly coupled work</div>
+        <p>Coding tasks where every step depends on the last one don't benefit much — you can't parallelize "write the next line of code."</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-risk">Bad fit</span>
+        <div class="card-title">Real-time collaboration</div>
+        <p>If subagents need to talk to each other while working (not just report back at the end), current architectures struggle. Each agent waits for all others to finish before the next step.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 8 Principles ── -->
+  <section class="section">
+    <h2>8 Hard-Won Principles for Building These Systems</h2>
+    <p class="section-sub">The Anthropic team distilled their hands-on lessons into eight guidelines — things they learned the painful way so you don't have to.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>Think like your agents</h3>
+          <p>Build a simulation in the AI playground with the exact same prompts and tools your agent will use. Watch it fail step-by-step. You can't fix what you can't observe.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>Teach orchestration explicitly</h3>
+          <p>The lead agent needs precise instructions for each subtask: what the goal is, what format to return, which tools to use, and where one task ends and another begins. Vague instructions like "research the semiconductor shortage" cause agents to duplicate work or leave gaps entirely.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>Scale effort to complexity</h3>
+          <p>Embed explicit budgets in your prompts. Simple fact-finding: 1 agent, 3–10 searches. Comparison: 2–4 agents, 10–15 searches. Complex research: 10+ agents with divided responsibilities. Otherwise agents either over-invest in easy tasks or give up on hard ones.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h3>Tool design is critical</h3>
+          <p>If an agent has a "web search" tool and a "specialized database" tool, it needs to know when to use which one. Vague tool descriptions consistently derail agents — even small wording changes produce dramatically different behavior.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <h3>Agents as prompt engineers</h3>
+          <p>Claude 4 models can diagnose their own failures and suggest improvements to their instructions. One tool-testing agent found key nuances in its search tool and reduced task-completion time by 40% just from better descriptions — written by the AI itself.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <h3>Start wide, then narrow down</h3>
+          <p>Expert researchers start with broad searches and then zoom in. By default, AI agents do the opposite — they query too specifically and return almost nothing. You have to tell them explicitly: cast a wide net first.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">7</div>
+        <div class="step-body">
+          <h3>Guide the thinking process</h3>
+          <p>Claude 4 models support "extended thinking" — a controllable internal scratchpad before they respond. Prompting agents to use this improves instruction-following, reasoning quality, and efficiency across the board.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">8</div>
+        <div class="step-body">
+          <h3>Parallel tool calling</h3>
+          <p>There are two layers of parallelism: the lead agent spawns 3–5 subagents at once, AND each subagent calls 3+ tools simultaneously instead of waiting for one before starting the next. This one change alone cut research time by up to 90%.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Evaluation ── -->
+  <section class="section">
+    <h2>How They Know If It's Actually Working</h2>
+    <p class="section-sub">Knowing your system is good requires a rigorous testing process — and human judgment at the final step.</p>
+    <div class="card-grid">
+      <div class="card">
+        <span class="tag tag-practice">Evaluation</span>
+        <div class="card-title">Start small</div>
+        <p>Begin with ~20 test questions before running expensive large-scale evaluations. Iterate quickly, then scale once you've found real issues.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-concept">Evaluation</span>
+        <div class="card-title">AI grading AI</div>
+        <p>A separate AI judge scores each answer on: factual accuracy, citation accuracy, completeness, source quality, and tool efficiency — all in a single prompt returning 0.0 to 1.0 scores.</p>
+      </div>
+      <div class="card">
+        <span class="tag tag-practice">Evaluation</span>
+        <div class="card-title">Human review catches bias</div>
+        <p>Automated scoring missed a real problem: the system was prioritizing SEO-optimized content farms over academic papers and authoritative sources. Human reviewers spotted it; the team then added source-quality heuristics to fix it.</p>
+      </div>
+    </div>
+
+    <div class="quote-block">
+      "Multi-agent systems work mainly because they help spend enough tokens to solve the problem." — Anthropic Engineering team
+    </div>
+  </section>
+
+  <!-- ── Real examples ── -->
+  <section class="section">
+    <h2>Real Tasks This System Handles</h2>
+    <p class="section-sub">Concrete examples of what users actually asked for — tasks that would take a human hours or days.</p>
+    <div class="examples-row">
+      <div class="example-card">
+        <span class="tag tag-example">Example</span>
+        <div class="example-name">Board member lookup</div>
+        <p>Identify every board member across all S&amp;P 500 Information Technology companies — a task requiring hundreds of individual lookups done in parallel.</p>
+      </div>
+      <div class="example-card">
+        <span class="tag tag-example">Example</span>
+        <div class="example-name">Market landscape</div>
+        <p>Find all AI agent companies active in 2025 — aggregating information from dozens of sources that no single search would surface.</p>
+      </div>
+      <div class="example-card">
+        <span class="tag tag-example">Example</span>
+        <div class="example-name">Opportunity discovery</div>
+        <p>Surfacing business opportunities users hadn't considered — open-ended research where the system decides what's worth finding.</p>
+      </div>
+      <div class="example-card">
+        <span class="tag tag-example">Example</span>
+        <div class="example-name">Healthcare navigation</div>
+        <p>Helping users understand complex health insurance or medical options — synthesizing policy documents, regulations, and advice.</p>
+      </div>
+      <div class="example-card">
+        <span class="tag tag-example">Example</span>
+        <div class="example-name">Technical debugging</div>
+        <p>Resolving software bugs by searching documentation, GitHub issues, and Stack Overflow simultaneously across multiple agents.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Cautions ── -->
+  <section class="section">
+    <h2>Honest Limitations and Warnings</h2>
+    <p class="section-sub">The Anthropic team is unusually candid about where this approach falls short — here's what to watch for.</p>
+    <div class="caution-list">
+      <div class="caution-item">
+        <div class="caution-title">⚠️ It's expensive</div>
+        <p>Multi-agent systems use 15× more tokens than a normal chat conversation. They're only economically justified for high-value tasks where the output is worth the cost.</p>
+      </div>
+      <div class="caution-item">
+        <div class="caution-title">⚠️ Small changes cause big unpredictability</div>
+        <p>A minor tweak to one prompt can cascade into wildly different behavior across the whole system. "One step failing can cause agents to explore entirely different trajectories, leading to unpredictable outcomes."</p>
+      </div>
+      <div class="caution-item">
+        <div class="caution-title">⚠️ The last mile is most of the journey</div>
+        <p>Getting a prototype working takes hours. Getting it to work reliably in production takes weeks or months. Error compounding — where small failures stack into big failures — makes this gap much wider than in traditional software.</p>
+      </div>
+      <div class="caution-item">
+        <div class="caution-title">⚠️ Agents wait for the slowest</div>
+        <p>Currently, the lead agent has to wait for ALL subagents to finish before moving on. If one subagent gets stuck on a slow website, everything blocks. True parallel streaming is much harder to build.</p>
+      </div>
+      <div class="caution-item">
+        <div class="caution-title">⚠️ Context windows still limit you</div>
+        <p>Each agent has a limit of ~200,000 words of memory. The lead agent saves its plan to an external memory system to work around this — without that, it forgets what it was doing mid-research.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Takeaway ── -->
+  <div class="takeaway">
+    <div class="takeaway-label">Key Takeaway</div>
+    <p>
+      Multi-agent AI research systems genuinely work — <strong>90% better</strong> than a single agent on hard research problems. But the reason they work is almost embarrassingly simple: they spend <strong>more compute</strong>. The real engineering challenge isn't the architecture, it's the <strong>last mile</strong> — crafting prompts that scale effort correctly, designing tools with crisp descriptions, building observability from day one, and accepting that prototypes and production are very different things.
+    </p>
+  </div>
+
+  <footer>
+    Based on <em><a href="https://www.anthropic.com/engineering/multi-agent-research-system" target="_blank">How we built our multi-agent research system</a></em> by the Anthropic Engineering team &mdash; 2025.
+  </footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agentic AI Solved Coding — Beginner's Summary</title>
+    <link rel="stylesheet" href="../summary.css" />
+  </head>
+  <body>
+    <div class="page">
+
+      <header class="hero">
+        <span class="hero-badge">Beginner's Summary</span>
+        <h1>Agentic AI Solved Coding — and Exposed Every Other Problem in Software Engineering</h1>
+        <p class="hero-hook">
+          AI agents write code faster than ever. So why aren't products improving at the same rate?
+        </p>
+        <a class="source-link" href="https://venturebeat.com/technology/agentic-ai-solved-coding-and-exposed-every-other-problem-in-software-engineering" target="_blank">Read the original on VentureBeat →</a>
+      </header>
+
+      <div class="big-idea">
+        <div class="big-idea-label">The Big Idea</div>
+        <p>
+          Writing code was never the real bottleneck in software engineering. The hard parts were always figuring out <em>what</em> to build, wiring it into complex existing systems, and keeping it running reliably. AI agents made code generation lightning fast — but that just means more code lands on human reviewers who are already struggling to keep up. Companies that understand this will adapt deliberately. Companies that don't will reach for a simpler, more destructive lever: cut engineers and spend more on AI.
+        </p>
+      </div>
+
+      <section class="section">
+        <h2>Agents Don't Compress Ambiguity</h2>
+        <p class="section-sub">Why going faster on the easy part doesn't make the hard part easier.</p>
+        <div class="card-grid">
+          <div class="card">
+            <span class="tag tag-concept">Concept</span>
+            <div class="card-title">Code was never the bottleneck</div>
+            <p>The hard parts of building software — defining clear requirements, integrating with messy legacy systems, and maintaining things under real-world conditions — were always the constraints. Agents didn't touch those. They just automated the part that was already manageable.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-risk">Risk</span>
+            <div class="card-title">Human review is the new bottleneck</div>
+            <p>When agents flood a team with ten times the code, someone still has to read and approve it. Engineers are now reviewing at superhuman volume, losing the deep familiarity with the system they need to actually catch mistakes.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-concept">Concept</span>
+            <div class="card-title">Execution ≠ clarity</div>
+            <p>Agents compress execution time. They do not compress ambiguity, accountability, or operational complexity. A vague requirement produces wrong code faster. A complex system integration fails harder. These problems get worse with more code, not better.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-risk">Risk</span>
+            <div class="card-title">The headcount trap</div>
+            <p>Companies that miss this reach the wrong conclusion: fewer engineers plus more AI spend equals the same output. In reality, without engineers who understand the system deeply, AI-generated code accelerates failure rather than delivery.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>A Deliberate Playbook for Enterprise AI</h2>
+        <p class="section-sub">Three sequential phases for adopting AI without losing control — governance first, then strategy, then people.</p>
+
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <strong>Phase 1 — Financial &amp; Risk Governance</strong>
+              <p>Lock down the downside before scaling up. Treat agent configuration (prompts, skills, permissions) like production infrastructure — version it, review it, and deploy it gradually. Enforce <em>least privilege</em>: agents must never inherit a human engineer's full permissions, because agents don't have a human's judgment or accountability. Require human approval for any action that is destructive or touches production. And set hard spending limits — runaway agentic loops have already generated bills as large as $500 million in a single month for early adopters.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <strong>Phase 2 — Technical Strategy</strong>
+              <p>No single AI model is best at everything. Route different tasks to the model best suited for each, and never depend on a single vendor — that's a single point of failure in your core engineering function. Pay for frontier (high-quality) models: the cheapest model by token price is rarely the cheapest overall, because poor output leads to expensive rework. Finally, stop measuring productivity in lines of code or pull requests. These metrics are misleading with AI. Measure feature adoption, retention, change failure rate, and task success per dollar instead.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <strong>Phase 3 — Talent &amp; Organization</strong>
+              <p>Engineers who used to write syntax now need to guide agents, manage cross-system integration, and hold the architectural vision that agents can't maintain on their own. Invest in upskilling — this is a real transition, not a weekend training. Reward engineers for business impact and system reliability, not story points or sprint velocity. And critically: don't cut headcount before you've actually measured what augmented teams produce. Cutting first isn't discipline — it's flying blind.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>What to Measure Instead</h2>
+        <p class="section-sub">Old productivity metrics become actively misleading when agents can inflate them at will.</p>
+        <div class="card-grid">
+          <div class="card">
+            <span class="tag tag-risk">Avoid</span>
+            <div class="card-title">Lines of code &amp; pull requests</div>
+            <p>An agent can open a hundred PRs in an afternoon. More PRs does not mean more value — it means more review burden. These metrics reward AI volume, not human judgment.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-practice">Use instead</span>
+            <div class="card-title">Business outcomes</div>
+            <p>Feature adoption and user retention tell you whether the right thing got built. Change failure rate and escaped defects tell you whether it was built durably. Code survival over time reveals whether the work actually holds up.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-practice">Use instead</span>
+            <div class="card-title">AI efficiency metrics</div>
+            <p>Task success per dollar and rework time measure whether AI spend is actually paying off. Token counts tell you how much the model ran — not whether it ran well.</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="examples-row">
+        <div class="example-card">
+          <span class="tag tag-example">Real Example</span>
+          <div class="example-name">Uber</div>
+          <p>Burned through its entire 2026 AI budget by April — months before the year was half over — forcing the company to cap its AI spend.</p>
+        </div>
+        <div class="example-card">
+          <span class="tag tag-example">Real Example</span>
+          <div class="example-name">Unnamed company</div>
+          <p>Incurred a $500 million Anthropic bill in a single month due to runaway agentic loops with no rate limits or budget controls in place.</p>
+        </div>
+      </div>
+
+      <div class="caution-list">
+        <div class="caution-item">
+          <div class="caution-title">⚠️ Agents must not inherit human permissions</div>
+          <p>Human engineers get broad access because they have contextual judgment and bear ultimate accountability. Giving an agent those same permissions without human oversight creates an accountability gap that attackers and runaway loops can exploit.</p>
+        </div>
+        <div class="caution-item">
+          <div class="caution-title">⚠️ Don't cut headcount before your strategy adapts</div>
+          <p>If you haven't yet integrated agentic workflows, measured what augmented teams actually produce, and reworked your roadmap around faster execution — you don't have enough information to make headcount decisions. Cutting first is guesswork, not strategy.</p>
+        </div>
+        <div class="caution-item">
+          <div class="caution-title">⚠️ Single-vendor lock-in is a critical risk</div>
+          <p>No model excels at every task. Standardizing on one provider sacrifices capability and creates a single point of failure in your core engineering function — exactly where you can least afford it.</p>
+        </div>
+      </div>
+
+      <div class="quote-block">
+        "We have handed engineering teams the ultimate power tool. The old adage demands that you measure twice and cut once. Instead, too many firms are opting to just cut."
+        <br>— Joe Bertolami, CTO &amp; co-founder of Clifton AI
+      </div>
+
+      <div class="takeaway">
+        <div class="takeaway-label">Key Takeaway</div>
+        <p>AI is a <strong>force multiplier</strong> for engineering judgment — not a replacement for it. In well-structured systems it safely accelerates delivery. In poorly understood systems it accelerates failure. The companies winning with AI aren't the ones moving fastest — they're the ones who understood where the real bottlenecks were before they started cutting.</p>
+      </div>
+
+      <footer>
+        Based on <em><a href="https://venturebeat.com/technology/agentic-ai-solved-coding-and-exposed-every-other-problem-in-software-engineering" target="_blank">Agentic AI solved coding — and exposed every other problem in software engineering</a></em> —
+        Joe Bertolami, VentureBeat, June 2026.
+      </footer>
+
+    </div>
+  </body>
+</html>

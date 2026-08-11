@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Harness Engineering — Beginner's Guide</title>
+  <link rel="stylesheet" href="../summary.css">
+</head>
+<body>
+  <main class="page">
+
+    <!-- Header -->
+    <header class="hero">
+      <span class="hero-badge">Beginner's Summary</span>
+      <h1>Harness Engineering for AI-Generated Code</h1>
+      <p class="hero-hook">AI can write code fast — but how do you keep a large AI-generated codebase from falling apart? This memo explores the answer: build a "harness" around your AI.</p>
+      <a class="source-link" href="https://martinfowler.com/articles/exploring-gen-ai/harness-engineering-memo.html" target="_blank" rel="noopener">
+        Original article by Birgitta Böckeler on martinfowler.com →
+      </a>
+    </header>
+
+    <!-- Big idea -->
+    <div class="big-idea">
+      <div class="big-idea-label">The Big Idea</div>
+      <p>Letting an AI generate code freely leads to chaos at scale. The solution is a <strong>harness</strong> — a set of guardrails, rules, and feedback loops that constrain what the AI can do and how. Instead of hoping the AI stays consistent, you <strong>engineer the environment</strong> so it has no choice but to stay consistent.</p>
+    </div>
+
+    <!-- What is a harness -->
+    <section class="section" aria-labelledby="harness-heading">
+      <h2 id="harness-heading">What exactly is a "harness"?</h2>
+      <p class="section-sub">A harness is made up of two things that work together to guide the AI and catch its mistakes.</p>
+      <div class="pillars">
+
+        <div class="pillar">
+          <div class="icon" aria-hidden="true">🧭</div>
+          <h3>Guides</h3>
+          <p>Things that tell the AI what to do and how to do it — before it writes code.</p>
+          <ul>
+            <li>Architecture rules and conventions</li>
+            <li>Documentation the AI can read as context</li>
+            <li>Pre-configured project templates</li>
+            <li>Custom linting rules that steer the style</li>
+          </ul>
+        </div>
+
+        <div class="pillar">
+          <div class="icon" aria-hidden="true">📡</div>
+          <h3>Sensors</h3>
+          <p>Things that detect when the AI went off track — after it writes code.</p>
+          <ul>
+            <li>Automated tests (unit, structural, integration)</li>
+            <li>Linters and code analysis tools</li>
+            <li>AI agents that scan for inconsistencies</li>
+            <li>Pre-commit hooks that block bad code</li>
+          </ul>
+        </div>
+
+        <div class="pillar">
+          <div class="icon" aria-hidden="true">🔄</div>
+          <h3>Feedback loops</h3>
+          <p>When a sensor fires, the signal feeds back to improve the guides — continuously tightening the harness over time.</p>
+          <ul>
+            <li>"Agent struggled here" → add missing docs</li>
+            <li>Recurring violations → new linting rule</li>
+            <li>Bad pattern detected → update template</li>
+          </ul>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- OpenAI case study -->
+    <section class="section" aria-labelledby="casestudy-heading">
+      <h2 id="casestudy-heading">Real example: OpenAI's 1M-line codebase</h2>
+      <p class="section-sub">OpenAI built a production codebase of over one million lines with <em>no manually typed code at all</em>. Here's how they did it — and what it took.</p>
+      <div class="card-grid">
+
+        <div class="card">
+          <span class="tag tag-harness">Context</span>
+          <h3>Context engineering</h3>
+          <p>They continuously fed the AI rich context: up-to-date documentation, live observability data, and the ability to browse. The AI always knew the state of the system it was editing.</p>
+        </div>
+
+        <div class="card">
+          <span class="tag tag-harness">Architecture</span>
+          <h3>Structural constraints</h3>
+          <p>Deterministic linters and structural tests enforced boundaries. An AI agent also ran validation passes — combining machine precision with AI-level reasoning about patterns.</p>
+        </div>
+
+        <div class="card">
+          <span class="tag tag-harness">Maintenance</span>
+          <h3>Entropy management</h3>
+          <p>Periodically, agents scanned the codebase for documentation drift and architectural violations — like a health check that runs itself. Keeps large codebases from slowly rotting.</p>
+        </div>
+
+        <div class="card">
+          <span class="tag tag-risk">Caveat</span>
+          <h3>What's missing</h3>
+          <p>The OpenAI writeup focuses heavily on internal code quality and consistency — but gives little evidence that the code actually <em>works correctly</em> for end users. Maintainability ≠ correctness.</p>
+        </div>
+
+      </div>
+
+      <div class="quote-block" style="margin-block-start: var(--gap);">
+        <blockquote>"When the agent struggles, we treat it as a signal" — for identifying missing tools, guardrails, or documentation.</blockquote>
+        <cite>— OpenAI engineering team</cite>
+      </div>
+    </section>
+
+    <!-- Four hypotheses -->
+    <section class="section" aria-labelledby="hypotheses-heading">
+      <h2 id="hypotheses-heading">4 bold predictions about where this is heading</h2>
+      <p class="section-sub">The article makes four educated guesses about how software engineering will change as harness engineering matures.</p>
+      <div class="steps">
+
+        <div class="step">
+          <span class="step-num" aria-hidden="true">1</span>
+          <div class="step-body">
+            <h4>Less freedom, more reliability</h4>
+            <p>Counterintuitively, AI works <em>better</em> when constrained. Teams that lock down their stack and patterns will get more consistent AI output than teams that let the AI do whatever it wants.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="step-num" aria-hidden="true">2</span>
+          <div class="step-body">
+            <h4>Fewer tech stacks will win</h4>
+            <p>As developers spend less time typing code directly, "AI-friendliness" becomes a reason to pick a framework. Popular, well-documented stacks will dominate further — obscure ones will fade faster.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="step-num" aria-hidden="true">3</span>
+          <div class="step-body">
+            <h4>Code structure becomes the new abstraction</h4>
+            <p>Natural language might not be the real abstraction layer. Instead, well-designed patterns and module boundaries could become the new interface — the thing humans think in, while AI fills in the details.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="step-num" aria-hidden="true">4</span>
+          <div class="step-body">
+            <h4>Legacy codebases may be left behind</h4>
+            <p>Retrofitting a harness onto a messy, unstructured legacy codebase might be too hard to be worth it. Full AI autonomy may only be achievable in codebases designed for it from the start.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Harnesses as templates -->
+    <section class="section" aria-labelledby="templates-heading">
+      <h2 id="templates-heading">Harnesses as service templates</h2>
+      <p class="section-sub">Think of a harness as a starter kit — not just boilerplate files, but a complete opinionated environment.</p>
+      <div class="card-grid">
+
+        <div class="card">
+          <span class="tag tag-practice">What's included</span>
+          <h3>A harness template bundles…</h3>
+          <p>Custom linters, structural tests, project documentation, and context providers — all pre-configured and ready for AI agents to use as their operating rules.</p>
+        </div>
+
+        <div class="card">
+          <span class="tag tag-practice">Benefit</span>
+          <h3>Consistency across teams</h3>
+          <p>Different teams in the same org can share one harness template, ensuring AI-generated code looks and behaves the same everywhere — making cross-team review much easier.</p>
+        </div>
+
+        <div class="card">
+          <span class="tag tag-risk">New challenge</span>
+          <h3>Template drift</h3>
+          <p>Once a team forks a template and starts building on it, keeping up with updates to the shared template becomes a real problem — similar to the headache of updating a shared library.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- What to do today -->
+    <section class="section" aria-labelledby="today-heading">
+      <h2 id="today-heading">What you can do today</h2>
+      <p class="section-sub">Practical starting points for teams that want to move in this direction.</p>
+      <div class="card-grid">
+
+        <div class="card">
+          <span class="tag tag-practice">Action</span>
+          <h3>Audit your existing harness</h3>
+          <p>You probably already have harness components without calling them that — pre-commit hooks, linting rules, CI checks. Map them out and ask: what's missing?</p>
+        </div>
+
+        <div class="card">
+          <span class="tag tag-practice">Action</span>
+          <h3>Try structural testing</h3>
+          <p>Tools like <strong>ArchUnit</strong> let you write tests that enforce architectural rules (e.g. "the data layer must not import from the UI layer"). These are perfect sensors for a harness.</p>
+        </div>
+
+        <div class="card">
+          <span class="tag tag-practice">Action</span>
+          <h3>Decide what to constrain</h3>
+          <p>Pick the architectural boundaries that matter most in your codebase and make them enforceable. The tighter and clearer the rules, the better the AI will perform within them.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Cautions -->
+    <section class="section" aria-labelledby="cautions-heading">
+      <h2 id="cautions-heading">Things to watch out for</h2>
+      <p class="section-sub">Harness engineering is promising — but it comes with real risks and honest caveats.</p>
+      <div class="caution-list">
+
+        <div class="caution-item">
+          <h4 class="caution-title">It takes months, not days</h4>
+          <p>OpenAI's team spent 5 months building their harness. This is not a quick win. Expect a significant upfront investment before the AI autonomy payoff arrives.</p>
+        </div>
+
+        <div class="caution-item">
+          <h4 class="caution-title">Correctness isn't the same as consistency</h4>
+          <p>A well-harnessed codebase can look beautiful and still have bugs. The harness ensures the AI follows your patterns — it doesn't guarantee the patterns themselves are right.</p>
+        </div>
+
+        <div class="caution-item">
+          <h4 class="caution-title">Old codebases may not benefit</h4>
+          <p>If your codebase is large, inconsistent, and undocumented, retrofitting a harness may cost more than it saves. This approach works best on greenfield projects or disciplined existing ones.</p>
+        </div>
+
+        <div class="caution-item">
+          <h4 class="caution-title">Better AI models won't solve this</h4>
+          <p>The real challenge isn't that the AI is too dumb — it's that the environment isn't designed to guide and check it. Waiting for a smarter model is the wrong strategy.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Key takeaway -->
+    <div class="takeaway" aria-labelledby="takeaway-heading">
+      <div class="takeaway-label" id="takeaway-heading">Key Takeaway</div>
+      <p>AI writing code is just the beginning. The real engineering challenge is designing the <strong>environment around the AI</strong> — the rules, tests, templates, and feedback loops that keep a large AI-generated codebase consistent, safe, and maintainable. That environment is the harness, and building it well is the new engineering skill that matters.</p>
+    </div>
+
+    <footer>
+      <p>Summary of <em>Harness Engineering Memo</em> by Birgitta Böckeler on martinfowler.com</p>
+    </footer>
+
+  </main>
+</body>
+</html>

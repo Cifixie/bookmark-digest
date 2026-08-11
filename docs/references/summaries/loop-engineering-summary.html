@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Loop Engineering — Beginner's Summary</title>
+    <link rel="stylesheet" href="../summary.css" />
+    <style>
+      :root {
+        --accent: #0d9488;
+        --accent-light: #ccfbf1;
+        --accent-dark: #0f766e;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+
+      <header class="hero">
+        <span class="hero-badge">Beginner's Summary</span>
+        <h1>Loop Engineering</h1>
+        <p class="hero-hook">
+          Stop manually prompting AI agents. Design systems that prompt them for you — and keep doing it automatically.
+        </p>
+        <a class="source-link" href="https://www.oreilly.com/radar/loop-engineering/" target="_blank">Source: O'Reilly Radar →</a>
+      </header>
+
+      <div class="big-idea">
+        <div class="big-idea-label">The Big Idea</div>
+        <p>
+          The way most developers use AI today — type a prompt, read the answer, type the next prompt — is already becoming obsolete. The next step is <strong>loop engineering</strong>: building automated systems that discover work, hand it to AI agents, verify the results, and open pull requests, all without a human in the middle. Your job shifts from writing prompts to designing the loop that writes the prompts for you.
+        </p>
+      </div>
+
+      <section class="section">
+        <h2>Why the Workflow Is Changing</h2>
+        <p class="section-sub">Understanding what "leverage point moved" actually means for day-to-day engineering work.</p>
+        <div class="card-grid">
+          <div class="card">
+            <span class="tag tag-concept">Concept</span>
+            <div class="card-title">The Old Way: Manual Prompting</div>
+            <p>You type a prompt, read the AI's answer, then type the next prompt. Each iteration requires you to be present. You're the loop.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-concept">Concept</span>
+            <div class="card-title">The New Way: Loop Engineering</div>
+            <p>You design a system — automations, skills, subagents — that handles discovery, triage, execution, and verification on its own. The system is the loop.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-practice">Practice</span>
+            <div class="card-title">Where Leverage Now Lives</div>
+            <p>Writing clever prompts matters less. Designing how agents are triggered, what context they have, and how their work is verified matters more. This is architecture, not chat.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-future">Future</span>
+            <div class="card-title">The Factory Model</div>
+            <p>When the loop works, the system building your software becomes a kind of automated factory — running agents in parallel, merging results, surfacing only the edge cases that need a human decision.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>The Six Parts of Every Loop</h2>
+        <p class="section-sub">What a working autonomous loop is actually made of — the building blocks you need to assemble.</p>
+        <div class="card-grid">
+          <div class="card">
+            <span class="tag tag-concept">Automations</span>
+            <div class="card-title">Scheduled Triggers</div>
+            <p>Tasks that run on a schedule without human input — reading CI failures, scanning open issues, checking recent commits. In Claude Code these are <code>/loop</code> and cron hooks; in Codex App they're the Automations tab.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-concept">Worktrees</span>
+            <div class="card-title">Isolated Work Environments</div>
+            <p>Each agent gets its own isolated copy of the repo (a "worktree") so parallel agents don't step on each other's file changes. Think of it like each worker getting their own desk.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-concept">Skills</span>
+            <div class="card-title">Codified Project Knowledge</div>
+            <p>Markdown files (<code>SKILL.md</code>) that capture decisions, conventions, and context once, so every agent session starts knowing the rules instead of rediscovering them. Eliminates "intent debt."</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-concept">Plugins / Connectors</span>
+            <div class="card-title">Integrations</div>
+            <p>MCP servers and plugins that give agents access to your issue tracker, Slack, APIs, and other external tools. Without these, the agent is an island — with them, it can open PRs and update tickets.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-concept">Subagents</span>
+            <div class="card-title">Specialized Roles</div>
+            <p>Different agents with different instructions — one that drafts code, a second that reviews it, a third that verifies against project standards. Configured in <code>.claude/agents/</code> or <code>.codex/agents/</code> directories.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-memory">State / Memory</span>
+            <div class="card-title">Persistent External Memory</div>
+            <p>Agents forget between runs. Writing findings to Markdown files or a Linear board gives the loop persistent memory — a triage inbox that survives session boundaries.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Key Concepts to Know</h2>
+        <p class="section-sub">The vocabulary the article introduces — each one names a real problem you'll hit when building loops.</p>
+        <div class="card-grid">
+          <div class="card">
+            <span class="tag tag-risk">Risk</span>
+            <div class="card-title">Intent Debt</div>
+            <p>Every time you start a new agent session you have to re-explain your project's decisions and history. Skills cure this by writing intent down once so you never pay that cost again.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-risk">Risk</span>
+            <div class="card-title">Comprehension Debt</div>
+            <p>The faster agents ship code, the harder it is to keep up with what's actually in your codebase. Without active code review, you can drift into not understanding what you own.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-risk">Risk</span>
+            <div class="card-title">Orchestration Tax</div>
+            <p>Even with parallel agents, the bottleneck shifts to how fast <em>you</em> can review their output. The ceiling isn't compute — it's your review bandwidth.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-risk">Risk</span>
+            <div class="card-title">Cognitive Surrender</div>
+            <p>The most dangerous outcome of loop engineering: becoming so comfortable with agent output that you stop checking whether it's actually correct. Same loop, opposite result depending on your intent.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-concept">Concept</span>
+            <div class="card-title">Agent Harness Engineering</div>
+            <p>The art of configuring the environment — tools, context, memory, constraints — in which a single agent operates. The loop is built from many well-configured harnesses.</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Define a verifiable stopping condition</strong>
+            <p>Use <code>/goal</code> with a concrete, checkable outcome like "all tests in test/auth pass and lint is clean." Vague goals like "improve the auth module" produce vague results — and agents keep going forever.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Invest in skills where intent is expensive</strong>
+            <p>Prioritize writing SKILL.md files for decisions made "because of that one incident" — context that agents would otherwise waste tokens re-deriving every run, or get wrong entirely.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Split the maker and verifier roles</strong>
+            <p>Don't use a single agent to both write and review code. Assign a separate subagent as the verifier — configured with a skeptical, adversarial stance. The verifier model can even be more powerful than the maker.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Externalize state aggressively</strong>
+            <p>Don't rely on conversation history or agent "memory." Write findings to files or a project board after every run. The loop is only as reliable as the state it can read back on the next invocation.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <strong>Stay the engineer, not just the person who presses go</strong>
+            <p>Build the loop and then read the code it ships. Set up active review discipline so comprehension debt doesn't accumulate silently beneath a working CI pipeline.</p>
+          </div>
+        </div>
+      </div>
+
+      <section class="section">
+        <h2>How the Two Major Tools Compare</h2>
+        <p class="section-sub">Both Codex App and Claude Code support the same loop primitives under different names — choose based on your workflow, not capability gaps.</p>
+        <div class="examples-row">
+          <div class="example-card">
+            <span class="tag tag-example">Codex App</span>
+            <div class="example-name">OpenAI Codex App</div>
+            <p>Automations tab + <code>/goal</code> for triggers. Worktrees built-in. Knowledge via <code>SKILL.md</code>. Subagents defined in <code>.codex/agents/</code> TOML files. Integrations via MCP connectors.</p>
+          </div>
+          <div class="example-card">
+            <span class="tag tag-example">Claude Code</span>
+            <div class="example-name">Anthropic Claude Code</div>
+            <p><code>/loop</code>, cron, and hooks for triggers. <code>git worktree</code> and <code>--worktree</code> flag for isolation. Knowledge via <code>SKILL.md</code>. Subagents in <code>.claude/agents/</code>. Integrations via MCP servers.</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="caution-list">
+        <div class="caution-item">
+          <div class="caution-title">⚠️ Unattended loops make unattended mistakes</div>
+          <p>A loop that runs without verification is a loop that silently ships bugs. The maker/verifier split improves reliability, but human confirmation is still the final check — the loop can't replace your judgment.</p>
+        </div>
+        <div class="caution-item">
+          <div class="caution-title">⚠️ Comprehension gaps grow faster than you expect</div>
+          <p>Faster shipping means more code accumulates before you've read it. If you don't actively maintain a reading habit, you'll wake up one day not understanding your own codebase.</p>
+        </div>
+        <div class="caution-item">
+          <div class="caution-title">⚠️ Token costs can surprise you</div>
+          <p>Rich-context loops (large codebases, many tool calls, long subagent chains) can consume tokens at a rate that's hard to predict. Monitor usage patterns and design lean loops where possible.</p>
+        </div>
+        <div class="caution-item">
+          <div class="caution-title">⚠️ Loop engineering is still early</div>
+          <p>The author is explicitly skeptical and frames this as an evolving practice. Patterns that work today will change as the tools mature. Build understanding, not just automation.</p>
+        </div>
+      </div>
+
+      <div class="quote-block">
+        "Designing the loop is the cure when you do it with judgment and the accelerant when you do it to avoid thinking: same action, opposite result."
+        <br><em style="font-size:0.85em; opacity:0.8;">— Loop Engineering, O'Reilly Radar</em>
+      </div>
+
+      <div class="takeaway">
+        <div class="takeaway-label">Key Takeaway</div>
+        <p>
+          Loop engineering is the shift from <strong>typing prompts</strong> to <strong>designing systems</strong> that prompt AI agents on your behalf — triggered by automations, backed by skills, verified by subagents. Done with judgment, it multiplies what a careful engineer can ship. Done to avoid thinking, it multiplies mistakes. <strong>Build the loop, but stay the engineer.</strong>
+        </p>
+      </div>
+
+      <footer>
+        Based on <em><a href="https://www.oreilly.com/radar/loop-engineering/" target="_blank">Loop Engineering</a></em> —
+        O'Reilly Radar, 2025.
+      </footer>
+
+    </div>
+  </body>
+</html>

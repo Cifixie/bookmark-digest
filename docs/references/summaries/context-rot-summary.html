@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Context Rot — Beginner's Summary</title>
+    <link rel="stylesheet" href="../summary.css" />
+  </head>
+  <body>
+    <div class="page">
+
+      <!-- 1. Hero -->
+      <header class="hero">
+        <span class="hero-badge">Beginner's Summary</span>
+        <h1>Context Rot: How More Text Makes AI Less Reliable</h1>
+        <p class="hero-hook">
+          Even the most advanced AI models quietly get worse the more text you give them — and the standard tests used to prove they're "fine" completely miss this.
+        </p>
+        <a class="source-link" href="https://www.trychroma.com/research/context-rot" target="_blank">Read the original research →</a>
+      </header>
+
+      <!-- 2. Big Idea -->
+      <div class="big-idea">
+        <div class="big-idea-label">The Big Idea</div>
+        <p>
+          AI companies advertise context windows of one million tokens or more, and benchmarks show near-perfect scores on long-context tests. But those tests only check whether the AI can find an exact phrase — like a word-search puzzle. Chroma's researchers ran harder, more realistic experiments across 18 state-of-the-art models and found that performance degrades significantly and unpredictably as input length grows. The problem isn't that long context is impossible; it's that <em>how</em> you fill that context matters enormously, and the industry has been measuring the wrong thing.
+        </p>
+      </div>
+
+      <!-- 3. What Is Context Rot? -->
+      <section class="section">
+        <h2>What Is Context Rot?</h2>
+        <p class="section-sub">Understanding why longer inputs are harder than they look — even when the task stays exactly the same.</p>
+
+        <div class="card-grid">
+          <div class="card">
+            <span class="tag tag-concept">Concept</span>
+            <div class="card-title">Uniform processing is a myth</div>
+            <p>Models are assumed to handle the 10,000th token just as reliably as the 100th. In practice, performance becomes increasingly unreliable as input grows — this is "context rot."</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-risk">Risk</span>
+            <div class="card-title">Benchmarks hide the problem</div>
+            <p>The industry's go-to test, "Needle in a Haystack" (NIAH), just asks: can you find this exact phrase in a long document? Real tasks require understanding meaning, handling ambiguity, and reasoning — things NIAH never checks.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-concept">Concept</span>
+            <div class="card-title">Distractors are the danger</div>
+            <p>Adding a single distractor — a piece of text that's related but doesn't answer the question — degrades model performance relative to no distractors at all. And some distractors hurt far more than others.</p>
+          </div>
+          <div class="card">
+            <span class="tag tag-practice">Practice</span>
+            <div class="card-title">Context engineering matters</div>
+            <p>What you put in the context window, and where you put it, strongly influences task performance. Careful construction of context is as important as choosing which model to use.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. The Four Experiments (Steps) -->
+      <section class="section">
+        <h2>The Four Experiments</h2>
+        <p class="section-sub">How the researchers isolated the effect of input length, keeping task difficulty constant while varying what fills the context.</p>
+
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <strong>Extended Needle in a Haystack</strong>
+              <p>The researchers kept the classic find-the-fact task but added new variables: How similar is the question to the hidden answer? How similar is the answer to the surrounding filler text? How many related-but-wrong distractors are present? Each variable independently caused performance to drop as input grew. Models performed <em>better</em> when haystack text was shuffled into random sentence order — suggesting models exploit structural coherence in ways that can backfire.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <strong>LongMemEval: Realistic Chat History</strong>
+              <p>Models were given either a focused 300-token excerpt containing only relevant context, or a full 113,000-token chat history with irrelevant content mixed in. Every single model showed a significant performance gap between the two conditions. Even enabling "thinking mode" (extended reasoning) didn't close the gap. Temporal reasoning — working out the sequence of past events — was the hardest category for almost every model.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <strong>Repeated Words Task</strong>
+              <p>Models were asked to copy a sequence of repeated words (e.g. "apple apple apple <strong>apples</strong> apple apple…") exactly as written. This sounds trivial, but as the word count grew from 25 to 10,000 words, models increasingly placed the unique word in the wrong position, refused the task citing copyright concerns, or generated completely random outputs not present in the input at all.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">4</div>
+            <div class="step-body">
+              <strong>Controlled Variable Design</strong>
+              <p>Across all experiments, the researchers held task complexity constant and varied only input length. This is rare in the field — most benchmarks accidentally make tasks harder as they get longer, confusing the two effects. By separating them, this study shows that input length alone causes measurable, consistent degradation.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. How Different Models Behaved (Examples) -->
+      <section class="section">
+        <h2>How Different Models Behaved</h2>
+        <p class="section-sub">The 18 models tested each failed in distinct ways — knowing the failure mode helps you choose the right model for the job.</p>
+
+        <div class="examples-row">
+          <div class="example-card">
+            <span class="tag tag-example">Anthropic</span>
+            <div class="example-name">Claude family</div>
+            <p>Lowest hallucination rate. Tends to abstain or say "I cannot determine…" when uncertain. Claude Opus 4 degraded slowest but refused ~3% of tasks. Claude Sonnet 3.5 outperformed newer versions on the copying task up to its 8,192-token limit.</p>
+          </div>
+          <div class="example-card">
+            <span class="tag tag-example">OpenAI</span>
+            <div class="example-name">GPT family</div>
+            <p>Highest hallucination rate — generates confident but incorrect answers. GPT-4.1 nano lowercase "san francisco" to "san". GPT-4.1 mini invented words like "Golden Golden" not present in the input. GPT-3.5 Turbo refused 60% of copying tasks.</p>
+          </div>
+          <div class="example-card">
+            <span class="tag tag-example">Google</span>
+            <div class="example-name">Gemini family</div>
+            <p>Most models (except Gemini 2.5 Flash) started generating random garbage — things like "-le-le-le" sequences or URL fragments like "/2021/01/20/orange-county…" — around 500–750 words into the copying task. Gemini 2.5 Pro showed the greatest variability overall.</p>
+          </div>
+          <div class="example-card">
+            <span class="tag tag-example">Alibaba</span>
+            <div class="example-name">Qwen family</div>
+            <p>Random outputs starting around 5,000 words. In one case Qwen3-8B began repeating "I'm going to take a break… I need to chill out" in a loop instead of copying the input. The 4.2% non-attempt rate was among the highest.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. Key Numbers -->
+      <section class="section">
+        <h2>By the Numbers</h2>
+        <p class="section-sub">The scale of the study and the gaps it found between ideal and real-world performance.</p>
+
+        <div class="stat-row">
+          <div class="stat-card">
+            <div class="stat-num">18</div>
+            <div class="stat-label">LLMs tested across Anthropic, OpenAI, Google, and Alibaba</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">306</div>
+            <div class="stat-label">Manually cleaned LongMemEval prompts averaging 113k tokens each</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">12</div>
+            <div class="stat-label">Input lengths tested (25 to 10,000 words) in the copying task</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">~100%</div>
+            <div class="stat-label">Typical NIAH score for top models — hiding real degradation underneath</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. A Telling Quote -->
+      <div class="quote-block">
+        "Models do not use their context uniformly; instead, their performance grows increasingly unreliable as input length grows."
+        <cite>— Chroma Research, Context Rot</cite>
+      </div>
+
+      <!-- 8. Cautions & Limitations -->
+      <section class="section">
+        <h2>What the Research Doesn't Answer</h2>
+        <p class="section-sub">The authors are unusually honest about what their study can't yet explain — worth knowing before drawing hard conclusions.</p>
+
+        <div class="caution-list">
+          <div class="caution-item">
+            <div class="caution-title">⚠️ Real tasks are even harder</div>
+            <p>The experiments held task complexity constant on purpose, but real-world applications require synthesis, multi-step reasoning, and cross-document analysis. The degradation found here is likely a lower bound on what happens in production.</p>
+          </div>
+          <div class="caution-item">
+            <div class="caution-title">⚠️ No mechanistic explanation</div>
+            <p>The researchers document that degradation happens and measure it carefully, but they don't explain why — that would require interpretability research into how attention mechanisms process long sequences. The "why" remains open.</p>
+          </div>
+          <div class="caution-item">
+            <div class="caution-title">⚠️ Only two haystack topics tested</div>
+            <p>The needle-haystack similarity experiments used only PG essays and arXiv papers. The authors acknowledge this is too narrow to draw generalizable conclusions about which content types cause the most interference.</p>
+          </div>
+          <div class="caution-item">
+            <div class="caution-title">⚠️ The shuffled-haystack finding is unexplained</div>
+            <p>Models performed better on incoherent, randomly-shuffled text than on naturally flowing prose. This is surprising and unintuitive. The authors flag it as a potential interpretability research direction but offer no explanation.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9. Pillars: What You Can Do About It -->
+      <section class="section">
+        <h2>What You Can Do About It</h2>
+        <p class="section-sub">The practical takeaways for anyone building with or evaluating LLMs today.</p>
+
+        <div class="pillars">
+          <div class="pillar">
+            <h3>Trim before sending</h3>
+            <p>The LongMemEval results show a huge gap between focused 300-token prompts and full 113k-token histories. Retrieving only the relevant context — not dumping everything in — is one of the highest-leverage things you can do.</p>
+          </div>
+          <div class="pillar">
+            <h3>Distrust perfect benchmark scores</h3>
+            <p>A model that scores near 100% on Needle in a Haystack hasn't proven it handles long context well. Ask whether the benchmark required semantic reasoning, disambiguation, or any task harder than exact phrase lookup.</p>
+          </div>
+          <div class="pillar">
+            <h3>Test your specific use case</h3>
+            <p>Different models fail in different ways. Claude abstains; GPT hallucinates confidently; Gemini generates garbage. The failure mode that matters most depends on your application — run your own experiments.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 10. Takeaway -->
+      <div class="takeaway">
+        <div class="takeaway-label">Key Takeaway</div>
+        <p>
+          Long context windows are real, but <strong>reliable long-context reasoning</strong> is not. Every model tested — from Claude Opus 4 to Gemini 2.5 Pro — showed measurable degradation as inputs grew, even on tasks that didn't get harder. The right response isn't to avoid long contexts but to <strong>engineer them carefully</strong>: retrieve only what's relevant, audit for distractors, and stop trusting benchmark numbers that only measure word-search.
+        </p>
+      </div>
+
+      <footer>
+        Based on <em><a href="https://www.trychroma.com/research/context-rot" target="_blank">Context Rot: How Increasing Input Tokens Impacts LLM Performance</a></em> —
+        Chroma Research, 2025.
+      </footer>
+
+    </div>
+  </body>
+</html>

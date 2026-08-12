@@ -9,6 +9,7 @@ import { iterateComponents } from "./iterateComponents";
 import { AuthorCard } from "../components/digestBlocks/AuthorCard/AuthorCard";
 import { Callout } from "../components/digestBlocks/Callout/Callout";
 import { Card } from "../components/digestBlocks/Card/Card";
+import { Chart } from "../components/digestBlocks/Chart/Chart";
 import { ChecklistItem } from "../components/digestBlocks/ChecklistItem/ChecklistItem";
 import { CodeBlock } from "../components/digestBlocks/CodeBlock/CodeBlock";
 import { ComparisonTable } from "../components/digestBlocks/ComparisonTable/ComparisonTable";
@@ -22,6 +23,7 @@ import { NextSteps } from "../components/digestBlocks/NextSteps/NextSteps";
 import { Prerequisites } from "../components/digestBlocks/Prerequisites/Prerequisites";
 import { Prose } from "../components/digestBlocks/Prose/Prose";
 import { ProsCons } from "../components/digestBlocks/ProsCons/ProsCons";
+import { PullQuote } from "../components/digestBlocks/PullQuote/PullQuote";
 import { QuoteBlock } from "../components/digestBlocks/QuoteBlock/QuoteBlock";
 import { SectionContainer } from "../components/digestBlocks/SectionContainer/SectionContainer";
 import { StatCard } from "../components/digestBlocks/StatCard/StatCard";
@@ -35,6 +37,7 @@ export const blockComponents = {
   AuthorCard,
   Callout,
   Card,
+  Chart,
   ChecklistItem,
   CodeBlock,
   ComparisonTable,
@@ -48,6 +51,7 @@ export const blockComponents = {
   Prerequisites,
   Prose,
   ProsCons,
+  PullQuote,
   QuoteBlock,
   SectionContainer,
   StatCard,

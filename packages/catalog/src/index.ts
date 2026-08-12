@@ -13,6 +13,7 @@ import { z } from "zod";
 import * as AuthorCard from "./digestBlocks/AuthorCard.catalog";
 import * as Callout from "./digestBlocks/Callout.catalog";
 import * as Card from "./digestBlocks/Card.catalog";
+import * as Chart from "./digestBlocks/Chart.catalog";
 import * as ChecklistItem from "./digestBlocks/ChecklistItem.catalog";
 import * as CodeBlock from "./digestBlocks/CodeBlock.catalog";
 import * as ComparisonTable from "./digestBlocks/ComparisonTable.catalog";
@@ -26,6 +27,7 @@ import * as NextSteps from "./digestBlocks/NextSteps.catalog";
 import * as Prerequisites from "./digestBlocks/Prerequisites.catalog";
 import * as Prose from "./digestBlocks/Prose.catalog";
 import * as ProsCons from "./digestBlocks/ProsCons.catalog";
+import * as PullQuote from "./digestBlocks/PullQuote.catalog";
 import * as QuoteBlock from "./digestBlocks/QuoteBlock.catalog";
 import * as StatCard from "./digestBlocks/StatCard.catalog";
 import * as Step from "./digestBlocks/Step.catalog";
@@ -68,6 +70,7 @@ type DigestBlockTypeLiteral =
   | "AuthorCard"
   | "Callout"
   | "Card"
+  | "Chart"
   | "ChecklistItem"
   | "CodeBlock"
   | "ComparisonTable"
@@ -81,6 +84,7 @@ type DigestBlockTypeLiteral =
   | "Prerequisites"
   | "Prose"
   | "ProsCons"
+  | "PullQuote"
   | "QuoteBlock"
   | "SectionContainer"
   | "StatCard"
@@ -109,6 +113,7 @@ export const digestBlockSchema = z.object({
     "AuthorCard",
     "Callout",
     "Card",
+    "Chart",
     "ChecklistItem",
     "CodeBlock",
     "ComparisonTable",
@@ -122,6 +127,7 @@ export const digestBlockSchema = z.object({
     "Prerequisites",
     "Prose",
     "ProsCons",
+    "PullQuote",
     "QuoteBlock",
     "SectionContainer",
     "StatCard",
@@ -174,6 +180,7 @@ export interface DigestPage {
 export type { AuthorCardProps } from "./digestBlocks/AuthorCard.catalog";
 export type { CalloutProps } from "./digestBlocks/Callout.catalog";
 export type { CardProps } from "./digestBlocks/Card.catalog";
+export type { ChartDataPoint, ChartProps } from "./digestBlocks/Chart.catalog";
 export type { ChecklistItemProps } from "./digestBlocks/ChecklistItem.catalog";
 export type { CodeBlockProps } from "./digestBlocks/CodeBlock.catalog";
 export type { ComparisonTableProps } from "./digestBlocks/ComparisonTable.catalog";
@@ -187,6 +194,7 @@ export type { NextStepsProps } from "./digestBlocks/NextSteps.catalog";
 export type { PrerequisitesProps } from "./digestBlocks/Prerequisites.catalog";
 export type { ProseProps } from "./digestBlocks/Prose.catalog";
 export type { ProsConsProps } from "./digestBlocks/ProsCons.catalog";
+export type { PullQuoteProps } from "./digestBlocks/PullQuote.catalog";
 export type { QuoteBlockProps } from "./digestBlocks/QuoteBlock.catalog";
 export type { SectionContainerProps } from "./digestBlocks/SectionContainer.catalog";
 export type { StatCardProps } from "./digestBlocks/StatCard.catalog";

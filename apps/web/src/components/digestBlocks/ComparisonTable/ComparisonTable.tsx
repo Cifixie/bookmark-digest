@@ -44,7 +44,7 @@ export const ComparisonTable = (props: ComparisonTableProps) => {
                       padding: "8px 12px",
                       borderBottom: "1px solid #eee",
                       color: "#555",
-                      fontWeight: i === row.winnerIndex ? 600 : 400,
+                      fontWeight: row.winnerIndex != null && i === row.winnerIndex ? 600 : 400,
                       background: i === winnerIndex ? winnerBackground : undefined,
                     }}
                   >

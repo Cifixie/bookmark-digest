@@ -9,8 +9,8 @@ const comparisonTableRow = z.object({
   label: z.string(),
   /** One value per source/column — mapped to columns by index. */
   values: z.array(z.string()),
-  /** Optional per-row winner highlight (index into values, 0-based). */
-  winnerIndex: z.number().int().min(0).max(99).optional(),
+  /** Optional per-row winner highlight (index into values, 0-based). Omitted or null means no winner for this row. */
+  winnerIndex: z.number().int().min(0).max(99).nullable().optional(),
 });
 
 export type ComparisonTableProps = z.infer<typeof props>;
@@ -22,8 +22,8 @@ export const props = z.object({
   rows: z.array(comparisonTableRow),
   /** Overall verdict or summary across all sources. */
   summary: z.string().optional(),
-  /** Winning item index (overall) if the sources converge on a clear favorite. */
-  winnerIndex: z.number().int().min(0).max(99).optional(),
+  /** Winning item index (overall) if the sources converge on a clear favorite. Omitted or null means no clear winner. */
+  winnerIndex: z.number().int().min(0).max(99).nullable().optional(),
 });
 
 export const description =

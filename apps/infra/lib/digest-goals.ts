@@ -27,7 +27,7 @@ export const DIGEST_GOALS: DigestGoalConfig[] = [
     label: "Summary",
     description: "A thorough prose summary of the source content.",
     promptTemplate: `
-Consider ALL of the following from content:
+For data-heavy sources: use Chart (bar chart for side-by-side comparisons or rankings; sparkline for simple trends with ≤8 data points) instead of StatCard when multiple related numbers need visual comparison. For long Prose sections: use PullQuote for a single impactful sentence with no attribution — but only if you cannot attribute it (use QuoteBlock when you have a speaker/author name).
 - The main thesis or central argument
 - Every major section and its key points
 - Concrete examples, case studies, or real-world instances mentioned
@@ -68,6 +68,8 @@ disconnected facts is a worse summary than one that shows how the facts relate.
     description:
       "A beginner-friendly explanation, assuming no prior knowledge.",
     promptTemplate: `
+For data-heavy sources: use Chart (bar chart for side-by-side comparisons or rankings; sparkline for simple trends with ≤8 data points) instead of StatCard when multiple related numbers need visual comparison. For long Prose sections: use PullQuote for a single impactful sentence with no attribution — but only if you cannot attribute it (use QuoteBlock when you have a speaker/author name).
+
 Explain the following content to someone with no prior background in the subject. Assume
 intelligence, not familiarity — they can follow a well-built argument, they just don't yet
 have the vocabulary or context this content assumes.
@@ -136,6 +138,7 @@ the same author or from the same perspective. Treat them as one body of material
   *within* the material, e.g. a real trade-off the sources themselves discuss.)
 - Where sources genuinely disagree, say so in prose or a Callout rather than
   building the whole page around the disagreement.
+- Do NOT use PullQuote — the sources are complementary, not opinion-based.
 `,
   },
   {

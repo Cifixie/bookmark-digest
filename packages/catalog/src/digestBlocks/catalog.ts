@@ -1,6 +1,7 @@
 export * as AuthorCard from "./AuthorCard.catalog";
 export * as Callout from "./Callout.catalog";
 export * as Card from "./Card.catalog";
+export * as Chart from "./Chart.catalog";
 export * as ChecklistItem from "./ChecklistItem.catalog";
 export * as CodeBlock from "./CodeBlock.catalog";
 export * as ComparisonTable from "./ComparisonTable.catalog";
@@ -14,6 +15,7 @@ export * as NextSteps from "./NextSteps.catalog";
 export * as Prerequisites from "./Prerequisites.catalog";
 export * as Prose from "./Prose.catalog";
 export * as ProsCons from "./ProsCons.catalog";
+export * as PullQuote from "./PullQuote.catalog";
 export * as QuoteBlock from "./QuoteBlock.catalog";
 export * as SectionContainer from "./SectionContainer.catalog";
 export * as StatCard from "./StatCard.catalog";

@@ -9,6 +9,7 @@ import { z } from "zod";
 import * as AuthorCard from "./digestBlocks/AuthorCard.catalog";
 import * as Callout from "./digestBlocks/Callout.catalog";
 import * as Card from "./digestBlocks/Card.catalog";
+import * as Chart from "./digestBlocks/Chart.catalog";
 import * as ChecklistItem from "./digestBlocks/ChecklistItem.catalog";
 import * as CodeBlock from "./digestBlocks/CodeBlock.catalog";
 import * as ComparisonTable from "./digestBlocks/ComparisonTable.catalog";
@@ -22,6 +23,7 @@ import * as NextSteps from "./digestBlocks/NextSteps.catalog";
 import * as Prerequisites from "./digestBlocks/Prerequisites.catalog";
 import * as Prose from "./digestBlocks/Prose.catalog";
 import * as ProsCons from "./digestBlocks/ProsCons.catalog";
+import * as PullQuote from "./digestBlocks/PullQuote.catalog";
 import * as QuoteBlock from "./digestBlocks/QuoteBlock.catalog";
 import * as SectionContainer from "./digestBlocks/SectionContainer.catalog";
 import * as StatCard from "./digestBlocks/StatCard.catalog";
@@ -35,6 +37,7 @@ export const digestBlockProps: Record<string, z.ZodType> = {
   AuthorCard: AuthorCard.props,
   Callout: Callout.props,
   Card: Card.props,
+  Chart: Chart.props,
   ChecklistItem: ChecklistItem.props,
   CodeBlock: CodeBlock.props,
   ComparisonTable: ComparisonTable.props,
@@ -48,6 +51,7 @@ export const digestBlockProps: Record<string, z.ZodType> = {
   Prerequisites: Prerequisites.props,
   Prose: Prose.props,
   ProsCons: ProsCons.props,
+  PullQuote: PullQuote.props,
   QuoteBlock: QuoteBlock.props,
   SectionContainer: SectionContainer.props,
   StatCard: StatCard.props,

@@ -61,6 +61,7 @@ export async function sourcesPut(item: {
   fetchedAt: string;
   fetchedBy: string | null;
   status: string;
+  title?: string;
   embedding?: number[];
   embeddingModel?: string;
   embeddingAt?: string;
@@ -119,6 +120,7 @@ export async function digestsPut(item: {
   paramsVersion: string;
   status: string;
   output?: unknown[];
+  meta?: Record<string, unknown>; // AI-generated metadata (subject, tags, digestType, tone, length, difficulty)
   error?: string;
   model?: string;
   createdAt: string;
@@ -179,6 +181,44 @@ export async function sourcesScan(
   projectionExpression?: string
 ) {
   const params: any = { TableName: SOURCES_TABLE };
+  const { values, names } = splitExpressionAttributes(expressionAttributes ?? {});
+  if (filterExpression) {
+    params.FilterExpression = filterExpression;
+    params.ExpressionAttributeValues = values;
+  }
+  if (projectionExpression) {
+    params.ProjectionExpression = projectionExpression;
+  }
+  if (Object.keys(names).length > 0) params.ExpressionAttributeNames = names;
+
+  const items: Record<string, any>[] = [];
+  let lastEvaluatedKey: Record<string, any> | undefined;
+  do {
+    const page = await getDocClient().send(
+      new ScanCommand({ ...params, ExclusiveStartKey: lastEvaluatedKey })
+    );
+    if (page.Items) items.push(...page.Items);
+    lastEvaluatedKey = page.LastEvaluatedKey;
+  } while (lastEvaluatedKey);
+
+  return { Items: items, Count: items.length };
+}
+
+// ---------------------------------------------------------------------------
+// Digests scan (backs the browse list — mirrors sourcesScan)
+// ---------------------------------------------------------------------------
+
+/**
+ * Scan the Digests table, following `LastEvaluatedKey` to completion.
+ * Same pagination/projection contract as sourcesScan; used by fetch-digest's
+ * list-all-with-filters mode.
+ */
+export async function digestsScan(
+  filterExpression?: string,
+  expressionAttributes?: Record<string, unknown>,
+  projectionExpression?: string
+) {
+  const params: any = { TableName: DIGESTS_TABLE };
   const { values, names } = splitExpressionAttributes(expressionAttributes ?? {});
   if (filterExpression) {
     params.FilterExpression = filterExpression;

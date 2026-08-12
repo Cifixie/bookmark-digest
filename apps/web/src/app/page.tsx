@@ -607,7 +607,12 @@ export default function Home() {
 
   return (
     <>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Bookmark Digest</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <h1 style={{ fontSize: 22, marginBottom: 4 }}>Bookmark Digest</h1>
+        <Link to="/browse" style={{ fontSize: 13, color: "#4a90d9", textDecoration: "none" }}>
+          Browse →
+        </Link>
+      </div>
 
       <form onSubmit={handleSubmit}>
         <input

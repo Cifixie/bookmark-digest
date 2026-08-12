@@ -22,7 +22,7 @@ import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 import { compileSpecStream, autoFixSpec, type Spec } from "@json-render/core";
-import { validateDigestSpec, catalog } from "@bookmark-digest/catalog";
+import { validateDigestSpec, catalog, DigestMeta } from "@bookmark-digest/catalog";
 import { randomUUID } from "crypto";
 import {
   GEMINI_MODEL_ID,
@@ -58,6 +58,77 @@ function stripNulls(value: unknown): void {
   }
 }
 import customRules from "./customRules";
+
+// ---------------------------------------------------------------------------
+// DigestMeta generation (Phase-3 step 6) — asks the model for a small
+// classification object (subject, tags, digestType, tone, length, difficulty),
+// separate from the heavy Spec generation call so a failure here never
+// invalidates an otherwise-good digest. The enum lists come straight from the
+// zod schema (packages/catalog/src/enums.ts) so the prompt can't drift from
+// what the schema actually accepts.
+// ---------------------------------------------------------------------------
+
+const META_ENUMS = DigestMeta.digestMetaSchema.shape;
+const SUBJECT_LIST = META_ENUMS.subject.unwrap().options.join(", ");
+const DIGEST_TYPE_LIST = META_ENUMS.digestType.options.join(", ");
+const TONE_LIST = META_ENUMS.tone.unwrap().options.join(", ");
+const LENGTH_LIST = META_ENUMS.length.unwrap().options.join(", ");
+const DIFFICULTY_LIST = META_ENUMS.difficulty.unwrap().options.join(", ");
+
+const MAX_SOURCE_CHARS_FOR_META = 5000; // First N chars are enough to classify
+
+/**
+ * Generates and validates DigestMeta from the source content. Returns null on
+ * any failure (model error, unparseable JSON, or schema validation failure) —
+ * the caller treats that as "no meta this time", not a digest failure.
+ */
+async function generateMeta(source: { url: string; content: string }): Promise<DigestMeta.DigestMeta | null> {
+  try {
+    const systemPrompt = `
+You are classifying source material for a digest system.
+Produce a JSON object with these fields:
+
+- subject: one of ["${SUBJECT_LIST}"] — the broad topic domain
+- tags: array of 1-6 strings describing specific topics (e.g. "CSS", "Design Systems")
+- digestType: one of ["${DIGEST_TYPE_LIST}"] — what kind of content this is
+- tone: one of ["${TONE_LIST}"] — how the explanation is framed
+- length: one of ["${LENGTH_LIST}"] — approximate reading length
+- difficulty: one of ["${DIFFICULTY_LIST}"] — target reader level (optional)
+
+Be decisive — pick the best fit from each list, don't say "other" unless nothing
+else genuinely fits. Tags should be concrete, not broad categories.
+`;
+
+    const provider = await getGoogleProvider();
+    const contentSlice = source.content.slice(0, MAX_SOURCE_CHARS_FOR_META);
+    const result = await generateText({
+      model: provider(GENERATION_MODEL),
+      system: systemPrompt,
+      prompt: `Source URL: ${source.url}\n\nSource content (first ${MAX_SOURCE_CHARS_FOR_META} chars):\n${contentSlice}`,
+      maxOutputTokens: 500,
+      temperature: 0.2,
+    });
+
+    const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+
+    const candidate = JSON.parse(jsonMatch[0]);
+    candidate.generatedAt = new Date().toISOString();
+
+    // Validate against the real schema — a hallucinated enum value (e.g.
+    // digestType: "blog") fails here rather than silently polluting the
+    // stored meta with a value Browse's subject filter won't recognize.
+    const parsed = DigestMeta.digestMetaSchema.safeParse(candidate);
+    if (!parsed.success) {
+      console.warn(`DigestMeta validation failed: ${parsed.error.message}`);
+      return null;
+    }
+    return parsed.data;
+  } catch (err) {
+    console.warn("Meta generation failed:", err);
+    return null;
+  }
+}
 
 const GENERATION_MODEL = process.env.GEMINI_MODEL ?? GEMINI_MODEL_ID;
 const FALLBACK_MODEL = process.env.BEDROCK_HAIKU_INFERENCE_PROFILE_ID ?? BEDROCK_HAIKU_INFERENCE_PROFILE_ID;
@@ -515,8 +586,24 @@ async function runGeneration({ digestId, sourceHashes, digestGoal, multiSource, 
 
     const spec = parsedSpec;
 
-    // Save result — store the compiled Spec (not flat blocks)
-    await digestsUpdate(digestId, "SET #s = :status, #o = :output, #m = :model, #ca = :at, #u = :u", {
+    // Generate DigestMeta (subject, tags, etc.) from the source content.
+    // Multi-source bundles are skipped — classifying "what is this" doesn't
+    // have a single clear answer across N sources, and it's not on the
+    // critical path for Phase-3 (subject/tags are a single-source browse
+    // facet for now). Non-critical either way: a failure here still saves
+    // the digest, just without meta.
+    let meta: DigestMeta.DigestMeta | null = null;
+    if (sourceHashes.length === 1) {
+      const sourceResult = await sourcesGet(sourceHashes[0]);
+      const source = sourceResult?.Item as { url: string; content: string } | undefined;
+      if (source?.content) {
+        meta = await generateMeta({ url: source.url, content: source.content });
+      }
+    }
+
+    // Save result — store the compiled Spec (not flat blocks) + optional meta.
+    const setExpressions = ["#s = :status", "#o = :output", "#m = :model", "#ca = :at", "#u = :u"];
+    const updateAttributes: Record<string, unknown> = {
       ":status": "done",
       ":output": spec,
       ":model": usedModel,
@@ -527,7 +614,13 @@ async function runGeneration({ digestId, sourceHashes, digestGoal, multiSource, 
       "#m": "model",
       "#ca": "completedAt",
       "#u": "updatedAt",
-    });
+    };
+    if (meta) {
+      setExpressions.push("#meta = :meta");
+      updateAttributes["#meta"] = "meta";
+      updateAttributes[":meta"] = meta;
+    }
+    await digestsUpdate(digestId, `SET ${setExpressions.join(", ")}`, updateAttributes);
   } catch (err) {
     console.error(`Generation failed for ${digestId}:`, err);
     await digestsUpdate(digestId, "SET #s = :status, #e = :err, #m = :model, #ca = :at", {

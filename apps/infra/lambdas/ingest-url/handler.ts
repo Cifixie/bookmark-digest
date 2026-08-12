@@ -25,13 +25,15 @@ interface FetchedSource {
   contentType: "article" | "video" | "unknown";
   /** Recorded on the row so a bad fetch is traceable to the fetcher that made it. */
   fetchedBy: string;
+  /** Page title from Firecrawl metadata; null for pasted/manual content. */
+  title: string | null;
 }
 
 const VALID_CONTENT_TYPES = new Set(["article", "video", "unknown"]);
 
 // --- Firecrawl fetch ---
 
-async function fetchWithFirecrawl(url: string): Promise<{ markdown: string } | null> {
+async function fetchWithFirecrawl(url: string): Promise<{ markdown: string; title: string | null } | null> {
   const apiKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey) {
     console.warn("FIRECRAWL_API_KEY not set");
@@ -52,7 +54,7 @@ async function fetchWithFirecrawl(url: string): Promise<{ markdown: string } | n
 
     const data: any = await res.json();
     if (data.success && data.data?.markdown) {
-      return { markdown: data.data.markdown };
+      return { markdown: data.data.markdown, title: data.data.metadata?.title ?? null };
     }
     return null;
   } catch (err) {
@@ -77,13 +79,27 @@ async function fetchSource(
       pasted.contentType && VALID_CONTENT_TYPES.has(pasted.contentType)
         ? (pasted.contentType as FetchedSource["contentType"])
         : "unknown";
-    return { content: pasted.content, contentType, fetchedBy: "manual" };
+    return { content: pasted.content, contentType, fetchedBy: "manual", title: null };
   }
 
   const scraped = await fetchWithFirecrawl(url);
   return scraped
-    ? { content: scraped.markdown, contentType: "article", fetchedBy: "firecrawl" }
+    ? { content: scraped.markdown, contentType: "article", fetchedBy: "firecrawl", title: scraped.title }
     : null;
+}
+
+/**
+ * Display title: prefer Firecrawl's metadata title; fall back to
+ * hostname + path so old/title-less rows still get a readable label.
+ */
+function displayTitle(url: string, fetchedTitle: string | null): string {
+  if (fetchedTitle && fetchedTitle.trim().length > 0) return fetchedTitle.trim();
+  try {
+    const parsed = new URL(url);
+    return `${parsed.hostname}${parsed.pathname.replace(/\/$/, "")}`;
+  } catch {
+    return url;
+  }
 }
 
 // --- Lambda handler ---
@@ -161,6 +177,7 @@ export async function handler(event: { body?: string }): Promise<{
           fetchedAt: now,
           fetchedBy: fetched.fetchedBy,
           status: "embedding",
+          title: displayTitle(url, fetched.title),
         },
         "attribute_not_exists(contentHash)"
       );

@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import Home from "./page";
 import DigestsPage from "./digests/page";
 import DigestPageClient from "./digests/[digestId]/DigestPageClient";
+import BrowsePage from "./browse/BrowsePage";
 import App from "./App";
 
 const routes = [
@@ -10,6 +11,7 @@ const routes = [
     element: <App />,
     children: [
       { index: true, element: <Home /> },
+      { path: "browse", element: <BrowsePage /> },
       { path: "digests", element: <DigestsPage /> },
       { path: "digests/:digestId", element: <DigestPageClient /> },
     ],

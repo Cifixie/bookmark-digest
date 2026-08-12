@@ -25,16 +25,18 @@ export interface ScoredSource {
   url: string;
   contentType: string;
   fetchedAt: string;
+  title: string | null;
   score: number;
 }
 
 /**
  * Ranks candidate sources by cosine similarity to `queryEmbedding`, excluding
  * `excludeContentHash` (typically the source the query embedding came from),
- * and returns the top `count` matches.
+ * and returns the top `count` matches. `title` is optional on the candidate
+ * (related-sources doesn't project it) — falls back to null.
  */
 export function rankBySimilarity(
-  candidates: Array<{ contentHash: string; url: string; contentType: string; fetchedAt: string; embedding?: number[] }>,
+  candidates: Array<{ contentHash: string; url: string; contentType: string; fetchedAt: string; title?: string | null; embedding?: number[] }>,
   queryEmbedding: number[],
   excludeContentHash: string,
   count: number
@@ -46,6 +48,7 @@ export function rankBySimilarity(
       url: c.url,
       contentType: c.contentType,
       fetchedAt: c.fetchedAt,
+      title: c.title ?? null,
       score: cosineSimilarity(queryEmbedding, c.embedding as number[]),
     }))
     .sort((a, b) => b.score - a.score)

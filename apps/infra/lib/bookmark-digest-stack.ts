@@ -321,6 +321,28 @@ export class BookmarkDigest extends cdk.Stack {
 
     sourcesTable.grantReadData(listSourcesFn);
 
+    // GET /sources/search — semantic search over the Sources table (Phase-3
+    // step 5). Embeds the query via Bedrock Titan, scans for embedded
+    // sources, ranks by cosine similarity. Purely additive on the existing
+    // structural search.
+    const searchSourcesFn = new lambdaNodejs.NodejsFunction(this, "SearchSourcesFunction", {
+      entry: "lambdas/search-sources/handler.ts",
+      handler: "handler",
+      runtime: cdk.aws_lambda.Runtime.NODEJS_24_X,
+      timeout: cdk.Duration.seconds(30),
+      environment: {
+        SOURCES_TABLE_NAME: sourcesTable.tableName,
+      },
+    });
+
+    sourcesTable.grantReadData(searchSourcesFn);
+    searchSourcesFn.role?.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        actions: ["bedrock:InvokeModel"],
+        resources: [config.BEDROCK_EMBEDDING_MODEL_ARN],
+      }),
+    );
+
     // GET /sources/{sourceHash}/related: brute-force cosine-similarity search
     // over embeddings (see plans/dynamodb-migration.md §2 — the pgvector replacement)
     const relatedSourcesFn = new lambdaNodejs.NodejsFunction(this, "RelatedSourcesFunction", {
@@ -364,6 +386,24 @@ export class BookmarkDigest extends cdk.Stack {
     sources.addMethod(
       "POST",
       new apigw.LambdaIntegration(ingestUrlFn, { proxy: true }),
+      {
+        authorizer,
+        authorizationType: apigw.AuthorizationType.COGNITO,
+      }
+    );
+
+    // GET /sources/search — must be added as a sibling literal resource so
+    // API Gateway resolves it ahead of the {sourceHash} path param below.
+    const search = sources.addResource("search", {
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigw.Cors.ALL_ORIGINS,
+        allowMethods: ["GET", "OPTIONS"],
+        allowHeaders: ["Content-Type", "Authorization"],
+      },
+    });
+    search.addMethod(
+      "GET",
+      new apigw.LambdaIntegration(searchSourcesFn, { proxy: true }),
       {
         authorizer,
         authorizationType: apigw.AuthorizationType.COGNITO,

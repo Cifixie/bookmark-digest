@@ -79,6 +79,32 @@ ingestion submitted → received → processing → done/failed
 
 Phase-0 checks in `plans/phase-0-checklist.md` are **superseded** by Phase-1 work (this catalog).
 
+## Data Storage (DynamoDB)
+
+Defined in `apps/infra/lib/bookmark-digest-stack.ts` (both `TableV2`, on-demand
+billing, `RemovalPolicy.RETAIN`). Deploys to stack `BookmarkDigest`, account
+`032080729840`, region `eu-north-1`. Physical names are CloudFormation-generated
+(no fixed `tableName`) — read them from stack outputs `SourcesTableName` /
+`DigestsTableName`, or from the `SOURCES_TABLE_NAME` / `DIGESTS_TABLE_NAME` Lambda
+env vars. Persistence helpers live in `apps/infra/lib/dynamo.ts`.
+
+- **SourcesTable** — ingested source content + embeddings.
+  - PK: `contentHash` (String)
+  - GSI `UrlIndex`: PK `url` (String)
+  - DynamoDB Stream (`NEW_IMAGE`) triggers the `embed-source` Lambda.
+  - PITR enabled, deletion protection on.
+- **DigestsTable** — generated digest content (the compiled Spec tree, in `output`).
+  - PK: `id` (String) — a fresh `randomUUID()` per digest request, **not** the
+    content hash.
+  - GSI `SourceHashIndex`: PK `sourceHash` (String), SK `digestGoal` (String) —
+    this is how you look up a digest by source + goal (dedup lookups use
+    `digestsQueryBySourceHash`).
+  - For multi-source digests, `sourceHash` is `hashes[0]`; the full list is in
+    `sourceHashes: string[]`, plus optional `sourceMode`.
+  - Item shape: `{ id, sourceHash, sourceHashes?, sourceMode?, digestGoal,
+    paramsVersion, status, output?, error?, model?, createdAt, updatedAt,
+    completedAt? }`.
+
 # AWS Guidance
 
 - Prefer the AWS MCP Server for AWS interactions — it provides sandboxed

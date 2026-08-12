@@ -38,6 +38,14 @@ Consider ALL of the following from content:
 Be thorough — capture enough detail that a beginner could learn the full substance
 without reading the original.
 
+If the source itself uses an explicit structure — a numbered list ("10 tips"), a
+named multi-part comparison, a recurring motif it returns to more than once — treat
+that structure as content in its own right. Make sure every named part of it shows
+up somewhere in the output, even if you merge several into one themed block. A
+checklist above tells you what kinds of content to look for; it is not a ceiling —
+something the source clearly organized itself around does not stop mattering just
+because it doesn't fit one of those categories.
+
 # Page composition guidance
 Let the article's structure drive the page structure. Ask: what is the most interesting
 or surprising thing about this content, and how can the layout make that clear at a glance?
@@ -47,7 +55,11 @@ or surprising thing about this content, and how can the layout make that clear a
 - A data-heavy article benefits from a stat row up front.
 - A cautionary or critical piece might open with a caution list before the hero.
 
-Mix, repeat, and reorder blocks to serve the story.
+Mix, repeat, and reorder blocks to serve the story — but don't let the blocks
+*replace* the story. Where two points are causally or thematically linked, say so
+in a sentence (a Prose block, a Card's text, a section intro) rather than placing
+them side by side and letting the reader infer the connection. A page of accurate,
+disconnected facts is a worse summary than one that shows how the facts relate.
 `,
   },
   {
@@ -245,4 +257,10 @@ well-shaped page containing things the material does not say.
 - Quote only text present in the material, and attribute only to the speaker or
   author the material names. Do not attach a timestamp to a quote unless the
   material carries one.
+- Synthesis is not invention. A sentence that connects two of the source's own
+  points — states the pattern they share, the cause behind both, the throughline
+  the material itself is making — is still grounded, as long as both points are
+  actually in the material. Invention is a fact, figure, example, or claim the
+  source never made. Do not use this rule as a reason to leave connections
+  unstated; state them, just don't manufacture the points being connected.
 `;

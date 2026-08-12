@@ -1,12 +1,33 @@
 /**
  * ingest-url Lambda — Phase-1 ingestion entry point (DynamoDB).
- * Receives a URL, fetches content via Firecrawl, deduplicates, stores in DynamoDB.
+ * Receives a URL, fetches content via Firecrawl (or takes pasted content
+ * directly), deduplicates, stores in DynamoDB.
  * Trigger: POST /sources via API Gateway.
+ *
+ * A dedicated YouTube transcript fetcher (InnerTube caption endpoint) lived
+ * here briefly but was reverted: from Lambda's shared IP ranges it silently
+ * came back with no caption tracks on most requests (no error — YouTube's
+ * anti-abuse system just declines to serve captions to that caller), while
+ * working fine from a residential IP. That made it unreliable in exactly the
+ * environment it has to run in. See `plans/thin-source-detection.md` for the
+ * incident that motivated it. The `content` field below — paste the
+ * transcript in by hand — is the replacement for video sources.
  */
 
 import { createHash } from "crypto";
 import { sourcesPut, sourcesQueryByUrl } from "../../lib/dynamo";
 import { FIRECRAWL_API_URL } from "../../lib/config";
+
+/** What a fetcher returns, ready to store. */
+interface FetchedSource {
+  content: string;
+  /** Matches the schemas package's sourceContentType enum. */
+  contentType: "article" | "video" | "unknown";
+  /** Recorded on the row so a bad fetch is traceable to the fetcher that made it. */
+  fetchedBy: string;
+}
+
+const VALID_CONTENT_TYPES = new Set(["article", "video", "unknown"]);
 
 // --- Firecrawl fetch ---
 
@@ -40,6 +61,31 @@ async function fetchWithFirecrawl(url: string): Promise<{ markdown: string } | n
   }
 }
 
+// --- Fetcher dispatch ---
+
+/**
+ * Fetches a URL via Firecrawl, unless the caller already supplied the content
+ * (a manual paste — the affordance for sources Firecrawl can't get, like a
+ * video transcript copied by hand from YouTube's own "Show transcript" panel).
+ */
+async function fetchSource(
+  url: string,
+  pasted?: { content: string; contentType?: string }
+): Promise<FetchedSource | null> {
+  if (pasted) {
+    const contentType =
+      pasted.contentType && VALID_CONTENT_TYPES.has(pasted.contentType)
+        ? (pasted.contentType as FetchedSource["contentType"])
+        : "unknown";
+    return { content: pasted.content, contentType, fetchedBy: "manual" };
+  }
+
+  const scraped = await fetchWithFirecrawl(url);
+  return scraped
+    ? { content: scraped.markdown, contentType: "article", fetchedBy: "firecrawl" }
+    : null;
+}
+
 // --- Lambda handler ---
 
 const corsHeaders = {
@@ -69,6 +115,14 @@ export async function handler(event: { body?: string }): Promise<{
     return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: "URL is required" }) };
   }
 
+  // Pasted content is an explicit opt-out of fetching: a non-empty string
+  // means the caller already has the material (e.g. a transcript copied by
+  // hand) and Firecrawl should not be tried at all.
+  const pastedContent = typeof body.content === "string" ? body.content.trim() : "";
+  const pasted = pastedContent
+    ? { content: pastedContent, contentType: typeof body.contentType === "string" ? body.contentType : undefined }
+    : undefined;
+
   try {
     // Check if URL already exists (dedup via UrlIndex GSI)
     const existingResult = await sourcesQueryByUrl(url);
@@ -83,13 +137,13 @@ export async function handler(event: { body?: string }): Promise<{
       }
     }
 
-    // Fetch content
-    const fetched = await fetchWithFirecrawl(url);
+    // Fetch content, unless it was pasted in directly
+    const fetched = await fetchSource(url, pasted);
     if (!fetched) {
       return { statusCode: 422, headers: corsHeaders, body: JSON.stringify({ error: "Failed to fetch content" }) };
     }
 
-    const contentHash = createHash("sha256").update(fetched.markdown).digest("hex");
+    const contentHash = createHash("sha256").update(fetched.content).digest("hex");
     const now = new Date().toISOString();
 
     // Conditional put for idempotent insert. Status is set to "embedding"
@@ -102,10 +156,10 @@ export async function handler(event: { body?: string }): Promise<{
         {
           contentHash,
           url,
-          content: fetched.markdown,
-          contentType: "article",
+          content: fetched.content,
+          contentType: fetched.contentType,
           fetchedAt: now,
-          fetchedBy: "firecrawl",
+          fetchedBy: fetched.fetchedBy,
           status: "embedding",
         },
         "attribute_not_exists(contentHash)"

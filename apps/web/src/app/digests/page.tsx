@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { fetchWithAuth } from "@/utils/fetchApi";
 
@@ -26,6 +26,25 @@ export default function DigestsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sourceHash, setSourceHash] = useState("");
+  const [autoLoaded, setAutoLoaded] = useState(false);
+
+  // Read URL hash on mount and auto-load.
+  useEffect(() => {
+    const hash = window.location.hash.replace(/^#/, "");
+    if (hash) {
+      setSourceHash(hash);
+      setAutoLoaded(true);
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+  }, []);
+
+  // Auto-load once — only when `autoLoaded` is true (set by mount effect, never by user input).
+  useEffect(() => {
+    if (sourceHash.trim() && autoLoaded) {
+      loadDigests();
+      setAutoLoaded(false);
+    }
+  }, [sourceHash]);
 
   async function loadDigests() {
     if (!sourceHash.trim()) return;

@@ -172,7 +172,26 @@ function SourceCard({
       >
         <span>{source.contentType}</span>
         <span>fetched {source.fetchedAt}</span>
-        <span>hash: {source.sourceHash.slice(0, 12)}…</span>
+        <Link
+          to={`/digests#${source.sourceHash}`}
+          style={{
+            color: "#4a90d9",
+            textDecoration: "none",
+            cursor: "pointer",
+          }}
+        >
+          hash: {source.sourceHash.slice(0, 12)}…
+        </Link>
+        <Link
+          to={`/digests#${source.sourceHash}`}
+          style={{
+            color: "#4a90d9",
+            textDecoration: "none",
+            cursor: "pointer",
+          }}
+        >
+          View digests
+        </Link>
         {source.embedded && <span>✓ embedded</span>}
       </div>
     </div>
@@ -339,6 +358,12 @@ export default function Home() {
   const { user, signOut } = useAuthenticator((context) => [context.user]);
 
   const [url, setUrl] = useState("");
+  // Paste mode is the alternative to fetching: for sources Firecrawl can't
+  // get (a YouTube transcript copied by hand from the "Show transcript"
+  // panel, a paywalled article), the content is supplied directly instead of
+  // fetched from the URL.
+  const [pasteMode, setPasteMode] = useState(false);
+  const [pastedContent, setPastedContent] = useState("");
   const [sources, setSources] = useState<SourceItem[]>([]);
   // The source the single-source panel acts on. Tracked by hash rather than
   // by position, so the panel and its goal buttons can't drift apart from
@@ -417,8 +442,18 @@ export default function Home() {
     setError(null);
     setDigests([]);
 
+    const trimmedContent = pastedContent.trim();
+    if (pasteMode && !trimmedContent) {
+      setError("Paste the source content first");
+      return;
+    }
+
     try {
-      const res = await fetchWithAuth("POST", "/sources", { url });
+      const res = await fetchWithAuth(
+        "POST",
+        "/sources",
+        pasteMode ? { url, content: trimmedContent } : { url },
+      );
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -427,19 +462,24 @@ export default function Home() {
 
       const data: IngestResponse = await res.json();
       // Newest first, matching the list endpoint's order.
+      // contentType stays "unknown" either way — the form doesn't collect
+      // it, and the server defaults to the same — but fetchedBy is known
+      // immediately for a paste (no fetch happens) vs. left null for a fetch
+      // until pollSource replaces this row with the server's.
       setSources((prev) => [
         {
           sourceHash: data.sourceHash,
           url,
           status: "fetched",
-          contentType: "article",
+          contentType: "unknown",
           fetchedAt: new Date().toISOString(),
-          fetchedBy: "firecrawl",
+          fetchedBy: pasteMode ? "manual" : null,
         },
         ...prev.filter((s) => s.sourceHash !== data.sourceHash),
       ]);
       setActiveSourceHash(data.sourceHash);
       pollSource(data.sourceHash);
+      setPastedContent("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     }
@@ -585,6 +625,50 @@ export default function Home() {
             boxSizing: "border-box",
           }}
         />
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            marginTop: 8,
+            fontSize: 13,
+            color: "#555",
+            cursor: "pointer",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={pasteMode}
+            onChange={(e) => setPasteMode(e.target.checked)}
+          />
+          Paste text instead of fetching
+        </label>
+        {pasteMode && (
+          <>
+            <textarea
+              required
+              placeholder="Paste the article or transcript text here — e.g. YouTube's own &quot;Show transcript&quot; panel for a video Firecrawl can't get."
+              value={pastedContent}
+              onChange={(e) => setPastedContent(e.target.value)}
+              rows={8}
+              style={{
+                width: "100%",
+                marginTop: 8,
+                padding: "8px 12px",
+                borderRadius: 6,
+                border: "1px solid #d1d5db",
+                fontSize: 14,
+                fontFamily: "inherit",
+                boxSizing: "border-box",
+                resize: "vertical",
+              }}
+            />
+            <p style={{ marginTop: 4, marginBottom: 0, fontSize: 12, color: "#888" }}>
+              Stored as-is, no fetch attempted — the URL above is kept only as the source's
+              citation link.
+            </p>
+          </>
+        )}
         <button
           type="submit"
           style={{
@@ -599,7 +683,7 @@ export default function Home() {
             fontWeight: 500,
           }}
         >
-          Submit URL
+          {pasteMode ? "Submit pasted content" : "Submit URL"}
         </button>
       </form>
 

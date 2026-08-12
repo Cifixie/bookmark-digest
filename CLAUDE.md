@@ -49,14 +49,22 @@ Mergers:
 ## Digest Generation: Two Independent Axes
 
 Both live in `apps/infra/lib/digest-goals.ts` and are composed into the **system**
-prompt (goal template, then mode template, then `catalog.prompt()`). The user turn
-carries only the source material — never shape instructions, or the two fight.
+prompt (goal template, then mode template, then `GROUNDING_RULES`, then
+`catalog.prompt()`). The user turn carries only the source material — never shape
+instructions, or the two fight.
 
 - **`digestGoal`** — depth and voice: `tl_dr` | `summary` | `understand`.
   Applies to every digest. Templates are written in the singular.
 - **`sourceMode`** — how a bundle's sources relate: `synthesize` (default) |
   `compare` | `evolution`. Multi-source only. Owns page composition, and comes
   after the goal template so it overrides that singular voicing.
+
+`GROUNDING_RULES` is not an axis — it applies to every digest and is composed
+last so it outranks both templates. It exists because validation checks that
+props fit their schema, never that content came from the source: given thin
+material, a model asked for thoroughness will invent content that validates
+cleanly. See `plans/thin-source-detection.md` for the input-side counterpart,
+still unbuilt.
 
 Source count does **not** imply shape. Two articles by one author on one subject
 want `synthesize` (merge, don't attribute per source, no ComparisonTable across

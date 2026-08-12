@@ -7,7 +7,7 @@
  *
  * Phase-1 (current):
  *   DynamoDB Tables (Sources + Digests) for persistent storage
- *   ingest-url Lambda → dedup + Firecrawl fetch → DynamoDB Sources
+ *   ingest-url Lambda → dedup + Firecrawl fetch (or pasted content) → DynamoDB Sources
  *   embed-source Lambda → triggered via DynamoDB Stream → Bedrock embedding → DynamoDB Sources
  *   generate-digest Lambda → Gemini → json-render Spec tree → DynamoDB Digests
  *   API Gateway routes: /sources, /digest-goals, /digests

@@ -37,7 +37,26 @@ import {
   digestsUpdate,
   sourcesGet,
 } from "../../lib/dynamo";
-import { getDigestGoal, getSourceMode, DEFAULT_SOURCE_MODE } from "../../lib/digest-goals";
+import { getDigestGoal, getSourceMode, DEFAULT_SOURCE_MODE, GROUNDING_RULES } from "../../lib/digest-goals";
+
+// Recursively deletes `null` values from objects/arrays in place. Every
+// optional field in the catalog's Zod schemas is `.optional()`, not
+// `.nullable()`, so an explicit `null` (a common model habit) fails
+// validation where simply omitting the key would not.
+function stripNulls(value: unknown): void {
+  if (Array.isArray(value)) {
+    for (const item of value) stripNulls(item);
+    return;
+  }
+  if (value === null || typeof value !== "object") return;
+  for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+    if (v === null) {
+      delete (value as Record<string, unknown>)[key];
+    } else {
+      stripNulls(v);
+    }
+  }
+}
 import customRules from "./customRules";
 
 const GENERATION_MODEL = process.env.GEMINI_MODEL ?? GEMINI_MODEL_ID;
@@ -289,8 +308,15 @@ async function runGeneration({ digestId, sourceHashes, digestGoal, multiSource, 
     // two in different turns is what previously let "compare and contrast"
     // fight the goal's own instructions, and comparison won regardless of
     // whether the sources were actually in competition.
+    //
+    // GROUNDING_RULES comes last of the three prose blocks because it has to
+    // outrank both: the goal template asks for thoroughness ("capture enough
+    // detail that a beginner could learn the full substance") and the mode
+    // template asks for a particular page shape, and a model with inadequate
+    // material will satisfy either by inventing content. The grounding block
+    // is what makes "the material doesn't support this" an acceptable answer.
     const modeTemplate = multiSource && sourceMode ? getSourceMode(sourceMode).promptTemplate : "";
-    const systemPrompt = [goalConfig.promptTemplate, modeTemplate, catalogPrompt]
+    const systemPrompt = [goalConfig.promptTemplate, modeTemplate, GROUNDING_RULES, catalogPrompt]
       .filter(Boolean)
       .join("\n");
 
@@ -403,6 +429,12 @@ async function runGeneration({ digestId, sourceHashes, digestGoal, multiSource, 
       // is left to fail validation as-is.
       if (el.children === undefined) el.children = [];
       if (el.props === undefined) el.props = {};
+      // The model sometimes emits `null` for an omitted optional field
+      // instead of leaving the key out (e.g. ComparisonTable rows without
+      // a winner). Zod schemas here use `.optional()`, not `.nullable()`,
+      // so an explicit null fails validation even though omitting the key
+      // entirely would have been fine. Strip nulls to normalize both forms.
+      stripNulls(el.props);
     }
 
     // Drop child references pointing at elements that were never emitted.

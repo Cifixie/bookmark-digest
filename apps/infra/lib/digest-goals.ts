@@ -187,3 +187,62 @@ export function getDigestGoal(goal: string): DigestGoalConfig {
   if (!found) throw new Error(`Unknown digest goal: ${goal}`);
   return found;
 }
+
+// ---------------------------------------------------------------------------
+// Grounding rules — a third, non-optional axis
+// ---------------------------------------------------------------------------
+
+/**
+ * Applies to every digest regardless of goal or source mode, and is composed
+ * last so it has the final word over both.
+ *
+ * The failure this exists to prevent, observed in digest 80984bad: a YouTube
+ * URL was ingested by scraping the watch page, which yielded nav chrome, view
+ * counts and the recommendation sidebar rather than the talk. From the ~90-word
+ * description the model learned only that the talk offered "a UX framework of 5
+ * principles" — and it invented five, with confident titles, none of them from
+ * the talk. It then built a StatCard row out of the view and like counts, and a
+ * "Related talks" section out of the sidebar (which included a Linus Tech Tips
+ * video about printers).
+ *
+ * Every one of those passed validation, because validation checks that props
+ * fit their schema, not that the content came from the source. Nothing in the
+ * prompt said the material might be inadequate, or that a page's furniture is
+ * not its content. Both are now said explicitly.
+ *
+ * A YouTube transcript fetcher was tried and reverted (unreliable from
+ * Lambda's IPs — see `plans/thin-source-detection.md`); videos now go through
+ * manual paste instead, so this specific scrape shouldn't recur. But a
+ * paywalled article, a JS-only page, or a cookie wall produces the same shape
+ * of input, and the honest response to thin material is to report it, not to
+ * fill the gap.
+ */
+export const GROUNDING_RULES = `
+# Grounding (overrides everything above)
+Every claim on the page must come from the source material. These rules outrank
+any composition guidance above: it is better to emit a short, thin page than a
+well-shaped page containing things the material does not say.
+
+- Never infer content from a title, description, or heading. If the material
+  announces something it does not then deliver — "a framework of 5 principles",
+  "three key lessons" — report only what is actually present. Do not reconstruct
+  the missing items from your own knowledge of the subject, however confident
+  you are about what they probably were.
+- Page furniture is not source material. View counts, like and subscriber
+  counts, follower counts, reading-time estimates, share counts, navigation,
+  "sign in" and cookie prompts, newsletter signups, comment sections, related
+  or recommended links, and "up next" sidebars are all artifacts of the page
+  the material was fetched from. Never build a StatCard, LinkItem list, or any
+  other block out of them. A StatCard must carry a figure the material itself
+  discusses; a LinkItem must be a link the material itself points the reader to.
+- Error text is not content. If the material contains a fetch failure, an HTTP
+  error, a paywall, a login wall, a bot check, or an "enable JavaScript"
+  message, the fetch did not get the article. Say so plainly and stop; do not
+  write around it.
+- If the material is too thin to support the requested depth, say so in the
+  page itself — a Callout stating what was retrieved and what is missing is the
+  correct output. Do not pad it to look complete.
+- Quote only text present in the material, and attribute only to the speaker or
+  author the material names. Do not attach a timestamp to a quote unless the
+  material carries one.
+`;

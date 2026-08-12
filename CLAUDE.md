@@ -1,3 +1,17 @@
+# CLAUDE.md
+
+This project uses a shared memory system with Pi (see AGENTS.md).
+
+- Read wiki/decisions.md, wiki/gotchas.md, wiki/current-work.md before starting work
+- Add anything worth remembering to the right file when you finish
+- Use [[links]] between related notes
+
+## Stack
+
+- MacBook Pro M5 Pro, 64GB
+- Local model: Qwen3.6-35B via oMLX
+- Also using Pi (terminal coding agent) alongside Claude
+
 # bookmark-digest — @bookmark-digest monorepo
 
 ## Monorepo Layout
@@ -17,27 +31,35 @@ packages/
 The catalog is built on a **source-variant** + **digest-block** model:
 
 - **Source variants** (`written` | `temporal`) — a discriminated union that determines the hero shape and nested fields. Not registered in `defineCatalog`.
-- **Digest blocks** (19 content types) — registered in `defineCatalog`. Each block is `{ type: "<BlockName>", props: <Props> }`.
+- **Digest blocks** (25 content types) — registered in `defineCatalog`. Each block is `{ type: "<BlockName>", props: <Props> }`.
 - **DigestPage** — the typed page tree: `{ source, meta, sections, accentColor }`.
 
-### 22 Content Blocks (all registered)
-`TLDR, Prose, List, Grid, Callout, Card, StatCard, FaqItem, GlossaryTerm, Figure, QuoteBlock, CodeBlock, Terminal, ChecklistItem, NextSteps, Prerequisites, LinkItem, ProsCons, Step, ComparisonTable, AuthorCard, TimelineEvent`
+### 25 Content Blocks (all registered)
+
+`TLDR, Prose, List, Grid, Callout, Card, StatCard, FaqItem, GlossaryTerm, Figure, QuoteBlock, CodeBlock, Terminal, ChecklistItem, NextSteps, Prerequisites, LinkItem, ProsCons, Step, ComparisonTable, AuthorCard, TimelineEvent, Chart, PullQuote, ComparisonNarrative`
 
 Every registered block needs a renderer in `apps/web/src/lib/registry.tsx`. Missing
 one is otherwise silent (the generator emits it, validation passes, the page shows
 nothing), so `registry.tsx` throws at module load if any block type is unrendered.
 
+`SectionContainer` is also registered alongside these but is structural, not
+content — the root layout wrapper for a `DigestSection`'s Spec, not something a
+model reaches for to convey information.
+
 ### Non-catalog sections (standalone schemas, NOT in defineCatalog)
+
 `RelatedFromYourBookmarks` (vector-similarity retrieval — brute-force cosine similarity over DynamoDB, see `plans/dynamodb-migration.md`), `MyNote` (user-authored) — embedded into the page separately by the renderer.
 
-### Deferred (Tier 3)
-`DecisionItem`
+### Cut
+
+`DecisionItem` — no concrete use case surfaced; not built (see `plans/phase-2-scope.md`).
 
 ## Component Naming
 
 All digest components use the `Digest*` prefix for page shell elements and raw names for content blocks. `Summary*` (old naming) has been replaced.
 
 Mergers:
+
 - `MythVsReality` → `Callout` with `variant: "misconception"`
 - `TranscriptQuote` → `QuoteBlock` (gains optional `timestampSeconds`)
 - `VideoHero/Chapter/Speaker` → nested fields on `temporal` source variant

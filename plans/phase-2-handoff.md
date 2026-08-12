@@ -2,7 +2,9 @@
 
 **Status: complete.** Steps 1-3 shipped as designed. Step 4 (DynamoDB native
 vector search) was built, found to be broken, and deliberately reverted — see
-"Step 4: reverted" below before re-attempting it.
+"Step 4: reverted" below before re-attempting it. Step 5 (suggested-bundle
+UX) was split out to its own plan — see "Step 5: split out" below — and is
+not part of what "complete" claims here.
 
 ## Completed
 
@@ -118,11 +120,11 @@ instead of silently returning only the first 1 MB page.
 Revisit the vector index when a scan actually hurts, and start from the six
 points above.
 
-### Step 5: Suggested-bundle UX (later)
-The "suggested bundle" flow from `phase-2-scope.md` is unblocked — related
-sources work today via brute force:
-- After a user completes a multi-source digest, offer "generate related digests" for top-K related sources
-- The `RelatedFromYourBookmarks` section (already wired in the frontend) uses the similarity signal
+### Step 5: split out
+
+`phase-2-scope.md`'s step 5 (suggested-bundle UX) was not built here — moved
+to its own plan, `plans/phase-2d-suggested-bundles.md`, since it's unblocked
+but unstarted and doesn't gate anything else in phase-2 or phase-3.
 
 ## Known gaps going into Phase 3
 

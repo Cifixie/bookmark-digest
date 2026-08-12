@@ -4,6 +4,7 @@ export * as Card from "./Card.catalog";
 export * as Chart from "./Chart.catalog";
 export * as ChecklistItem from "./ChecklistItem.catalog";
 export * as CodeBlock from "./CodeBlock.catalog";
+export * as ComparisonNarrative from "./ComparisonNarrative.catalog";
 export * as ComparisonTable from "./ComparisonTable.catalog";
 export * as FaqItem from "./FaqItem.catalog";
 export * as Figure from "./Figure.catalog";

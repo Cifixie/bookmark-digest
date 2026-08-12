@@ -16,6 +16,7 @@ import * as Card from "./digestBlocks/Card.catalog";
 import * as Chart from "./digestBlocks/Chart.catalog";
 import * as ChecklistItem from "./digestBlocks/ChecklistItem.catalog";
 import * as CodeBlock from "./digestBlocks/CodeBlock.catalog";
+import * as ComparisonNarrative from "./digestBlocks/ComparisonNarrative.catalog";
 import * as ComparisonTable from "./digestBlocks/ComparisonTable.catalog";
 import * as FaqItem from "./digestBlocks/FaqItem.catalog";
 import * as Figure from "./digestBlocks/Figure.catalog";
@@ -73,6 +74,7 @@ type DigestBlockTypeLiteral =
   | "Chart"
   | "ChecklistItem"
   | "CodeBlock"
+  | "ComparisonNarrative"
   | "ComparisonTable"
   | "FaqItem"
   | "Figure"
@@ -116,6 +118,7 @@ export const digestBlockSchema = z.object({
     "Chart",
     "ChecklistItem",
     "CodeBlock",
+    "ComparisonNarrative",
     "ComparisonTable",
     "FaqItem",
     "Figure",
@@ -183,6 +186,7 @@ export type { CardProps } from "./digestBlocks/Card.catalog";
 export type { ChartDataPoint, ChartProps } from "./digestBlocks/Chart.catalog";
 export type { ChecklistItemProps } from "./digestBlocks/ChecklistItem.catalog";
 export type { CodeBlockProps } from "./digestBlocks/CodeBlock.catalog";
+export type { ComparisonNarrativeProps } from "./digestBlocks/ComparisonNarrative.catalog";
 export type { ComparisonTableProps } from "./digestBlocks/ComparisonTable.catalog";
 export type { FaqItemProps } from "./digestBlocks/FaqItem.catalog";
 export type { FigureProps } from "./digestBlocks/Figure.catalog";

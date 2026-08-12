@@ -12,6 +12,7 @@ import * as Card from "./digestBlocks/Card.catalog";
 import * as Chart from "./digestBlocks/Chart.catalog";
 import * as ChecklistItem from "./digestBlocks/ChecklistItem.catalog";
 import * as CodeBlock from "./digestBlocks/CodeBlock.catalog";
+import * as ComparisonNarrative from "./digestBlocks/ComparisonNarrative.catalog";
 import * as ComparisonTable from "./digestBlocks/ComparisonTable.catalog";
 import * as FaqItem from "./digestBlocks/FaqItem.catalog";
 import * as Figure from "./digestBlocks/Figure.catalog";
@@ -40,6 +41,7 @@ export const digestBlockProps: Record<string, z.ZodType> = {
   Chart: Chart.props,
   ChecklistItem: ChecklistItem.props,
   CodeBlock: CodeBlock.props,
+  ComparisonNarrative: ComparisonNarrative.props,
   ComparisonTable: ComparisonTable.props,
   FaqItem: FaqItem.props,
   Figure: Figure.props,

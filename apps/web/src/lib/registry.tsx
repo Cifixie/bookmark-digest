@@ -12,6 +12,7 @@ import { Card } from "../components/digestBlocks/Card/Card";
 import { Chart } from "../components/digestBlocks/Chart/Chart";
 import { ChecklistItem } from "../components/digestBlocks/ChecklistItem/ChecklistItem";
 import { CodeBlock } from "../components/digestBlocks/CodeBlock/CodeBlock";
+import { ComparisonNarrative } from "../components/digestBlocks/ComparisonNarrative/ComparisonNarrative";
 import { ComparisonTable } from "../components/digestBlocks/ComparisonTable/ComparisonTable";
 import { FaqItem } from "../components/digestBlocks/FaqItem/FaqItem";
 import { Figure } from "../components/digestBlocks/Figure/Figure";
@@ -40,6 +41,7 @@ export const blockComponents = {
   Chart,
   ChecklistItem,
   CodeBlock,
+  ComparisonNarrative,
   ComparisonTable,
   FaqItem,
   Figure,

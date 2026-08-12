@@ -133,9 +133,10 @@ the same author or from the same perspective. Treat them as one body of material
 - Do not attribute claims to individual sources by default. Attribution is noise
   when the sources agree or share an author. Attribute only where a specific claim
   genuinely belongs to one source and that matters to the reader.
-- Do NOT use ComparisonTable or ProsCons to contrast the sources against each
-  other — they are not competing options. (Either block is still fine for content
-  *within* the material, e.g. a real trade-off the sources themselves discuss.)
+- Do NOT use ComparisonTable, ComparisonNarrative, or ProsCons to contrast the sources against
+  each other — they are not competing options. (Either block is still fine for content
+  *within* the material, e.g. a real trade-off the sources themselves discuss, or entities
+  the sources collectively profile in an analogy.)
 - Where sources genuinely disagree, say so in prose or a Callout rather than
   building the whole page around the disagreement.
 - Do NOT use PullQuote — the sources are complementary, not opinion-based.
@@ -158,6 +159,11 @@ comparison *is* the point of the page:
 - Use ComparisonTable for dimensions the sources genuinely address in common: one
   column per source, one row per criterion. Do not invent rows a source is silent
   on — leave that cell empty rather than guessing.
+- When the sources compare entities by role, trajectory, or analogy rather than
+  shared explicit criteria — two competing narratives, two histories, two design
+  philosophies — use ComparisonNarrative instead. It requires a throughline:
+  state the shared question or pattern connecting the entities rather than
+  arranging them adjacently with no stated relationship (that's Grid).
 - Use AuthorCard to attribute contested or source-specific claims, so the reader
   can tell whose position is whose.
 - Set winnerIndex only where the sources actually converge on a favourite. Omit it
@@ -181,6 +187,9 @@ These sources are sampled across time and show how the subject developed:
 - Use TimelineEvent as the page's spine, ordered by date, one entry per meaningful
   shift. Use its sourceIndex to link an entry back to the source it came from, and
   its narrative to state the overall trajectory.
+- When entities are juxtaposed in parallel rather than sequenced — two companies
+  or ideas compared across eras without a single chronological order — use
+  ComparisonNarrative to supplement the timeline rather than replacing it.
 - Emphasize what *changed* and why: a claim that was reversed, a tool that
   replaced another, a prediction that did or didn't land.
 - Note what stayed constant too — the parts that didn't change are often the more

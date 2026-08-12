@@ -259,6 +259,12 @@ well-shaped page containing things the material does not say.
   the material was fetched from. Never build a StatCard, LinkItem list, or any
   other block out of them. A StatCard must carry a figure the material itself
   discusses; a LinkItem must be a link the material itself points the reader to.
+- A LinkItem's href must be a real URL copied verbatim from the material. If
+  the material names a source, citation, or reference but the fetched text
+  does not carry an actual URL for it (a title and publisher with no link, a
+  stripped citation list), do not invent or guess one — list it as plain text
+  in a List or Prose instead of a LinkItem. A fabricated href is worse than an
+  absent one: it fails validation and drops the whole digest.
 - Error text is not content. If the material contains a fetch failure, an HTTP
   error, a paywall, a login wall, a bot check, or an "enable JavaScript"
   message, the fetch did not get the article. Say so plainly and stop; do not

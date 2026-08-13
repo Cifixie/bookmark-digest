@@ -3,6 +3,9 @@
 /* ── CSS variables: light + dark themes via light-dark() ─────────── */
 
 :root {
+  /* Theme color-scheme — drives native scrollbar / form-control colors */
+  --color-scheme: light dark;
+
   /* Backgrounds */
   --bg-page: light-dark(#ffffff, #0d1117);
   --bg-card: light-dark(#f6f8fa, #161b22);

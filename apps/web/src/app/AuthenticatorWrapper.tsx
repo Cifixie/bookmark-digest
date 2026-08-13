@@ -3,6 +3,7 @@ import { Amplify } from "aws-amplify";
 import { getCurrentUser, signIn } from "aws-amplify/auth";
 import { Authenticator } from "@aws-amplify/ui-react";
 import { amplifyConfig } from "@/lib/amplify-config";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 import { PropsWithChildren, useEffect, useState } from "react";
 
 Amplify.configure(amplifyConfig);
@@ -82,16 +83,19 @@ export default function AuthenticatorWrapper({ children }: PropsWithChildren) {
               <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 0 }}>
                 Signed in as: {user?.username || "unknown"}
               </p>
-              <Link
-                to="/digests"
-                style={{
-                  fontSize: 13,
-                  color: "var(--brand)",
-                  textDecoration: "none",
-                }}
-              >
-                View digests
-              </Link>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <ThemeToggle />
+                <Link
+                  to="/digests"
+                  style={{
+                    fontSize: 13,
+                    color: "var(--brand)",
+                    textDecoration: "none",
+                  }}
+                >
+                  View digests
+                </Link>
+              </div>
             </div>
             <button
               onClick={() => signOut?.()}

@@ -54,42 +54,62 @@ const SOURCE_STATUSES = ["fetched", "embedding", "ready", "failed"] as const;
 const DIGEST_STATUSES = ["pending", "generating", "done", "failed"] as const;
 
 const SUBJECT_COLORS: Record<string, string> = {
-  engineering: "#3b82f6",
-  "ai-ml": "#a855f7",
-  design: "#ec4899",
-  business: "#f59e0b",
-  science: "#22c55e",
-  productivity: "#0891b2",
-  culture: "#f97316",
-  health: "#14b8a6",
-  finance: "#6366f1",
-  other: "#9ca3af",
+  engineering: "var(--subject-engineering)",
+  "ai-ml": "var(--subject-ai-ml)",
+  design: "var(--subject-design)",
+  business: "var(--subject-business)",
+  science: "var(--subject-science)",
+  productivity: "var(--subject-productivity)",
+  culture: "var(--subject-culture)",
+  health: "var(--subject-health)",
+  finance: "var(--subject-finance)",
+  other: "var(--subject-other)",
 };
 
 function getSourceBadgeColor(status: string): string {
   const map: Record<string, string> = {
-    ready: "#22c55e",
-    fetched: "#3b82f6",
-    embedding: "#f59e0b",
-    failed: "#ef4444",
+    ready: "var(--badge-ready)",
+    fetched: "var(--badge-fetched)",
+    embedding: "var(--badge-embedding)",
+    failed: "var(--badge-failed)",
   };
-  return map[status] ?? "#9ca3af";
+  return map[status] ?? "var(--badge-pending)";
+}
+
+function getSourceBadgeBg(status: string): string {
+  const map: Record<string, string> = {
+    ready: "var(--badge-ready-bg)",
+    fetched: "var(--badge-fetched-bg)",
+    embedding: "var(--badge-embedding-bg)",
+    failed: "var(--badge-failed-bg)",
+  };
+  return map[status] ?? "var(--badge-pending-bg)";
 }
 
 function getDigestBadgeColor(status: string): string {
   const map: Record<string, string> = {
-    done: "#22c55e",
-    generating: "#f59e0b",
-    pending: "#9ca3af",
-    failed: "#ef4444",
+    done: "var(--badge-done)",
+    generating: "var(--badge-generating)",
+    pending: "var(--badge-pending)",
+    failed: "var(--badge-failed)",
   };
-  return map[status] ?? "#9ca3af";
+  return map[status] ?? "var(--badge-pending)";
 }
 
-function getShapeBadge(mode: string | null, multiCount: number): { label: string; color: string } | null {
-  if (mode === "compare") return { label: "Compare", color: "#a855f7" };
-  if (mode === "evolution") return { label: "Evolution", color: "#0891b2" };
-  if (multiCount > 1) return { label: `Synthesize (${multiCount})`, color: "#6366f1" };
+function getDigestBadgeBg(status: string): string {
+  const map: Record<string, string> = {
+    done: "var(--badge-done-bg)",
+    generating: "var(--badge-generating-bg)",
+    pending: "var(--badge-pending-bg)",
+    failed: "var(--badge-failed-bg)",
+  };
+  return map[status] ?? "var(--badge-pending-bg)";
+}
+
+function getShapeBadge(mode: string | null, multiCount: number): { label: string; color: string; bg: string } | null {
+  if (mode === "compare") return { label: "Compare", color: "var(--accent-purple)", bg: "#2d1b4e" };
+  if (mode === "evolution") return { label: "Evolution", color: "var(--accent-cyan)", bg: "#1a3a3a" };
+  if (multiCount > 1) return { label: `Synthesize (${multiCount})`, color: "var(--accent-indigo)", bg: "#22264a" };
   return null;
 }
 
@@ -139,9 +159,9 @@ function FilterBar({
   const selectStyle: React.CSSProperties = {
     padding: "5px 8px",
     borderRadius: 6,
-    border: "1px solid #d1d5db",
+    border: "1px solid var(--border-primary)",
     fontSize: 13,
-    background: "white",
+    background: "var(--bg-card)",
     cursor: "pointer",
     minWidth: 100,
   };
@@ -151,12 +171,12 @@ function FilterBar({
   const toggleStyle: React.CSSProperties = {
     padding: "4px 10px",
     borderRadius: 6,
-    border: "1px solid #d1d5db",
+    border: "1px solid var(--border-primary)",
     fontSize: 12,
     fontWeight: 600,
-    background: "#f9fafb",
+    background: "var(--bg-muted)",
     cursor: "pointer",
-    color: "#6b7280",
+    color: "var(--text-muted)",
     whiteSpace: "nowrap",
   };
 
@@ -175,8 +195,8 @@ function FilterBar({
           onClick={() => updateParam("semantic", params.semantic ? "" : "1")}
           style={{
             ...toggleStyle,
-            background: params.semantic ? "#4a90d9" : "#f9fafb",
-            color: params.semantic ? "white" : "#6b7280",
+            background: params.semantic ? "#4a90d9" : "var(--bg-muted)",
+            color: params.semantic ? "white" : "var(--text-muted)",
           }}
         >
           ✦ Semantic
@@ -212,7 +232,7 @@ function FilterBar({
       )}
 
       {Object.values(params).some((v) => v !== "") && (
-        <button onClick={() => onParamsChange({})} style={{ ...selectStyle, background: "#f9fafb", color: "#6b7280" }}>
+        <button onClick={() => onParamsChange({})} style={{ ...selectStyle, background: "var(--bg-muted)", color: "var(--text-muted)" }}>
           Clear
         </button>
       )}
@@ -229,7 +249,7 @@ function SourceRow({ item }: { item: BrowseSourceItem }) {
         to={`/sources/${item.sourceHash}`}
         style={{
           display: "block",
-          border: "1px solid #e5e7eb",
+          border: "1px solid var(--border-primary)",
           borderRadius: 8,
           padding: "12px 16px",
           textDecoration: "none",
@@ -242,7 +262,7 @@ function SourceRow({ item }: { item: BrowseSourceItem }) {
             <div style={{ fontSize: 14, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {displayTitle}
             </div>
-            <div style={{ fontSize: 11, color: "#999", marginTop: 2, wordBreak: "break-all" }}>
+            <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2, wordBreak: "break-all" }}>
               {truncateUrl(item.url)}
             </div>
           </div>
@@ -261,13 +281,13 @@ function SourceRow({ item }: { item: BrowseSourceItem }) {
             {item.status}
           </span>
         </div>
-        <div style={{ display: "flex", gap: 12, marginTop: 6, fontSize: 11, color: "#bbb" }}>
+        <div style={{ display: "flex", gap: 12, marginTop: 6, fontSize: 11, color: "var(--text-subtle)" }}>
           <span>{domainFromUrl(item.url)}</span>
           <span>{item.contentType}</span>
           <span>{new Date(item.fetchedAt).toLocaleDateString()}</span>
-          {item.embedded && <span style={{ color: "#22c55e" }}>✓ embedded</span>}
+          {item.embedded && <span style={{ color: "var(--accent-green)" }}>✓ embedded</span>}
           {item._score !== undefined && (
-            <span style={{ color: "#4a90d9" }}>match: {(item._score * 100).toFixed(0)}%</span>
+            <span style={{ color: "var(--brand)" }}>match: {(item._score * 100).toFixed(0)}%</span>
           )}
         </div>
       </Link>
@@ -279,7 +299,7 @@ function SourceRow({ item }: { item: BrowseSourceItem }) {
           display: "block",
           textAlign: "center",
           fontSize: 12,
-          color: "#4a90d9",
+          color: "var(--brand)",
           textDecoration: "none",
           marginBottom: 8,
         }}
@@ -294,14 +314,14 @@ function DigestRow({ item }: { item: BrowseDigestItem }) {
   const shape = getShapeBadge(item.sourceMode, item.multiSourceCount);
   const subject = item.meta?.subject as string | undefined;
   const tags = item.meta?.tags as string[] | undefined;
-  const subjectColor = subject ? SUBJECT_COLORS[subject] ?? "#9ca3af" : "#9ca3af";
+  const subjectColor = subject ? SUBJECT_COLORS[subject] ?? "var(--badge-pending)" : "var(--badge-pending)";
 
   return (
     <Link
       to={`/digests/${item.id}`}
       style={{
         display: "block",
-        border: "1px solid #e5e7eb",
+        border: "1px solid var(--border-primary)",
         borderRadius: 8,
         padding: "12px 16px",
         textDecoration: "none",
@@ -314,7 +334,7 @@ function DigestRow({ item }: { item: BrowseDigestItem }) {
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
             <strong style={{ fontSize: 14, textTransform: "capitalize" }}>{item.digestGoal}</strong>
             {shape && (
-              <span style={{ fontSize: 10, fontWeight: 600, color: shape.color, padding: "1px 6px", borderRadius: 8, background: `${shape.color}20` }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: shape.color, padding: "1px 6px", borderRadius: 8, background: shape.bg }}>
                 {shape.label}
               </span>
             )}
@@ -324,7 +344,7 @@ function DigestRow({ item }: { item: BrowseDigestItem }) {
               </span>
             )}
           </div>
-          <div style={{ fontSize: 11, color: "#999" }}>
+          <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>
             {item.model && `${item.model} · `}
             {new Date(item.createdAt).toLocaleDateString()}
             {tags && tags.length > 0 && (
@@ -446,13 +466,13 @@ export default function BrowsePage() {
 
   return (
     <>
-      <Link to="/" style={{ fontSize: 13, color: "#4a90d9", textDecoration: "none", display: "inline-block", marginBottom: 16 }}>
+      <Link to="/" style={{ fontSize: 13, color: "var(--brand)", textDecoration: "none", display: "inline-block", marginBottom: 16 }}>
         ← Back to Home
       </Link>
 
       <h1 style={{ fontSize: 20, marginBottom: 16 }}>Browse</h1>
 
-      <div style={{ display: "flex", gap: 4, marginBottom: 16, background: "#f3f4f6", borderRadius: 8, padding: 3 }}>
+      <div style={{ display: "flex", gap: 4, marginBottom: 16, background: "var(--bg-muted)", borderRadius: 8, padding: 3 }}>
         {(["sources", "digests"] as const).map((t) => (
           <button
             key={t}
@@ -465,8 +485,8 @@ export default function BrowsePage() {
               cursor: "pointer",
               fontSize: 13,
               fontWeight: tab === t ? 600 : 400,
-              background: tab === t ? "white" : "transparent",
-              color: tab === t ? "#111827" : "#6b7280",
+              background: tab === t ? "var(--bg-card)" : "transparent",
+              color: tab === t ? "var(--text-heading)" : "var(--text-muted)",
               boxShadow: tab === t ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
             }}
           >
@@ -477,19 +497,19 @@ export default function BrowsePage() {
 
       <FilterBar tab={tab} params={params} onParamsChange={updateParams} />
 
-      {loading && <p style={{ color: "#999", fontSize: 13 }}>Loading…</p>}
-      {error && <p style={{ color: "#ef4444", fontSize: 13, margin: "8px 0" }}>{error}</p>}
+      {loading && <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>Loading…</p>}
+      {error && <p style={{ color: "var(--badge-error)", fontSize: 13, margin: "8px 0" }}>{error}</p>}
 
       {!loading && !error && (
         <>
-          <p style={{ fontSize: 12, color: "#999", marginBottom: 8 }}>
+          <p style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 8 }}>
             {items.length} {tab}
           </p>
           {tab === "sources"
             ? (items as BrowseSourceItem[]).map((item) => <SourceRow key={item.sourceHash} item={item} />)
             : (items as BrowseDigestItem[]).map((item) => <DigestRow key={item.id} item={item} />)}
           {items.length === 0 && (
-            <p style={{ color: "#999", fontSize: 13 }}>
+            <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>
               {tab === "sources" && params.semantic ? "No semantic matches" : `No ${tab} found`} matching the current filters.
             </p>
           )}

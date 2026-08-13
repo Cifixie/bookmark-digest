@@ -74,7 +74,7 @@ export default function DigestsPage() {
         to="/"
         style={{
           fontSize: 13,
-          color: "#4a90d9",
+          color: "var(--brand)",
           textDecoration: "none",
           display: "inline-block",
           marginBottom: 16,
@@ -85,7 +85,7 @@ export default function DigestsPage() {
 
       <h1 style={{ fontSize: 20, marginBottom: 16 }}>Digests</h1>
 
-      <p style={{ color: "#999", fontSize: 12, marginBottom: 12 }}>
+      <p style={{ color: "var(--text-secondary)", fontSize: 12, marginBottom: 12 }}>
         Enter the source hash (from the source card on the home page) to list
         all digests for that source.
       </p>
@@ -110,7 +110,7 @@ export default function DigestsPage() {
             flex: 1,
             padding: "6px 10px",
             borderRadius: 6,
-            border: "1px solid #d1d5db",
+            border: "1px solid var(--border-primary)",
             fontSize: 13,
             fontFamily: "monospace",
           }}
@@ -120,7 +120,7 @@ export default function DigestsPage() {
           disabled={loading || !sourceHash.trim()}
           style={{
             padding: "6px 16px",
-            background: "#4a90d9",
+            background: "var(--brand)",
             color: "white",
             border: "none",
             borderRadius: 6,
@@ -134,15 +134,15 @@ export default function DigestsPage() {
         </button>
       </div>
 
-      {loading && <p style={{ color: "#999", fontSize: 13 }}>Loading…</p>}
+      {loading && <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>Loading…</p>}
       {error && (
-        <p style={{ color: "#ef4444", fontSize: 13, margin: "8px 0" }}>
+        <p style={{ color: "var(--badge-error)", fontSize: 13, margin: "8px 0" }}>
           {error}
         </p>
       )}
 
       {!loading && !error && digests.length === 0 && (
-        <p style={{ color: "#999", fontSize: 13 }}>
+        <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>
           No digests found for this source hash.
         </p>
       )}
@@ -158,19 +158,19 @@ export default function DigestsPage() {
 
 function DigestListItem({ digest }: { digest: DigestItem }) {
   const colorMap: Record<string, string> = {
-    done: "#22c55e",
-    generating: "#f59e0b",
-    pending: "#9ca3af",
-    failed: "#ef4444",
+    done: "var(--badge-done)",
+    generating: "var(--badge-generating)",
+    pending: "var(--badge-pending)",
+    failed: "var(--badge-failed)",
   };
-  const color = colorMap[digest.status] ?? "#9ca3af";
+  const color = colorMap[digest.status] ?? "var(--badge-pending)";
 
   return (
     <Link
       to={`/digests/${digest.id}`}
       style={{
         display: "block",
-        border: "1px solid #e5e7eb",
+        border: "1px solid var(--border-primary)",
         borderRadius: 8,
         padding: 12,
         textDecoration: "none",
@@ -203,7 +203,7 @@ function DigestListItem({ digest }: { digest: DigestItem }) {
       <div
         style={{
           fontSize: 11,
-          color: "#999",
+          color: "var(--text-secondary)",
           marginTop: 4,
           wordBreak: "break-all",
         }}
@@ -212,7 +212,7 @@ function DigestListItem({ digest }: { digest: DigestItem }) {
         {digest.model && ` | ${digest.model}`}
       </div>
       {digest.error && (
-        <p style={{ color: "#ef4444", fontSize: 12, margin: "4px 0 0 0" }}>
+        <p style={{ color: "var(--badge-error)", fontSize: 12, margin: "4px 0 0 0" }}>
           {digest.error}
         </p>
       )}

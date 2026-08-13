@@ -41,14 +41,14 @@ export default function AuthenticatorWrapper({ children }: PropsWithChildren) {
                 marginBottom: 16,
               }}
             >
-              <p style={{ color: "#666", fontSize: 13, marginBottom: 0 }}>
+              <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 0 }}>
                 Signed in as: {user?.username || "unknown"}
               </p>
               <Link
                 to="/digests"
                 style={{
                   fontSize: 13,
-                  color: "#4a90d9",
+                  color: "var(--brand)",
                   textDecoration: "none",
                 }}
               >
@@ -62,8 +62,8 @@ export default function AuthenticatorWrapper({ children }: PropsWithChildren) {
                 fontSize: 13,
                 marginBottom: 16,
                 cursor: "pointer",
-                background: "#f3f4f6",
-                border: "1px solid #d1d5db",
+                background: "var(--bg-muted)",
+                border: "1px solid var(--border-primary)",
                 borderRadius: 6,
               }}
             >

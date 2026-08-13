@@ -35,7 +35,7 @@ interface DigestResponse {
 
 function DigestSpecRenderer({ spec }: { spec: Spec | null }) {
   if (!spec || !spec.elements || Object.keys(spec.elements).length === 0) {
-    return <p style={{ color: "#999", fontSize: 13 }}>No output</p>;
+    return <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>No output</p>;
   }
 
   return (
@@ -51,12 +51,12 @@ function DigestSpecRenderer({ spec }: { spec: Spec | null }) {
 
 function StatusBadge({ status }: { status: string }) {
   const colorMap: Record<string, string> = {
-    done: "#22c55e",
-    generating: "#f59e0b",
-    pending: "#9ca3af",
-    failed: "#ef4444",
+    done: "var(--badge-done)",
+    generating: "var(--badge-generating)",
+    pending: "var(--badge-pending)",
+    failed: "var(--badge-failed)",
   };
-  const color = colorMap[status] ?? "#9ca3af";
+  const color = colorMap[status] ?? "var(--badge-pending)";
 
   return (
     <span
@@ -109,7 +109,7 @@ export default function DigestPageClient() {
         to="/"
         style={{
           fontSize: 13,
-          color: "#4a90d9",
+          color: "var(--brand)",
           textDecoration: "none",
           display: "inline-block",
           marginBottom: 16,
@@ -129,7 +129,7 @@ export default function DigestPageClient() {
           gap: 12,
           alignItems: "center",
           fontSize: 12,
-          color: "#999",
+          color: "var(--text-secondary)",
           marginBottom: 16,
         }}
       >
@@ -138,9 +138,9 @@ export default function DigestPageClient() {
         <span>Created: {digest?.createdAt?.slice(0, 10)}</span>
       </div>
 
-      {loading && <p style={{ color: "#999", fontSize: 13 }}>Loading…</p>}
+      {loading && <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>Loading…</p>}
       {error && (
-        <p style={{ color: "#ef4444", fontSize: 13, margin: "8px 0" }}>
+        <p style={{ color: "var(--badge-error)", fontSize: 13, margin: "8px 0" }}>
           {error}
         </p>
       )}
@@ -150,7 +150,7 @@ export default function DigestPageClient() {
       )}
 
       {digest?.status === "failed" && digest?.error && (
-        <p style={{ color: "#ef4444", fontSize: 13, margin: "8px 0" }}>
+        <p style={{ color: "var(--badge-error)", fontSize: 13, margin: "8px 0" }}>
           {digest.error}
         </p>
       )}

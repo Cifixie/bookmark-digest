@@ -1,1 +1,78 @@
 @import "@aws-amplify/ui-react/styles.css";
+
+:root {
+  /* ── Palette: dark theme ─────────────────────────────────────────── */
+
+  /* Backgrounds */
+  --bg-page: #0d1117;
+  --bg-card: #161b22;
+  --bg-input: #0d1117;
+  --bg-muted: #1c2333;
+  --bg-hover: #1a2030;
+  --bg-selected: #1a2744;
+
+  /* Text */
+  --text-heading: #e6edf3;
+  --text-primary: #c9d1d9;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
+  --text-subtle: #555d68;
+  --text-subtlest: #484f58;
+
+  /* Borders */
+  --border-primary: #30363d;
+  --border-secondary: #21262d;
+  --border-focus: #4a90d9;
+
+  /* Brand / links */
+  --brand: #4a90d9;
+  --brand-hover: #5aa0e9;
+  --brand-active: #2a70b9;
+
+  /* Status text */
+  --badge-ready: #3fb950;
+  --badge-fetched: #58a6ff;
+  --badge-embedding: #d29922;
+  --badge-done: #3fb950;
+  --badge-generating: #d29922;
+  --badge-pending: #6e7681;
+  --badge-failed: #f85149;
+  --badge-thin: #f0883e;
+  --badge-error: #f85149;
+
+  /* Status badge backgrounds (hue at ~20% opacity on dark) */
+  --badge-ready-bg: #234d2a;
+  --badge-fetched-bg: #1a3a5c;
+  --badge-embedding-bg: #4a3612;
+  --badge-done-bg: #234d2a;
+  --badge-generating-bg: #4a3612;
+  --badge-pending-bg: #2d333b;
+  --badge-failed-bg: #4d2222;
+  --badge-thin-bg: #4a3018;
+  --badge-error-bg: #4d2222;
+
+  /* Semantic / accent colors */
+  --accent-green: #3fb950;
+  --accent-blue: #58a6ff;
+  --accent-purple: #a371f7;
+  --accent-cyan: #39d2c0;
+  --accent-pink: #f778ba;
+  --accent-orange: #f0883e;
+  --accent-indigo: #6776d3;
+  --accent-teal: #26a69a;
+
+  /* Card highlight (selected) */
+  --card-selected: #4a90d9;
+
+  /* Subject tag colors */
+  --subject-engineering: #58a6ff;
+  --subject-ai-ml: #a371f7;
+  --subject-design: #f778ba;
+  --subject-business: #d29922;
+  --subject-science: #3fb950;
+  --subject-productivity: #26a69a;
+  --subject-culture: #f0883e;
+  --subject-health: #26c6da;
+  --subject-finance: #6776d3;
+  --subject-other: #6e7681;
+}

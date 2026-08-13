@@ -57,13 +57,13 @@ function truncateUrl(url: string, maxLen = 80): string {
 
 function StatusBadge({ status }: { status: string }) {
   const colorMap: Record<string, string> = {
-    ready: "#22c55e",
-    fetched: "#3b82f6",
-    embedding: "#f59e0b",
-    failed: "#ef4444",
-    thin: "#f97316",
+    ready: "var(--badge-ready)",
+    fetched: "var(--badge-fetched)",
+    embedding: "var(--badge-embedding)",
+    failed: "var(--badge-failed)",
+    thin: "var(--badge-thin)",
   };
-  const color = colorMap[status] ?? "#9ca3af";
+  const color = colorMap[status] ?? "var(--badge-pending)";
 
   return (
     <span
@@ -88,14 +88,14 @@ function ContentViewer({ content }: { content: string }) {
       style={{
         fontSize: 13,
         lineHeight: 1.6,
-        color: "#374151",
+        color: "var(--text-primary)",
         whiteSpace: "pre-wrap",
         wordBreak: "break-word",
         margin: 0,
         padding: "16px 20px",
-        background: "#f9fafb",
+        background: "var(--bg-muted)",
         borderRadius: 8,
-        border: "1px solid #e5e7eb",
+        border: "1px solid var(--border-primary)",
         maxHeight: 480,
         overflowY: "auto",
       }}
@@ -107,12 +107,12 @@ function ContentViewer({ content }: { content: string }) {
 
 function DigestLinkRow({ digest }: { digest: DigestRow }) {
   const colorMap: Record<string, string> = {
-    done: "#22c55e",
-    generating: "#f59e0b",
-    pending: "#9ca3af",
-    failed: "#ef4444",
+    done: "var(--badge-done)",
+    generating: "var(--badge-generating)",
+    pending: "var(--badge-pending)",
+    failed: "var(--badge-failed)",
   };
-  const color = colorMap[digest.status] ?? "#9ca3af";
+  const color = colorMap[digest.status] ?? "var(--badge-pending)";
 
   return (
     <Link
@@ -123,7 +123,7 @@ function DigestLinkRow({ digest }: { digest: DigestRow }) {
         justifyContent: "space-between",
         gap: 8,
         padding: "6px 0",
-        borderBottom: "1px solid #f3f4f6",
+        borderBottom: "1px solid var(--border-secondary)",
         textDecoration: "none",
         color: "inherit",
       }}
@@ -131,7 +131,7 @@ function DigestLinkRow({ digest }: { digest: DigestRow }) {
       <span style={{ textTransform: "capitalize", fontSize: 13, fontWeight: 500 }}>
         {digest.digestGoal}
       </span>
-      <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "#999" }}>
+      <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "var(--text-secondary)" }}>
         {digest.model && <span>{digest.model}</span>}
         <span style={{ color }}>{digest.status}</span>
       </span>
@@ -183,7 +183,7 @@ export default function SourcePageClient() {
         to="/browse"
         style={{
           fontSize: 13,
-          color: "#4a90d9",
+          color: "var(--brand)",
           textDecoration: "none",
           display: "inline-block",
           marginBottom: 16,
@@ -203,7 +203,7 @@ export default function SourcePageClient() {
           gap: 12,
           alignItems: "center",
           fontSize: 12,
-          color: "#999",
+          color: "var(--text-secondary)",
           marginBottom: 4,
         }}
       >
@@ -223,7 +223,7 @@ export default function SourcePageClient() {
             rel="noreferrer"
             style={{
               fontSize: 12,
-              color: "#4a90d9",
+              color: "var(--brand)",
               textDecoration: "none",
               marginLeft: "auto",
             }}
@@ -237,7 +237,7 @@ export default function SourcePageClient() {
         <p
           style={{
             fontSize: 11,
-            color: "#bbb",
+            color: "var(--text-subtle)",
             marginBottom: 16,
             wordBreak: "break-all",
           }}
@@ -246,12 +246,12 @@ export default function SourcePageClient() {
         </p>
       )}
 
-      {loading && <p style={{ color: "#999", fontSize: 13 }}>Loading…</p>}
-      {error && <p style={{ color: "#ef4444", fontSize: 13, margin: "8px 0" }}>{error}</p>}
+      {loading && <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>Loading…</p>}
+      {error && <p style={{ color: "var(--badge-error)", fontSize: 13, margin: "8px 0" }}>{error}</p>}
 
       {source && (
         <>
-          <h2 style={{ fontSize: 14, fontWeight: 600, color: "#6b7280", margin: "20px 0 8px" }}>
+          <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--text-muted)", margin: "20px 0 8px" }}>
             Content ({source.content.length.toLocaleString()} chars)
           </h2>
           <ContentViewer content={source.content} />
@@ -260,7 +260,7 @@ export default function SourcePageClient() {
 
       {source && digests.length > 0 && (
         <>
-          <h2 style={{ fontSize: 14, fontWeight: 600, color: "#6b7280", margin: "24px 0 8px" }}>
+          <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--text-muted)", margin: "24px 0 8px" }}>
             Generated from this source ({digests.length})
           </h2>
           <div style={{ padding: "0 4px" }}>
@@ -272,7 +272,7 @@ export default function SourcePageClient() {
       )}
 
       {source && digests.length === 0 && !loading && (
-        <p style={{ color: "#999", fontSize: 13, marginTop: 16 }}>
+        <p style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 16 }}>
           No digests generated from this source yet.
         </p>
       )}

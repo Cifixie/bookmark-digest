@@ -78,7 +78,7 @@ interface IngestResponse {
 
 function DigestSpecRenderer({ spec }: { spec: Spec | null }) {
   if (!spec || !spec.elements || Object.keys(spec.elements).length === 0) {
-    return <p style={{ color: "#999", fontSize: 13 }}>No output</p>;
+    return <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>No output</p>;
   }
 
   return (
@@ -103,10 +103,16 @@ function SourceCard({
 }) {
   const statusColor =
     source.status === "ready"
-      ? "#22c55e"
+      ? "var(--badge-ready)"
       : source.status === "embedding"
-        ? "#f59e0b"
-        : "#ef4444";
+        ? "var(--badge-generating)"
+        : "var(--badge-error)";
+  const statusBg =
+    source.status === "ready"
+      ? "var(--badge-ready-bg)"
+      : source.status === "embedding"
+        ? "var(--badge-embedding-bg)"
+        : "var(--badge-failed-bg)";
 
   return (
     <div
@@ -143,7 +149,7 @@ function SourceCard({
             fontSize: 12,
             fontWeight: 600,
             color: statusColor,
-            background: `${statusColor}20`,
+            background: statusBg,
             padding: "2px 8px",
             borderRadius: 12,
           }}
@@ -155,7 +161,7 @@ function SourceCard({
         style={{
           margin: "8px 0 0 0",
           fontSize: 13,
-          color: "#666",
+          color: "var(--text-muted)",
           wordBreak: "break-all",
         }}
       >
@@ -167,7 +173,7 @@ function SourceCard({
           gap: 16,
           marginTop: 8,
           fontSize: 12,
-          color: "#999",
+          color: "var(--text-secondary)",
         }}
       >
         <span>{source.contentType}</span>
@@ -175,7 +181,7 @@ function SourceCard({
         <Link
           to={`/digests#${source.sourceHash}`}
           style={{
-            color: "#4a90d9",
+            color: "var(--brand)",
             textDecoration: "none",
             cursor: "pointer",
           }}
@@ -185,7 +191,7 @@ function SourceCard({
         <Link
           to={`/digests#${source.sourceHash}`}
           style={{
-            color: "#4a90d9",
+            color: "var(--brand)",
             textDecoration: "none",
             cursor: "pointer",
           }}
@@ -218,7 +224,7 @@ function GoalPicker({
         borderRadius: 8,
         padding: 12,
         marginBottom: 8,
-        background: selected ? "#f0f7ff" : "white",
+        background: selected ? "var(--bg-selected)" : "var(--bg-card)",
       }}
     >
       <label
@@ -237,7 +243,7 @@ function GoalPicker({
         />
         <div>
           <strong style={{ fontSize: 14 }}>{goal.label}</strong>
-          <p style={{ margin: "2px 0 0 0", fontSize: 12, color: "#666" }}>
+          <p style={{ margin: "2px 0 0 0", fontSize: 12, color: "var(--text-muted)" }}>
             {goal.description}
           </p>
         </div>
@@ -250,7 +256,7 @@ function GoalPicker({
             disabled={generating}
             style={{
               padding: "6px 16px",
-              background: generating ? "#9ca3af" : "#4a90d9",
+              background: generating ? "var(--badge-pending)" : "#4a90d9",
               color: "white",
               border: "none",
               borderRadius: 6,
@@ -276,12 +282,20 @@ function DigestResultCard({
 }) {
   const statusColor =
     digest.status === "done"
-      ? "#22c55e"
+      ? "var(--badge-ready)"
       : digest.status === "generating"
-        ? "#f59e0b"
+        ? "var(--badge-generating)"
         : digest.status === "failed"
-          ? "#ef4444"
-          : "#9ca3af";
+          ? "var(--badge-error)"
+          : "var(--badge-pending)";
+  const statusBg =
+    digest.status === "done"
+      ? "var(--badge-done-bg)"
+      : digest.status === "generating"
+        ? "var(--badge-generating-bg)"
+        : digest.status === "failed"
+          ? "var(--badge-failed-bg)"
+          : "var(--badge-pending-bg)";
 
   useEffect(() => {
     if (digest.status === "generating" || digest.status === "pending") {
@@ -309,7 +323,7 @@ function DigestResultCard({
         <h4 style={{ margin: 0, textTransform: "capitalize" }}>
           {digest.digestGoal}
           {(digest.sourceHashes?.length ?? 1) > 1 ? (
-            <span style={{ fontSize: 11, color: "#999", fontWeight: 400 }}>
+            <span style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 400 }}>
               {" "}
               ({digest.sourceHashes!.length} sources)
             </span>
@@ -322,7 +336,7 @@ function DigestResultCard({
             color: statusColor,
             padding: "2px 8px",
             borderRadius: 12,
-            background: `${statusColor}20`,
+            background: statusBg,
           }}
         >
           {digest.status}
@@ -332,17 +346,17 @@ function DigestResultCard({
       {digest.status === "done" && digest.output ? (
         <DigestSpecRenderer spec={digest.output} />
       ) : digest.error ? (
-        <p style={{ color: "#ef4444", fontSize: 13, margin: "8px 0 0 0" }}>
+        <p style={{ color: "var(--badge-error)", fontSize: 13, margin: "8px 0 0 0" }}>
           {digest.error}
         </p>
       ) : (
-        <p style={{ color: "#999", fontSize: 13, margin: "8px 0 0 0" }}>
+        <p style={{ color: "var(--text-secondary)", fontSize: 13, margin: "8px 0 0 0" }}>
           {digest.status === "pending" ? "Queued…" : "Generating…"}
         </p>
       )}
 
       {digest.model && (
-        <p style={{ fontSize: 11, color: "#bbb", margin: "8px 0 0 0" }}>
+        <p style={{ fontSize: 11, color: "var(--text-subtle)", margin: "8px 0 0 0" }}>
           Model: {digest.model}
         </p>
       )}
@@ -609,7 +623,7 @@ export default function Home() {
     <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
         <h1 style={{ fontSize: 22, marginBottom: 4 }}>Bookmark Digest</h1>
-        <Link to="/browse" style={{ fontSize: 13, color: "#4a90d9", textDecoration: "none" }}>
+        <Link to="/browse" style={{ fontSize: 13, color: "var(--brand)", textDecoration: "none" }}>
           Browse →
         </Link>
       </div>
@@ -625,7 +639,7 @@ export default function Home() {
             width: "100%",
             padding: "8px 12px",
             borderRadius: 6,
-            border: "1px solid #d1d5db",
+            border: "1px solid var(--border-primary)",
             fontSize: 14,
             boxSizing: "border-box",
           }}
@@ -637,7 +651,7 @@ export default function Home() {
             gap: 6,
             marginTop: 8,
             fontSize: 13,
-            color: "#555",
+            color: "var(--text-secondary)",
             cursor: "pointer",
           }}
         >
@@ -661,14 +675,14 @@ export default function Home() {
                 marginTop: 8,
                 padding: "8px 12px",
                 borderRadius: 6,
-                border: "1px solid #d1d5db",
+                border: "1px solid var(--border-primary)",
                 fontSize: 14,
                 fontFamily: "inherit",
                 boxSizing: "border-box",
                 resize: "vertical",
               }}
             />
-            <p style={{ marginTop: 4, marginBottom: 0, fontSize: 12, color: "#888" }}>
+            <p style={{ marginTop: 4, marginBottom: 0, fontSize: 12, color: "var(--text-muted)" }}>
               Stored as-is, no fetch attempted — the URL above is kept only as the source's
               citation link.
             </p>
@@ -679,7 +693,7 @@ export default function Home() {
           style={{
             marginTop: 8,
             padding: "8px 24px",
-            background: "#4a90d9",
+            background: "var(--brand)",
             color: "white",
             border: "none",
             borderRadius: 6,
@@ -693,7 +707,7 @@ export default function Home() {
       </form>
 
       {error && (
-        <p style={{ color: "#ef4444", fontSize: 13, marginTop: 12 }}>{error}</p>
+        <p style={{ color: "var(--badge-error)", fontSize: 13, marginTop: 12 }}>{error}</p>
       )}
 
       {/* --- Single-source: the source just submitted, or the newest on load --- */}
@@ -709,7 +723,7 @@ export default function Home() {
                 Digest Goals
               </h4>
               {goalsLoading ? (
-                <p style={{ color: "#999", fontSize: 13 }}>
+                <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>
                   Loading goals…
                 </p>
               ) : goals.length > 0 ? (
@@ -723,7 +737,7 @@ export default function Home() {
                   />
                 ))
               ) : (
-                <p style={{ color: "#999", fontSize: 13 }}>
+                <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>
                   No digest goals available
                 </p>
               )}
@@ -750,7 +764,7 @@ export default function Home() {
               <label
                 style={{
                   fontSize: 12,
-                  color: "#666",
+                  color: "var(--text-muted)",
                   cursor: "pointer",
                 }}
               >
@@ -774,9 +788,9 @@ export default function Home() {
                   style={{
                     padding: "4px 8px",
                     borderRadius: 6,
-                    border: "1px solid #d1d5db",
+                    border: "1px solid var(--border-primary)",
                     fontSize: 12,
-                    background: "white",
+                    background: "var(--bg-card)",
                     cursor: "pointer",
                   }}
                 >
@@ -799,9 +813,9 @@ export default function Home() {
                   style={{
                     padding: "4px 8px",
                     borderRadius: 6,
-                    border: "1px solid #d1d5db",
+                    border: "1px solid var(--border-primary)",
                     fontSize: 12,
-                    background: "white",
+                    background: "var(--bg-card)",
                     cursor: "pointer",
                   }}
                 >
@@ -813,7 +827,7 @@ export default function Home() {
                 </select>
               )}
               {selectedSourceHashes.length > MAX_SOURCES_PER_DIGEST && (
-                <span style={{ fontSize: 12, color: "#ef4444" }}>
+                <span style={{ fontSize: 12, color: "var(--badge-error)" }}>
                   Max {MAX_SOURCES_PER_DIGEST} sources
                 </span>
               )}
@@ -823,7 +837,7 @@ export default function Home() {
                   disabled={generatingMulti || tooManySelected}
                   style={{
                     padding: "6px 16px",
-                    background: generatingMulti || tooManySelected ? "#9ca3af" : "#4a90d9",
+                    background: generatingMulti || tooManySelected ? "var(--badge-pending)" : "#4a90d9",
                     color: "white",
                     border: "none",
                     borderRadius: 6,
@@ -841,7 +855,7 @@ export default function Home() {
           </div>
 
           {loadingSources && (
-            <p style={{ color: "#999", fontSize: 13, margin: "4px 0" }}>
+            <p style={{ color: "var(--text-secondary)", fontSize: 13, margin: "4px 0" }}>
               Loading…
             </p>
           )}
@@ -881,7 +895,7 @@ export default function Home() {
         <p style={{ marginTop: 16 }}>
           <Link
             to="/digests"
-            style={{ fontSize: 13, color: "#4a90d9", textDecoration: "none" }}
+            style={{ fontSize: 13, color: "var(--brand)", textDecoration: "none" }}
           >
             View all digests →
           </Link>

@@ -6,6 +6,11 @@
   (`GET /sources/search`), and `DigestMeta` generation (subject/tags/etc. for
   single-source digests). See [[gotchas]] for two bugs found and fixed during
   review of the first pass at this (dead API route, broken DynamoDB update).
+- **Source detail page** (`/sources/:contentHash`, completed 2026-08-13)
+  — replaces external link in Browse with in-app source view showing
+  metadata, extracted content, "Open original ↗", and list of generated
+  digests. Frontend-only, no CDK/IAM changes (reuses existing `GET
+  /sources/{sourceHash}` + `GET /digests?sourceHash=`).
 
 ## What remains
 

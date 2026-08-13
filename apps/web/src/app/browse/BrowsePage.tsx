@@ -224,56 +224,69 @@ function SourceRow({ item }: { item: BrowseSourceItem }) {
   const displayTitle = item.title ?? fallbackTitle(item.url);
 
   return (
-    // No source detail page exists yet (see plans/phase-3-browse-search.md) —
-    // link out to the original article instead of a route that doesn't exist.
-    <a
-      href={item.url}
-      target="_blank"
-      rel="noreferrer"
-      style={{
-        display: "block",
-        border: "1px solid #e5e7eb",
-        borderRadius: 8,
-        padding: "12px 16px",
-        textDecoration: "none",
-        color: "inherit",
-        marginBottom: 8,
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {displayTitle}
+    <>
+      <Link
+        to={`/sources/${item.sourceHash}`}
+        style={{
+          display: "block",
+          border: "1px solid #e5e7eb",
+          borderRadius: 8,
+          padding: "12px 16px",
+          textDecoration: "none",
+          color: "inherit",
+          marginBottom: 8,
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {displayTitle}
+            </div>
+            <div style={{ fontSize: 11, color: "#999", marginTop: 2, wordBreak: "break-all" }}>
+              {truncateUrl(item.url)}
+            </div>
           </div>
-          <div style={{ fontSize: 11, color: "#999", marginTop: 2, wordBreak: "break-all" }}>
-            {truncateUrl(item.url)}
-          </div>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              color: getSourceBadgeColor(item.status),
+              padding: "2px 8px",
+              borderRadius: 12,
+              background: `${getSourceBadgeColor(item.status)}20`,
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            {item.status}
+          </span>
         </div>
-        <span
-          style={{
-            fontSize: 10,
-            fontWeight: 600,
-            color: getSourceBadgeColor(item.status),
-            padding: "2px 8px",
-            borderRadius: 12,
-            background: `${getSourceBadgeColor(item.status)}20`,
-            whiteSpace: "nowrap",
-            flexShrink: 0,
-          }}
-        >
-          {item.status}
-        </span>
-      </div>
-      <div style={{ display: "flex", gap: 12, marginTop: 6, fontSize: 11, color: "#bbb" }}>
-        <span>{domainFromUrl(item.url)}</span>
-        <span>{item.contentType}</span>
-        <span>{new Date(item.fetchedAt).toLocaleDateString()}</span>
-        {item.embedded && <span style={{ color: "#22c55e" }}>✓ embedded</span>}
-        {item._score !== undefined && (
-          <span style={{ color: "#4a90d9" }}>match: {(item._score * 100).toFixed(0)}%</span>
-        )}
-      </div>
-    </a>
+        <div style={{ display: "flex", gap: 12, marginTop: 6, fontSize: 11, color: "#bbb" }}>
+          <span>{domainFromUrl(item.url)}</span>
+          <span>{item.contentType}</span>
+          <span>{new Date(item.fetchedAt).toLocaleDateString()}</span>
+          {item.embedded && <span style={{ color: "#22c55e" }}>✓ embedded</span>}
+          {item._score !== undefined && (
+            <span style={{ color: "#4a90d9" }}>match: {(item._score * 100).toFixed(0)}%</span>
+          )}
+        </div>
+      </Link>
+      <a
+        href={item.url}
+        target="_blank"
+        rel="noreferrer"
+        style={{
+          display: "block",
+          textAlign: "center",
+          fontSize: 12,
+          color: "#4a90d9",
+          textDecoration: "none",
+          marginBottom: 8,
+        }}
+      >
+        Open original ↗
+      </a>
+    </>
   );
 }
 

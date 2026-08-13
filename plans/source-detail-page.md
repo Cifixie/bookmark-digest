@@ -1,9 +1,9 @@
 # Source detail page
 
-**Status:** proposed — not started, verified 2026-08-12 (no route exists
-under `apps/web/src/app` for a source detail view). Item 4 in
-`plans/ROADMAP.md`'s queue — standalone, no dependencies on anything else in
-the queue.
+**Status:** done, 2026-08-13. Item 4 in `plans/ROADMAP.md`'s queue —
+standalone, no dependencies on anything else in the queue. Shipped in two
+passes: metadata/content/digest-list first, `RelatedFromYourBookmarks` added
+second (see note below).
 
 ## Why this exists
 
@@ -23,9 +23,17 @@ A `/sources/:contentHash` route showing:
 - A list of digests generated from this source (`GET /digests?sourceHash=`,
   already exists via the `SourceHashIndex` GSI — no new backend needed for
   this part).
-- The `RelatedFromYourBookmarks` panel, if reusable directly from wherever
-  it's currently rendered — check before assuming; it may currently only be
-  wired into the digest-completion flow.
+- A "Related from your bookmarks" panel of similar sources.
+
+**Note on the related-bookmarks panel:** `RelatedFromYourBookmarks` in
+`DigestPage.tsx` turned out to be a pure placeholder — `<p>— (placeholder for
+pgvector retrieval) —</p>`, never actually wired to data anywhere (its
+`relatedBookmarks` prop is never passed by `DigestPageClient`). Not reusable.
+Instead the source page calls the real `GET /sources/{sourceHash}/related`
+endpoint directly (brute-force cosine similarity, already existed —
+`lambdas/related-sources/handler.ts`) and renders its own list of matches
+linking to other `/sources/:contentHash` pages. The `DigestPage` placeholder
+is unchanged and still not wired to anything.
 
 ## What's already there vs. what's new
 

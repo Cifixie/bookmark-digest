@@ -96,11 +96,12 @@ over the page directly. Detection's cheap first layer (fetch-failure
 markers) ships now; the statistical layer stays data-gated exactly as
 before.
 
-### 4. `plans/source-detail-page.md`
-Small, standalone, no dependencies. Browse currently links source rows out
-to the original URL instead of an in-app detail view — noted as a gap when
-browse/search shipped and never picked up. Good candidate to do whenever
-there's a short slot, not gated on anything above.
+### 4. `plans/source-detail-page.md` — DONE (2026-08-13)
+Small, standalone, no dependencies. Browse now links source rows to an
+in-app `/sources/:contentHash` detail view instead of the original URL,
+with metadata, extracted content, generated digests, and a "Related from
+your bookmarks" panel (via `GET /sources/{sourceHash}/related`, not the
+dead `DigestPage` placeholder — see the plan doc's note).
 
 ### 5. `plans/explore-agent.md`
 "Explore this" — given a topic/query instead of a URL, an agent plans →

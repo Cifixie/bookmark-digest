@@ -8,9 +8,14 @@
   review of the first pass at this (dead API route, broken DynamoDB update).
 - **Source detail page** (`/sources/:contentHash`, completed 2026-08-13)
   — replaces external link in Browse with in-app source view showing
-  metadata, extracted content, "Open original ↗", and list of generated
-  digests. Frontend-only, no CDK/IAM changes (reuses existing `GET
-  /sources/{sourceHash}` + `GET /digests?sourceHash=`).
+  metadata, extracted content, "Open original ↗", list of generated
+  digests, and a "Related from your bookmarks" panel. Frontend-only, no
+  CDK/IAM changes (reuses existing `GET /sources/{sourceHash}`, `GET
+  /digests?sourceHash=`, and `GET /sources/{sourceHash}/related`). Found
+  along the way: `DigestPage`'s `RelatedFromYourBookmarks` was a dead
+  placeholder never wired to real data — the source page bypasses it and
+  calls the related-sources endpoint directly instead (see
+  `plans/source-detail-page.md`).
 
 ## What remains
 
@@ -25,7 +30,7 @@ architectural reasoning pulled out of them lives in [[decisions]] and
 2. `plans/suggested-bundles.md` — unblocked, unstarted.
 3. `plans/source-quality-and-upload.md` — thin-fetch detection + HTML/PDF
    upload recovery.
-4. `plans/source-detail-page.md` — small, standalone.
+4. ~~`plans/source-detail-page.md`~~ — done 2026-08-13.
 5. `plans/explore-agent.md` — capstone, deliberately last and
    underspecified.
 

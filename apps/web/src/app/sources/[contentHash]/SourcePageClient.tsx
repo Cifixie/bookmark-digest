@@ -25,6 +25,15 @@ interface DigestRow {
   model: string | null;
 }
 
+interface RelatedSourceRow {
+  contentHash: string;
+  url: string;
+  contentType: string;
+  fetchedAt: string;
+  title: string | null;
+  score: number;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -139,6 +148,40 @@ function DigestLinkRow({ digest }: { digest: DigestRow }) {
   );
 }
 
+function RelatedSourceLinkRow({ item }: { item: RelatedSourceRow }) {
+  return (
+    <Link
+      to={`/sources/${item.contentHash}`}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 8,
+        padding: "6px 0",
+        borderBottom: "1px solid var(--border-secondary)",
+        textDecoration: "none",
+        color: "inherit",
+      }}
+    >
+      <span
+        style={{
+          fontSize: 13,
+          fontWeight: 500,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {item.title ?? fallbackTitle(item.url)}
+      </span>
+      <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "var(--text-secondary)", flexShrink: 0 }}>
+        <span>{domainFromUrl(item.url)}</span>
+        <span style={{ color: "var(--brand)" }}>{(item.score * 100).toFixed(0)}% match</span>
+      </span>
+    </Link>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -147,6 +190,7 @@ export default function SourcePageClient() {
   const { contentHash } = useParams<{ contentHash: string }>();
   const [source, setSource] = useState<SourceResponse | null>(null);
   const [digests, setDigests] = useState<DigestRow[]>([]);
+  const [relatedSources, setRelatedSources] = useState<RelatedSourceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -168,6 +212,13 @@ export default function SourcePageClient() {
         if (digRes.ok) {
           const digData = await digRes.json();
           setDigests((digData.digests ?? []) as DigestRow[]);
+        }
+
+        // Fetch related sources (brute-force cosine similarity over embeddings)
+        const relRes = await fetchWithAuth("GET", `/sources/${contentHash}/related`);
+        if (relRes.ok) {
+          const relData = await relRes.json();
+          setRelatedSources((relData.items ?? []) as RelatedSourceRow[]);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
@@ -275,6 +326,19 @@ export default function SourcePageClient() {
         <p style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 16 }}>
           No digests generated from this source yet.
         </p>
+      )}
+
+      {source && relatedSources.length > 0 && (
+        <>
+          <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--text-muted)", margin: "24px 0 8px" }}>
+            Related from your bookmarks
+          </h2>
+          <div style={{ padding: "0 4px" }}>
+            {relatedSources.map((item) => (
+              <RelatedSourceLinkRow key={item.contentHash} item={item} />
+            ))}
+          </div>
+        </>
       )}
     </>
   );

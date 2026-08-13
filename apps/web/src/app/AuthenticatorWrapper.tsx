@@ -1,10 +1,35 @@
 import { Link } from "react-router-dom";
 import { Amplify } from "aws-amplify";
+import { getCurrentUser, signIn } from "aws-amplify/auth";
 import { Authenticator } from "@aws-amplify/ui-react";
 import { amplifyConfig } from "@/lib/amplify-config";
-import { PropsWithChildren } from "react";
+import { PropsWithChildren, useEffect, useState } from "react";
 
 Amplify.configure(amplifyConfig);
+
+const devAutoLoginEmail = import.meta.env.VITE_DEV_AUTO_LOGIN_EMAIL;
+const devAutoLoginPassword = import.meta.env.VITE_DEV_AUTO_LOGIN_PASSWORD;
+
+// Dev convenience only: signs in with a real Cognito user from env vars so
+// `npm run dev` skips the login form. Stripped from production builds since
+// import.meta.env.DEV is a build-time constant. Never touches the API
+// Gateway authorizer — the token is a genuine Cognito session.
+const devAutoLoginEnabled =
+  import.meta.env.DEV && !!devAutoLoginEmail && !!devAutoLoginPassword;
+
+async function attemptDevAutoLogin() {
+  try {
+    await getCurrentUser();
+    return;
+  } catch {
+    // not signed in yet, fall through to sign-in
+  }
+  try {
+    await signIn({ username: devAutoLoginEmail!, password: devAutoLoginPassword! });
+  } catch (err) {
+    console.warn("[dev-auto-login] failed, falling back to manual sign-in", err);
+  }
+}
 
 const formFields = {
   signIn: {
@@ -20,6 +45,17 @@ const formFields = {
 };
 
 export default function AuthenticatorWrapper({ children }: PropsWithChildren) {
+  const [devAutoLoginDone, setDevAutoLoginDone] = useState(!devAutoLoginEnabled);
+
+  useEffect(() => {
+    if (!devAutoLoginEnabled) return;
+    attemptDevAutoLogin().finally(() => setDevAutoLoginDone(true));
+  }, []);
+
+  if (!devAutoLoginDone) {
+    return null;
+  }
+
   return (
     <Authenticator formFields={formFields} hideSignUp={true}>
       {({ signOut, user }) => (

@@ -6,8 +6,8 @@ export const CodeBlock = (props: CodeBlockProps) => {
     <div style={{ margin: "12px 0" }}>
       {language && (
         <div style={{
-          background: "#333",
-          color: "#eee",
+          background: "var(--code-header-bg)",
+          color: "var(--code-header-text)",
           padding: "4px 12px",
           fontSize: 12,
           borderRadius: "8px 8px 0 0",
@@ -17,8 +17,8 @@ export const CodeBlock = (props: CodeBlockProps) => {
       )}
       <pre style={{
         margin: 0,
-        background: "#1e1e1e",
-        color: "#d4d4d4",
+        background: "var(--code-bg)",
+        color: "var(--code-text)",
         padding: 16,
         borderRadius: language ? "0 0 8px 8px" : "8px",
         overflow: "auto",

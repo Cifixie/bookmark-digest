@@ -5,7 +5,7 @@ export const Prose = (props: ProseProps) => {
   return (
     <div style={{ margin: "8px 0" }}>
       {paragraphs.map((p, i) => (
-        <p key={i} style={{ margin: "0 0 12px", lineHeight: 1.7, color: "#333" }}>{p}</p>
+        <p key={i} style={{ margin: "0 0 12px", lineHeight: 1.7, color: "var(--text-primary)" }}>{p}</p>
       ))}
     </div>
   );

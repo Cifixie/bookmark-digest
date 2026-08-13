@@ -75,6 +75,70 @@
   --subject-health: #26c6da;
   --subject-finance: #6776d3;
   --subject-other: #6e7681;
+
+  /* Code blocks */
+  --code-bg: #1e1e1e;
+  --code-text: #d4d4d4;
+  --code-header-bg: #333333;
+  --code-header-text: #eeeeee;
+
+  /* Text on brand (white) */
+  --text-on-brand: #ffffff;
+
+  /* Borders */
+  --border-light: #e0e0e0;
+  --border-gray: #cccccc;
+
+  /* Shape badge backgrounds (dark theme) */
+  --shape-compare-bg: #2d1b4e;
+  --shape-evolution-bg: #1a3a3a;
+  --shape-synthesize-bg: #22264a;
+
+  /* Chart colors (material palette) */
+  --chart-1: #3b82f6;
+  --chart-2: #10b981;
+  --chart-3: #f59e0b;
+  --chart-4: #ef4444;
+  --chart-5: #8b5cf6;
+  --chart-6: #06b6d4;
+  --chart-7: #ec4899;
+  --chart-8: #84cc16;
+
+  /* Callout variant colors (dark theme) */
+  --callout-info-bg: #0d2a47;
+  --callout-info-border: #2196f3;
+  --callout-info-text: #90caf9;
+  --callout-tip-bg: #1a3a2a;
+  --callout-tip-border: #4caf50;
+  --callout-tip-text: #a5d6a7;
+  --callout-warning-bg: #3d2a10;
+  --callout-warning-border: #ff9800;
+  --callout-warning-text: #ffcc80;
+  --callout-success-bg: #1a3a2a;
+  --callout-success-border: #2e7d32;
+  --callout-success-text: #a5d6a7;
+  --callout-note-bg: #2a1a3a;
+  --callout-note-border: #9c27b0;
+  --callout-note-text: #ce93d8;
+  --callout-analogy-bg: #0d2a47;
+  --callout-analogy-border: #2196f3;
+  --callout-analogy-text: #90caf9;
+  --callout-big-idea-bg: #3d3210;
+  --callout-big-idea-border: #ffc107;
+  --callout-big-idea-text: #fff59d;
+  --callout-takeaway-bg: #1a3a2a;
+  --callout-takeaway-border: #4caf50;
+  --callout-takeaway-text: #a5d6a7;
+  --callout-why-it-matters-bg: #3d1528;
+  --callout-why-it-matters-border: #e91e63;
+  --callout-why-it-matters-text: #f48fb1;
+  --callout-misconception-bg: #3d1a1a;
+  --callout-misconception-border: #f44336;
+  --callout-misconception-text: #ef9a9a;
+
+  /* Other utility colors */
+  --accent-red: #f44336;
+  --brand-blue: #1a73e8;
 }
 
 /* ── Amplify override ─────────────────────────────────────────────── */

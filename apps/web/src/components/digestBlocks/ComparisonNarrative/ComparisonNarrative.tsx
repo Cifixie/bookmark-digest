@@ -31,12 +31,12 @@ export const ComparisonNarrative = ({
         style={{
           margin: "10px 0",
           padding: "8px 12px",
-          borderLeft: "3px solid #1a73e8",
+          borderLeft: "3px solid var(--brand-blue)",
           background: "var(--bg-selected)",
           borderRadius: 4,
           fontSize: 14,
           lineHeight: 1.5,
-          color: "#333",
+          color: "var(--text-primary)",
         }}
       >
         {throughline}

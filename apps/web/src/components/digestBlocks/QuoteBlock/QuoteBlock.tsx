@@ -6,11 +6,11 @@ export const QuoteBlock = (props: QuoteBlockProps) => {
     <blockquote style={{
       margin: "12px 0",
       padding: "12px 20px",
-      borderLeft: "4px solid #ccc",
+      borderLeft: "4px solid var(--border-gray)",
       background: "var(--bg-card)",
       borderRadius: "0 8px 8px 0",
     }}>
-      <p style={{ margin: "0 0 8px", fontStyle: "italic", color: "#444", lineHeight: 1.6 }}>
+      <p style={{ margin: "0 0 8px", fontStyle: "italic", color: "var(--text-primary)", lineHeight: 1.6 }}>
         "{quote}"
       </p>
       {(attribution || timestampSeconds) && (

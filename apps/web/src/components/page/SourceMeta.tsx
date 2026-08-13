@@ -11,17 +11,17 @@ export const SourceMeta = ({ kind, author, publication, publishDate, readingTime
     flexWrap: "wrap",
     gap: 16,
     padding: "12px 16px",
-    background: "#f5f5f5",
+    background: "var(--bg-muted)",
     borderRadius: "8px",
     margin: "12px 0",
     fontSize: 14,
-    color: "#666",
+    color: "var(--text-muted)",
   }}>
     <span>📄 {kind}</span>
     <span>✍️ {author}</span>
     {publication && <span>📰 {publication}</span>}
     {publishDate && <span>📅 {publishDate}</span>}
     {readingTimeMinutes && <span>⏱ {readingTimeMinutes} min read</span>}
-    {healthStatus && healthStatus !== "ok" && <span style={{ color: "#f44336" }}>⚠️ {healthStatus}</span>}
+    {healthStatus && healthStatus !== "ok" && <span style={{ color: "var(--accent-red)" }}>⚠️ {healthStatus}</span>}
   </div>
 );

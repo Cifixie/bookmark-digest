@@ -27,16 +27,16 @@ const defaultLabels: Record<CalloutProps["variant"], string> = {
 };
 
 const variantColors: Record<CalloutProps["variant"], { bg: string; border: string; text: string }> = {
-  info: { bg: "#0d2a47", border: "#2196f3", text: "#90caf9" },
-  tip: { bg: "#1a3a2a", border: "#4caf50", text: "#a5d6a7" },
-  warning: { bg: "#3d2a10", border: "#ff9800", text: "#ffcc80" },
-  success: { bg: "#1a3a2a", border: "#2e7d32", text: "#a5d6a7" },
-  note: { bg: "#2a1a3a", border: "#9c27b0", text: "#ce93d8" },
-  analogy: { bg: "#0d2a47", border: "#2196f3", text: "#90caf9" },
-  "big-idea": { bg: "#3d3210", border: "#ffc107", text: "#fff59d" },
-  takeaway: { bg: "#1a3a2a", border: "#4caf50", text: "#a5d6a7" },
-  "why-it-matters": { bg: "#3d1528", border: "#e91e63", text: "#f48fb1" },
-  misconception: { bg: "#3d1a1a", border: "#f44336", text: "#ef9a9a" },
+  info: { bg: "var(--callout-info-bg)", border: "var(--callout-info-border)", text: "var(--callout-info-text)" },
+  tip: { bg: "var(--callout-tip-bg)", border: "var(--callout-tip-border)", text: "var(--callout-tip-text)" },
+  warning: { bg: "var(--callout-warning-bg)", border: "var(--callout-warning-border)", text: "var(--callout-warning-text)" },
+  success: { bg: "var(--callout-success-bg)", border: "var(--callout-success-border)", text: "var(--callout-success-text)" },
+  note: { bg: "var(--callout-note-bg)", border: "var(--callout-note-border)", text: "var(--callout-note-text)" },
+  analogy: { bg: "var(--callout-analogy-bg)", border: "var(--callout-analogy-border)", text: "var(--callout-analogy-text)" },
+  "big-idea": { bg: "var(--callout-big-idea-bg)", border: "var(--callout-big-idea-border)", text: "var(--callout-big-idea-text)" },
+  takeaway: { bg: "var(--callout-takeaway-bg)", border: "var(--callout-takeaway-border)", text: "var(--callout-takeaway-text)" },
+  "why-it-matters": { bg: "var(--callout-why-it-matters-bg)", border: "var(--callout-why-it-matters-border)", text: "var(--callout-why-it-matters-text)" },
+  misconception: { bg: "var(--callout-misconception-bg)", border: "var(--callout-misconception-border)", text: "var(--callout-misconception-text)" },
 };
 
 export const Callout = (props: CalloutProps) => {

@@ -12,7 +12,7 @@ export type SectionContainerProps = z.infer<typeof props>;
 export const props = z.object({
   /** Optional CSS class or style hook for section theming. */
   className: z.string().optional(),
-  /** Optional accent color string (e.g. "#1a73e8") for section theming. */
+  /** Optional accent color string (e.g. a CSS variable like `var(--brand-blue)`) for section theming. */
   accentColor: z.string().optional(),
 });
 

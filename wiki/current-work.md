@@ -1,5 +1,13 @@
 # Current work
 
+- **Dark theme — color migration** (completed 2026-08-13) — replaced all
+  hardcoded hex colors in TSX components with CSS variables. Added 40+ new
+  variables to `styles.css`: code block colors, chart palette, callout
+  variant colors, utility borders, and semantic accents. Components updated:
+  DigestHero, DigestFooter, SourceMeta, DigestPage, CodeBlock, Chart, Step,
+  Terminal, Callout, StatCard, TimelineEvent, AuthorCard, QuoteBlock, List,
+  ComparisonNarrative, GlossaryTerm, TLDR, Prose.
+
 - **Phase-3 Browse/Search** (completed 2026-08-12) — title capture on ingest,
   `list-sources`/`fetch-digest` filters, `/browse` page (Sources/Digests
   toggle, structural filter + substring search), semantic search

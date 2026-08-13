@@ -256,7 +256,7 @@ function GoalPicker({
             disabled={generating}
             style={{
               padding: "6px 16px",
-              background: generating ? "var(--badge-pending)" : "#4a90d9",
+              background: generating ? "var(--badge-pending)" : "var(--brand)",
               color: "white",
               border: "none",
               borderRadius: 6,
@@ -837,7 +837,7 @@ export default function Home() {
                   disabled={generatingMulti || tooManySelected}
                   style={{
                     padding: "6px 16px",
-                    background: generatingMulti || tooManySelected ? "var(--badge-pending)" : "#4a90d9",
+                    background: generatingMulti || tooManySelected ? "var(--badge-pending)" : "var(--brand)",
                     color: "white",
                     border: "none",
                     borderRadius: 6,

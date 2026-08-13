@@ -9,31 +9,31 @@ import { registry } from "../../lib/registry";
 const RelatedFromYourBookmarks = () => (
   <div
     style={{
-      borderTop: "1px solid #e0e0e0",
+      borderTop: "1px solid var(--border-light)",
       paddingTop: 20,
       marginTop: 24,
     }}
   >
-    <h3 style={{ margin: "0 0 12px", color: "#333" }}>
+    <h3 style={{ margin: "0 0 12px", color: "var(--text-heading)" }}>
       Related from your bookmarks
     </h3>
-    <p style={{ color: "#888" }}>— (placeholder for pgvector retrieval) —</p>
+    <p style={{ color: "var(--text-muted)" }}>— (placeholder for pgvector retrieval) —</p>
   </div>
 );
 
 const MyNote = ({ text }: { text: string }) => (
   <div
     style={{
-      border: "1px solid #e0e0e0",
-      borderLeft: "4px solid #1a73e8",
+      border: "1px solid var(--border-light)",
+      borderLeft: "4px solid var(--brand-blue)",
       padding: "12px 16px",
       margin: "16px 0",
-      background: "#f0f7ff",
+      background: "var(--bg-selected)",
       borderRadius: "0 8px 8px 0",
     }}
   >
-    <strong style={{ color: "#1a73e8" }}>📝 My note:</strong>
-    <p style={{ margin: "4px 0 0", color: "#444", lineHeight: 1.6 }}>{text}</p>
+    <strong style={{ color: "var(--brand-blue)" }}>📝 My note:</strong>
+    <p style={{ margin: "4px 0 0", color: "var(--text-primary)", lineHeight: 1.6 }}>{text}</p>
   </div>
 );
 
@@ -55,7 +55,7 @@ export const DigestPage = ({
       padding: "24px 16px",
       fontFamily:
         "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      color: "#222",
+      color: "var(--text-primary)",
       lineHeight: 1.6,
     }}
   >
@@ -84,11 +84,11 @@ export const DigestPage = ({
     />
     {sections.map((section, i) => (
       <section key={i} style={{ margin: "24px 0" }}>
-        <h2 style={{ margin: "0 0 4px", fontSize: 22, color: "#222" }}>
+        <h2 style={{ margin: "0 0 4px", fontSize: 22, color: "var(--text-heading)" }}>
           {section.heading}
         </h2>
         {section.subtitle && (
-          <p style={{ margin: "0 0 16px", color: "#888" }}>
+          <p style={{ margin: "0 0 16px", color: "var(--text-muted)" }}>
             {section.subtitle}
           </p>
         )}

@@ -9,7 +9,7 @@ export const TLDR = (props: TLDRProps) => {
       padding: "16px 20px",
       margin: "12px 0",
     }}>
-      <strong style={{ display: "block", marginBottom: 8, color: "#333" }}>{label}</strong>
+      <strong style={{ display: "block", marginBottom: 8, color: "var(--text-heading)" }}>{label}</strong>
       <ul style={{ margin: 0, paddingLeft: 20 }}>
         {points.map((point, i) => (
           <li key={i} style={{ marginBottom: 4, color: "var(--text-primary)" }}>{point}</li>

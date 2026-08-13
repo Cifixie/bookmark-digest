@@ -7,10 +7,10 @@ const WrittenHero = ({ author, publication, publishDate, readingTimeMinutes }: {
   readingTimeMinutes?: number;
 }) => (
   <div style={{ marginBottom: 20 }}>
-    {publication && <div style={{ fontSize: 13, color: "#888", textTransform: "uppercase", letterSpacing: 1 }}>{publication}</div>}
-    <h2 style={{ margin: "8px 0 4px", color: "#555", fontSize: 18 }}>by {author}</h2>
-    {publishDate && <div style={{ fontSize: 14, color: "#888" }}>{publishDate}</div>}
-    {readingTimeMinutes && <div style={{ fontSize: 14, color: "#888" }}>{readingTimeMinutes} min read</div>}
+    {publication && <div style={{ fontSize: 13, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 1 }}>{publication}</div>}
+    <h2 style={{ margin: "8px 0 4px", color: "var(--text-secondary)", fontSize: 18 }}>by {author}</h2>
+    {publishDate && <div style={{ fontSize: 14, color: "var(--text-muted)" }}>{publishDate}</div>}
+    {readingTimeMinutes && <div style={{ fontSize: 14, color: "var(--text-muted)" }}>{readingTimeMinutes} min read</div>}
   </div>
 );
 
@@ -22,18 +22,18 @@ const TemporalHero = ({ title, showName, duration, hasVideo, chapters }: {
   chapters?: { timestampSeconds: number; title: string }[];
 }) => (
   <div style={{ marginBottom: 20 }}>
-    <div style={{ fontSize: 13, color: "#888", textTransform: "uppercase", letterSpacing: 1 }}>{showName}</div>
-    <h2 style={{ margin: "8px 0 4px", color: "#555", fontSize: 18 }}>{title}</h2>
-    <div style={{ display: "flex", gap: 16, fontSize: 14, color: "#888" }}>
+    <div style={{ fontSize: 13, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 1 }}>{showName}</div>
+    <h2 style={{ margin: "8px 0 4px", color: "var(--text-secondary)", fontSize: 18 }}>{title}</h2>
+    <div style={{ display: "flex", gap: 16, fontSize: 14, color: "var(--text-muted)" }}>
       {hasVideo && <span>📹 Video</span>}
       {duration && <span>⏱ {Math.floor(duration / 60)}:{String(duration % 60).padStart(2, "0")}</span>}
     </div>
     {chapters && chapters.length > 0 && (
       <details style={{ marginTop: 12 }}>
-        <summary style={{ cursor: "pointer", fontSize: 14, color: "#555" }}>Chapters</summary>
+        <summary style={{ cursor: "pointer", fontSize: 14, color: "var(--text-secondary)" }}>Chapters</summary>
         <ul style={{ margin: "8px 0 0", paddingLeft: 20 }}>
           {chapters.map((ch, i) => (
-            <li key={i} style={{ marginBottom: 2, fontSize: 13, color: "#666" }}>
+            <li key={i} style={{ marginBottom: 2, fontSize: 13, color: "var(--text-muted)" }}>
               {Math.floor(ch.timestampSeconds / 60)}:{String(ch.timestampSeconds % 60).padStart(2, "0")} — {ch.title}
             </li>
           ))}
@@ -49,8 +49,8 @@ export const DigestHero = ({ source, title, subtitle }: {
   subtitle?: string | null;
 }) => (
   <div>
-    <h1 style={{ margin: "0 0 12px", fontSize: 28, color: "#111" }}>{title}</h1>
-    {subtitle && <p style={{ margin: 0, fontSize: 16, color: "#666" }}>{subtitle}</p>}
+    <h1 style={{ margin: "0 0 12px", fontSize: 28, color: "var(--text-heading)" }}>{title}</h1>
+    {subtitle && <p style={{ margin: 0, fontSize: 16, color: "var(--text-muted)" }}>{subtitle}</p>}
     {source.kind === "written" ? (
       <WrittenHero {...source} />
     ) : (

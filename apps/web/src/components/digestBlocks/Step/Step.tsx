@@ -9,7 +9,7 @@ export const Step = (props: StepProps) => {
         height: 32,
         borderRadius: "50%",
         background: "var(--brand)",
-        color: "#fff",
+        color: "var(--text-on-brand)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

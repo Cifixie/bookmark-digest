@@ -107,9 +107,9 @@ function getDigestBadgeBg(status: string): string {
 }
 
 function getShapeBadge(mode: string | null, multiCount: number): { label: string; color: string; bg: string } | null {
-  if (mode === "compare") return { label: "Compare", color: "var(--accent-purple)", bg: "#2d1b4e" };
-  if (mode === "evolution") return { label: "Evolution", color: "var(--accent-cyan)", bg: "#1a3a3a" };
-  if (multiCount > 1) return { label: `Synthesize (${multiCount})`, color: "var(--accent-indigo)", bg: "#22264a" };
+  if (mode === "compare") return { label: "Compare", color: "var(--accent-purple)", bg: "var(--shape-compare-bg)" };
+  if (mode === "evolution") return { label: "Evolution", color: "var(--accent-cyan)", bg: "var(--shape-evolution-bg)" };
+  if (multiCount > 1) return { label: `Synthesize (${multiCount})`, color: "var(--accent-indigo)", bg: "var(--shape-synthesize-bg)" };
   return null;
 }
 
@@ -195,7 +195,7 @@ function FilterBar({
           onClick={() => updateParam("semantic", params.semantic ? "" : "1")}
           style={{
             ...toggleStyle,
-            background: params.semantic ? "#4a90d9" : "var(--bg-muted)",
+            background: params.semantic ? "var(--brand)" : "var(--bg-muted)",
             color: params.semantic ? "white" : "var(--text-muted)",
           }}
         >

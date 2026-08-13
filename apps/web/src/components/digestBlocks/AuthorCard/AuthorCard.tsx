@@ -5,8 +5,8 @@ export const AuthorCard = (props: AuthorCardProps) => {
   return (
     <div
       style={{
-        border: "1px solid #e0e0e0",
-        borderLeft: "3px solid #4a90d9",
+        border: "1px solid var(--border-light)",
+        borderLeft: "3px solid var(--brand-blue)",
         borderRadius: "8px",
         padding: "16px 20px",
         margin: "12px 0",
@@ -25,7 +25,7 @@ export const AuthorCard = (props: AuthorCardProps) => {
           {context}
           {context && url ? " · " : null}
           {url && (
-            <a href={url} target="_blank" rel="noreferrer" style={{ color: "#4a90d9" }}>
+            <a href={url} target="_blank" rel="noreferrer" style={{ color: "var(--brand-blue)" }}>
               Source
             </a>
           )}

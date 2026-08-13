@@ -26,7 +26,7 @@ export const TimelineEvent = (props: TimelineEventProps) => {
                 width: 10,
                 height: 10,
                 borderRadius: "50%",
-                background: "#4a90d9",
+                background: "var(--brand-blue)",
               }}
             />
             <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 2 }}>{formatDate(item.date)}</div>

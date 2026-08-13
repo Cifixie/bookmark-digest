@@ -1,8 +1,8 @@
 @import "@aws-amplify/ui-react/styles.css";
 
-:root {
-  /* ── Palette: dark theme ─────────────────────────────────────────── */
+/* ── CSS variables: dark theme ────────────────────────────────────── */
 
+:root {
   /* Backgrounds */
   --bg-page: #0d1117;
   --bg-card: #161b22;
@@ -75,4 +75,75 @@
   --subject-health: #26c6da;
   --subject-finance: #6776d3;
   --subject-other: #6e7681;
+}
+
+/* ── Amplify override ─────────────────────────────────────────────── */
+
+amplify-authenticator {
+  background: var(--bg-page) !important;
+  color: var(--text-primary) !important;
+  display: block;
+}
+
+amplify-authenticator::part(base) {
+  background: var(--bg-page) !important;
+  color: var(--text-primary) !important;
+}
+
+amplify-authenticator::part(title),
+amplify-authenticator::part(heading),
+amplify-authenticator::part(body) {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+amplify-authenticator p,
+amplify-authenticator div,
+amplify-authenticator span,
+amplify-authenticator strong {
+  color: inherit !important;
+}
+
+amplify-authenticator h1,
+amplify-authenticator h2,
+amplify-authenticator h3,
+amplify-authenticator h4,
+amplify-authenticator h5,
+amplify-authenticator h6 {
+  color: var(--text-heading) !important;
+}
+
+/* ── Default element styles ───────────────────────────────────────── */
+
+body {
+  background: var(--bg-page) !important;
+  color: var(--text-primary) !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-heading) !important;
+}
+
+a {
+  color: var(--brand) !important;
+}
+
+a:hover {
+  color: var(--brand-hover) !important;
+}
+
+input, textarea, select {
+  background: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-primary) !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--text-subtle) !important;
+}
+
+button {
+  color: var(--text-primary) !important;
+  background: var(--bg-muted) !important;
+  border-color: var(--border-primary) !important;
 }

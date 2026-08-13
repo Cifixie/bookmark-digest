@@ -31,6 +31,8 @@ export default function AuthenticatorWrapper({ children }: PropsWithChildren) {
               fontFamily:
                 "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
               padding: "0 16px",
+              background: "var(--bg-page)",
+              color: "var(--text-primary)",
             }}
           >
             <div

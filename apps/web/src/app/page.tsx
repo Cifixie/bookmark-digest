@@ -117,7 +117,7 @@ function SourceCard({
   return (
     <div
       style={{
-        border: checked ? "2px solid #4a90d9" : "1px solid #e5e7eb",
+        border: checked ? "2px solid var(--brand)" : "1px solid var(--border-primary)",
         borderRadius: 8,
         padding: 16,
         marginTop: 16,
@@ -161,7 +161,7 @@ function SourceCard({
         style={{
           margin: "8px 0 0 0",
           fontSize: 13,
-          color: "var(--text-muted)",
+          color: "var(--text-secondary)",
           wordBreak: "break-all",
         }}
       >
@@ -220,7 +220,7 @@ function GoalPicker({
   return (
     <div
       style={{
-        border: "1px solid #e5e7eb",
+        border: "1px solid var(--border-primary)",
         borderRadius: 8,
         padding: 12,
         marginBottom: 8,
@@ -242,8 +242,8 @@ function GoalPicker({
           style={{ marginTop: 3 }}
         />
         <div>
-          <strong style={{ fontSize: 14 }}>{goal.label}</strong>
-          <p style={{ margin: "2px 0 0 0", fontSize: 12, color: "var(--text-muted)" }}>
+          <strong style={{ fontSize: 14, color: "var(--text-heading)" }}>{goal.label}</strong>
+          <p style={{ margin: "2px 0 0 0", fontSize: 12, color: "var(--text-secondary)" }}>
             {goal.description}
           </p>
         </div>
@@ -307,7 +307,7 @@ function DigestResultCard({
   return (
     <div
       style={{
-        border: "1px solid #e5e7eb",
+        border: "1px solid var(--border-primary)",
         borderRadius: 8,
         padding: 16,
         marginTop: 12,
@@ -682,7 +682,7 @@ export default function Home() {
                 resize: "vertical",
               }}
             />
-            <p style={{ marginTop: 4, marginBottom: 0, fontSize: 12, color: "var(--text-muted)" }}>
+            <p style={{ marginTop: 4, marginBottom: 0, fontSize: 12, color: "var(--text-secondary)" }}>
               Stored as-is, no fetch attempted — the URL above is kept only as the source's
               citation link.
             </p>
@@ -764,7 +764,7 @@ export default function Home() {
               <label
                 style={{
                   fontSize: 12,
-                  color: "var(--text-muted)",
+                  color: "var(--text-secondary)",
                   cursor: "pointer",
                 }}
               >

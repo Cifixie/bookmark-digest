@@ -9,13 +9,20 @@
 
 ## What remains
 
-- No source detail page — Browse's source rows link out to the original URL
-  instead (`plans/phase-3-browse-search.md` flagged this as TBD).
-- `DigestMeta` generation only runs for single-source digests; multi-source
-  bundles never get `subject`/`tags`.
-- Self-expanding tag vocabulary (`TagsTable`) — designed in the phase-3 plan,
-  not built.
-- **Phase-2d**: suggested-bundle UX (from phase-2-scope.md step 5) — depends
-  on `RelatedFromYourBookmarks`.
-- **Phase-4**: "Explore this" — agent that adds content based on browsing
-  patterns.
+Planning was restructured 2026-08-12 — see `plans/ROADMAP.md` for the full
+picture. The old phase-N docs are archived at `plans/archive/`; durable
+architectural reasoning pulled out of them lives in [[decisions]] and
+[[gotchas]]. Queue, in order:
+
+1. `plans/digest-metadata-completeness.md` — multi-source `DigestMeta`,
+   tag-vocabulary fuzzy matching, digest synopsis + semantic search, model
+   tiering off Gemini's quota.
+2. `plans/suggested-bundles.md` — unblocked, unstarted.
+3. `plans/source-quality-and-upload.md` — thin-fetch detection + HTML/PDF
+   upload recovery.
+4. `plans/source-detail-page.md` — small, standalone.
+5. `plans/explore-agent.md` — capstone, deliberately last and
+   underspecified.
+
+Deferred-with-a-trigger: `plans/multi-catalog-gating.md`. Parked without a
+trigger: `plans/PARKED.md`.

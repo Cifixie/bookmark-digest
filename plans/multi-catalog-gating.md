@@ -1,7 +1,10 @@
 # Per-intention catalogs (multi-catalog gating)
 
-**Status:** deferred — deliberately not built. Pick up once phase-2 (including
-2b) is mentally done; not a blocker for phase-3 or anything else in flight.
+**Status:** deferred — deliberately not built. `Chart`/`PullQuote`/
+`ComparisonNarrative` (the blocks this exists to potentially gate) have all
+shipped (Milestone 1, `plans/ROADMAP.md`). Not queued — kept as its own file
+because it has an explicit trigger below, not a scheduled slot. See
+`plans/PARKED.md` for ideas parked without a trigger.
 
 **Goal:** stop offering the model blocks that don't fit the current
 `digestGoal`/`sourceMode` (e.g. `Chart` for `tl_dr`, `PullQuote` for
@@ -12,14 +15,15 @@ of a custom allowlist/filter layered on top of one catalog.
 
 ## Why this exists
 
-`plans/phase-2b-catalog-expansion.md` added `Chart` and `PullQuote`, both of
-which overlap an existing block closely enough that the model could reach for
-the wrong one (`Chart` vs `StatCard`/`ComparisonTable`; `PullQuote` vs
-`QuoteBlock`). That plan handles it with prompt text only — the same pattern
-already used for `synthesize` mode's "Do NOT use ComparisonTable or ProsCons"
-guidance — and deliberately does not build any gating mechanism, matching
-`phase-3-browse-search.md`'s earlier decision to defer `allowedBlockTypes` as
-speculative.
+`plans/archive/phase-2b-catalog-expansion.md` added `Chart` and `PullQuote`,
+both of which overlap an existing block closely enough that the model could
+reach for the wrong one (`Chart` vs `StatCard`/`ComparisonTable`;
+`PullQuote` vs `QuoteBlock`). That plan handles it with prompt text only —
+the same pattern already used for `synthesize` mode's "Do NOT use
+ComparisonTable or ProsCons" guidance — and deliberately does not build any
+gating mechanism, matching `plans/archive/phase-3-browse-search.md`'s
+earlier decision to defer `allowedBlockTypes` as speculative. See
+[[decisions]] for the durable version of this reasoning.
 
 An earlier version of this idea proposed a single global catalog plus a
 runtime `allowedBlockTypes?: string[]` field on `DigestGoalConfig`/

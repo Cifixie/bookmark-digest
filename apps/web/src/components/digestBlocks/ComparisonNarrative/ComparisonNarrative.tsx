@@ -16,11 +16,11 @@ export const ComparisonNarrative = ({
     <div style={{ margin: "16px 0" }}>
       {/* Header */}
       <div>
-        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "#222" }}>
+        <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "var(--text-heading)" }}>
           {title}
         </h3>
         {subtitle && (
-          <p style={{ margin: "2px 0 0", fontSize: 14, color: "#777" }}>
+          <p style={{ margin: "2px 0 0", fontSize: 14, color: "var(--text-secondary)" }}>
             {subtitle}
           </p>
         )}
@@ -32,7 +32,7 @@ export const ComparisonNarrative = ({
           margin: "10px 0",
           padding: "8px 12px",
           borderLeft: "3px solid #1a73e8",
-          background: "#f0f6ff",
+          background: "var(--bg-selected)",
           borderRadius: 4,
           fontSize: 14,
           lineHeight: 1.5,

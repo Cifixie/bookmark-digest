@@ -43,8 +43,8 @@ function BarChart({
           gap: 8,
           height: 160,
           padding: "0 8px",
-          borderBottom: "1px solid #e0e0e0",
-          borderLeft: "1px solid #e0e0e0",
+          borderBottom: "1px solid var(--border-primary)",
+          borderLeft: "1px solid var(--border-primary)",
         }}
       >
         {data.map((d, i) => {
@@ -64,7 +64,7 @@ function BarChart({
               <span
                 style={{
                   fontSize: 11,
-                  color: "#777",
+                  color: "var(--text-secondary)",
                   marginBottom: 4,
                   fontWeight: 500,
                 }}
@@ -85,7 +85,7 @@ function BarChart({
               <span
                 style={{
                   fontSize: 11,
-                  color: "#555",
+                  color: "var(--text-primary)",
                   marginTop: 4,
                   textAlign: "center",
                   lineHeight: 1.2,
@@ -102,7 +102,7 @@ function BarChart({
         <p
           style={{
             margin: "8px 8px 0",
-            color: "#888",
+            color: "var(--text-muted)",
             fontSize: 12,
             fontStyle: "italic",
           }}
@@ -159,7 +159,7 @@ function Sparkline({
         <polyline
           points={points}
           fill="none"
-          stroke="#3b82f6"
+          stroke="var(--accent-blue)"
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -175,7 +175,7 @@ function Sparkline({
             ((lastPoint.value - min) / range) * (height - 2 * padY)
           }
           r={4}
-          fill="#3b82f6"
+          fill="var(--accent-blue)"
         />
         {/* Start dot */}
         <circle cx={padX}
@@ -185,7 +185,7 @@ function Sparkline({
             ((firstPoint.value - min) / range) * (height - 2 * padY)
           }
           r={3}
-          fill="#3b82f6"
+          fill="var(--accent-blue)"
           opacity={0.5}
         />
       </svg>
@@ -194,7 +194,7 @@ function Sparkline({
           display: "flex",
           justifyContent: "space-between",
           fontSize: 11,
-          color: "#888",
+          color: "var(--text-muted)",
           marginTop: 4,
         }}
       >
@@ -213,7 +213,7 @@ function Sparkline({
         <p
           style={{
             margin: "4px 0 0",
-            color: "#888",
+            color: "var(--text-muted)",
             fontSize: 12,
             fontStyle: "italic",
           }}

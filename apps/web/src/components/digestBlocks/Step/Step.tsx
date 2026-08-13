@@ -8,8 +8,8 @@ export const Step = (props: StepProps) => {
         minWidth: 32,
         height: 32,
         borderRadius: "50%",
-        background: "#1a73e8",
-        color: "white",
+        background: "var(--brand)",
+        color: "#fff",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -19,8 +19,8 @@ export const Step = (props: StepProps) => {
         {order}
       </div>
       <div>
-        <h4 style={{ margin: "0 0 4px", color: "#222" }}>{title}</h4>
-        <p style={{ margin: 0, color: "#555", lineHeight: 1.6 }}>{description}</p>
+        <h4 style={{ margin: "0 0 4px", color: "var(--text-heading)" }}>{title}</h4>
+        <p style={{ margin: 0, color: "var(--text-primary)", lineHeight: 1.6 }}>{description}</p>
       </div>
     </div>
   );

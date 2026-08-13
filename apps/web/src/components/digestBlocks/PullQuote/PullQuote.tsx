@@ -18,7 +18,7 @@ export const PullQuote = (props: PullQuoteProps) => {
           fontSize: 22,
           fontWeight: 500,
           lineHeight: 1.5,
-          color: "#1a1a1a",
+          color: "var(--text-heading)",
           fontStyle: "italic",
         }}
       >

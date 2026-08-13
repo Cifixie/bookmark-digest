@@ -28,7 +28,7 @@ export const CodeBlock = (props: CodeBlockProps) => {
       }}>
         <code>{code}</code>
       </pre>
-      {caption && <p style={{ margin: "4px 0 0", fontSize: 13, color: "#888" }}>{caption}</p>}
+      {caption && <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-muted)" }}>{caption}</p>}
     </div>
   );
 };

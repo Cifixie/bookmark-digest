@@ -14,7 +14,7 @@ export const Terminal = (props: TerminalProps) => {
         <div style={{ color: "#4caf50" }}>$ {command}</div>
         {output && <pre style={{ margin: "8px 0 0", color: "#ccc", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{output}</pre>}
       </div>
-      {caption && <p style={{ margin: "4px 0 0", fontSize: 13, color: "#888" }}>{caption}</p>}
+      {caption && <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-muted)" }}>{caption}</p>}
     </div>
   );
 };

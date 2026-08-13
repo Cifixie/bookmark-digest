@@ -1,6 +1,6 @@
 import type { ComparisonTableProps } from "@bookmark-digest/catalog";
 
-const winnerBackground = "#f1f8e9";
+const winnerBackground = "var(--bg-selected)";
 
 export const ComparisonTable = (props: ComparisonTableProps) => {
   const { columns, rows, summary, winnerIndex } = props;
@@ -12,15 +12,15 @@ export const ComparisonTable = (props: ComparisonTableProps) => {
         <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 14 }}>
           <thead>
             <tr>
-              <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "2px solid #e0e0e0", color: "#777", fontWeight: 500 }} />
+              <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "2px solid var(--border-primary)", color: "var(--text-muted)", fontWeight: 500 }} />
               {columns.map((column, i) => (
                 <th
                   key={i}
                   style={{
                     textAlign: "left",
                     padding: "8px 12px",
-                    borderBottom: "2px solid #e0e0e0",
-                    color: "#222",
+                    borderBottom: "2px solid var(--border-primary)",
+                    color: "var(--text-heading)",
                     background: i === winnerIndex ? winnerBackground : undefined,
                   }}
                 >
@@ -32,7 +32,7 @@ export const ComparisonTable = (props: ComparisonTableProps) => {
           <tbody>
             {rows.map((row) => (
               <tr key={row.key}>
-                <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid #eee", color: "#555", fontWeight: 500 }}>
+                <th style={{ textAlign: "left", padding: "8px 12px", borderBottom: "1px solid var(--border-secondary)", color: "var(--text-secondary)", fontWeight: 500 }}>
                   {row.label}
                 </th>
                 {/* Values map to columns by index; a row shorter than the
@@ -42,8 +42,8 @@ export const ComparisonTable = (props: ComparisonTableProps) => {
                     key={i}
                     style={{
                       padding: "8px 12px",
-                      borderBottom: "1px solid #eee",
-                      color: "#555",
+                      borderBottom: "1px solid var(--border-secondary)",
+                      color: "var(--text-primary)",
                       fontWeight: row.winnerIndex != null && i === row.winnerIndex ? 600 : 400,
                       background: i === winnerIndex ? winnerBackground : undefined,
                     }}
@@ -57,7 +57,7 @@ export const ComparisonTable = (props: ComparisonTableProps) => {
         </table>
       </div>
       {summary && (
-        <p style={{ margin: "8px 0 0", color: "#777", fontSize: 13, fontStyle: "italic" }}>{summary}</p>
+        <p style={{ margin: "8px 0 0", color: "var(--text-muted)", fontSize: 13, fontStyle: "italic" }}>{summary}</p>
       )}
     </div>
   );

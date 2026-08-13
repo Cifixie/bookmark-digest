@@ -27,16 +27,16 @@ const defaultLabels: Record<CalloutProps["variant"], string> = {
 };
 
 const variantColors: Record<CalloutProps["variant"], { bg: string; border: string; text: string }> = {
-  info: { bg: "#e3f2fd", border: "#2196f3", text: "#0d47a1" },
-  tip: { bg: "#e8f5e9", border: "#4caf50", text: "#1b5e20" },
-  warning: { bg: "#fff3e0", border: "#ff9800", text: "#e65100" },
-  success: { bg: "#e8f5e9", border: "#2e7d32", text: "#1b5e20" },
-  note: { bg: "#f3e5f5", border: "#9c27b0", text: "#4a148c" },
-  analogy: { bg: "#e3f2fd", border: "#2196f3", text: "#0d47a1" },
-  "big-idea": { bg: "#fff8e1", border: "#ffc107", text: "#f57f17" },
-  takeaway: { bg: "#e8f5e9", border: "#4caf50", text: "#1b5e20" },
-  "why-it-matters": { bg: "#fce4ec", border: "#e91e63", text: "#880e4f" },
-  misconception: { bg: "#ffebee", border: "#f44336", text: "#b71c1c" },
+  info: { bg: "#0d2a47", border: "#2196f3", text: "#90caf9" },
+  tip: { bg: "#1a3a2a", border: "#4caf50", text: "#a5d6a7" },
+  warning: { bg: "#3d2a10", border: "#ff9800", text: "#ffcc80" },
+  success: { bg: "#1a3a2a", border: "#2e7d32", text: "#a5d6a7" },
+  note: { bg: "#2a1a3a", border: "#9c27b0", text: "#ce93d8" },
+  analogy: { bg: "#0d2a47", border: "#2196f3", text: "#90caf9" },
+  "big-idea": { bg: "#3d3210", border: "#ffc107", text: "#fff59d" },
+  takeaway: { bg: "#1a3a2a", border: "#4caf50", text: "#a5d6a7" },
+  "why-it-matters": { bg: "#3d1528", border: "#e91e63", text: "#f48fb1" },
+  misconception: { bg: "#3d1a1a", border: "#f44336", text: "#ef9a9a" },
 };
 
 export const Callout = (props: CalloutProps) => {

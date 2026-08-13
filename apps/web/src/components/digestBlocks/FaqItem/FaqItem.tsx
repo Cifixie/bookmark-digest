@@ -5,17 +5,18 @@ export const FaqItem = (props: FaqItemProps) => {
   const [open, setOpen] = useState(false);
   const { question, answer } = props;
   return (
-    <div style={{ border: "1px solid #e0e0e0", borderRadius: "8px", margin: "8px 0", overflow: "hidden" }}>
+    <div style={{ border: "1px solid var(--border-primary)", borderRadius: "8px", margin: "8px 0", overflow: "hidden" }}>
       <button
         onClick={() => setOpen(!open)}
         style={{
           width: "100%",
           padding: "12px 16px",
-          background: open ? "#f5f5f5" : "white",
+          background: open ? "var(--bg-card)" : "var(--bg-muted)",
           border: "none",
           textAlign: "left",
           cursor: "pointer",
           fontWeight: 500,
+          color: "var(--text-heading)",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
@@ -25,7 +26,7 @@ export const FaqItem = (props: FaqItemProps) => {
         <span>{open ? "▾" : "▸"}</span>
       </button>
       {open && (
-        <div style={{ padding: "12px 16px", background: "#fafafa", lineHeight: 1.6, color: "#555" }}>
+        <div style={{ padding: "12px 16px", background: "var(--bg-card)", lineHeight: 1.6, color: "var(--text-primary)" }}>
           {answer}
         </div>
       )}

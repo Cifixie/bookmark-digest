@@ -15,7 +15,7 @@ export const TimelineEvent = (props: TimelineEventProps) => {
 
   return (
     <div style={{ margin: "12px 0" }}>
-      <ol style={{ listStyle: "none", margin: 0, padding: 0, borderLeft: "2px solid #e0e0e0" }}>
+      <ol style={{ listStyle: "none", margin: 0, padding: 0, borderLeft: "2px solid var(--border-primary)" }}>
         {ordered.map((item, i) => (
           <li key={i} style={{ position: "relative", padding: "0 0 20px 20px" }}>
             <span
@@ -29,14 +29,14 @@ export const TimelineEvent = (props: TimelineEventProps) => {
                 background: "#4a90d9",
               }}
             />
-            <div style={{ fontSize: 12, color: "#777", marginBottom: 2 }}>{formatDate(item.date)}</div>
-            <div style={{ fontWeight: 600, color: "#222", fontSize: 14 }}>{item.label}</div>
-            <p style={{ margin: "4px 0 0", color: "#555", fontSize: 14, lineHeight: 1.6 }}>{item.text}</p>
+            <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 2 }}>{formatDate(item.date)}</div>
+            <div style={{ fontWeight: 600, color: "var(--text-heading)", fontSize: 14 }}>{item.label}</div>
+            <p style={{ margin: "4px 0 0", color: "var(--text-primary)", fontSize: 14, lineHeight: 1.6 }}>{item.text}</p>
           </li>
         ))}
       </ol>
       {narrative && (
-        <p style={{ margin: "4px 0 0", color: "#777", fontSize: 13, fontStyle: "italic" }}>{narrative}</p>
+        <p style={{ margin: "4px 0 0", color: "var(--text-secondary)", fontSize: 13, fontStyle: "italic" }}>{narrative}</p>
       )}
     </div>
   );

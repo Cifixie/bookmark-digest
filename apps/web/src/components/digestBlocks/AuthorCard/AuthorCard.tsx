@@ -10,18 +10,18 @@ export const AuthorCard = (props: AuthorCardProps) => {
         borderRadius: "8px",
         padding: "16px 20px",
         margin: "12px 0",
-        background: "#fafafa",
+        background: "var(--bg-card)",
       }}
     >
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
-        <span style={{ fontWeight: 600, color: "#222", fontSize: 15 }}>{name}</span>
+        <span style={{ fontWeight: 600, color: "var(--text-heading)", fontSize: 15 }}>{name}</span>
         {type && (
-          <span style={{ fontSize: 11, color: "#777", textTransform: "uppercase", letterSpacing: 0.5 }}>{type}</span>
+          <span style={{ fontSize: 11, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 0.5 }}>{type}</span>
         )}
       </div>
-      <p style={{ margin: 0, color: "#555", fontSize: 14, lineHeight: 1.6 }}>{text}</p>
+      <p style={{ margin: 0, color: "var(--text-primary)", fontSize: 14, lineHeight: 1.6 }}>{text}</p>
       {(context || url) && (
-        <div style={{ marginTop: 8, fontSize: 12, color: "#777" }}>
+        <div style={{ marginTop: 8, fontSize: 12, color: "var(--text-secondary)" }}>
           {context}
           {context && url ? " · " : null}
           {url && (

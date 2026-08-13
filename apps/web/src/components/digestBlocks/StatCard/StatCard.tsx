@@ -8,11 +8,11 @@ export const StatCard = (props: StatCardProps) => {
       borderRadius: "8px",
       padding: "20px",
       margin: "12px 0",
-      background: "#fafafa",
+      background: "var(--bg-card)",
       textAlign: "center",
     }}>
-      <div style={{ fontSize: 32, fontWeight: 700, color: "#222" }}>{value}</div>
-      <div style={{ color: "#777", fontSize: 14, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 32, fontWeight: 700, color: "var(--text-heading)" }}>{value}</div>
+      <div style={{ color: "var(--text-secondary)", fontSize: 14, marginBottom: 4 }}>{label}</div>
       {change && <div style={{ color: "#4caf50", fontSize: 14, fontWeight: 500 }}>{change}</div>}
     </div>
   );

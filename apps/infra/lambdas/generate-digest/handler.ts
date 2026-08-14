@@ -22,12 +22,16 @@ import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 import { compileSpecStream, autoFixSpec, type Spec } from "@json-render/core";
-import { validateDigestSpec, catalog, DigestMeta } from "@bookmark-digest/catalog";
+import { validateDigestSpec, catalog, DigestMeta, matchTag } from "@bookmark-digest/catalog";
 import { randomUUID } from "crypto";
+import { normalizeTag } from "@bookmark-digest/catalog";
+import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 import {
   GEMINI_MODEL_ID,
   DIGEST_MAX_TOKENS,
   BEDROCK_HAIKU_INFERENCE_PROFILE_ID,
+  BEDROCK_EMBEDDING_MODEL_ID,
+  BEDROCK_EMBEDDING_DIMENSIONS,
   MAX_SOURCES_PER_DIGEST,
   MAX_SOURCE_CHARS_MULTI,
 } from "../../lib/config";
@@ -36,6 +40,8 @@ import {
   digestsQueryBySourceHash,
   digestsUpdate,
   sourcesGet,
+  tagsScan,
+  tagsUpsert,
 } from "../../lib/dynamo";
 import { getDigestGoal, getSourceMode, DEFAULT_SOURCE_MODE, GROUNDING_RULES } from "../../lib/digest-goals";
 
@@ -76,14 +82,93 @@ const LENGTH_LIST = META_ENUMS.length.unwrap().options.join(", ");
 const DIFFICULTY_LIST = META_ENUMS.difficulty.unwrap().options.join(", ");
 
 const MAX_SOURCE_CHARS_FOR_META = 5000; // First N chars are enough to classify
+const MAX_SOURCE_CHARS_FOR_SYNOPSIS = 20000; // Enough for a short summary across N sources
+
+/**
+ * Generates a multi-source synopsis — a short paragraph describing what the
+ * combined digest covers. Only produces `synopsis`, not subject/tags etc.
+ */
+async function generateSynopsis(
+  sources: Array<{ url: string; content: string }>,
+): Promise<string | null> {
+  try {
+    const sourcesSection = sources
+      .slice(0, 3) // Cap at 3 sources for the synopsis call (keeps prompt small)
+      .map((s, i) => {
+        const clipped = s.content.slice(0, MAX_SOURCE_CHARS_FOR_SYNOPSIS);
+        return `--- Source ${i + 1} ---\nURL: ${s.url}\nContent:\n${clipped}`;
+      })
+      .join("\n\n");
+
+    const result = await generateText({
+      model: bedrock(FALLBACK_MODEL),
+      system: `
+You are summarizing a digest that combines multiple sources.
+Produce a JSON object with one field:
+
+- synopsis: short paragraph (2-3 sentences) describing what the combined digest covers,
+  written for a human scanning search results. Do NOT list the sources — describe the
+  combined topic.
+
+Keep it under 500 characters.
+`,
+      prompt: sourcesSection,
+      maxOutputTokens: 300,
+      temperature: 0.2,
+    });
+
+    const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+
+    const candidate = JSON.parse(jsonMatch[0]);
+    if (typeof candidate.synopsis !== "string" || candidate.synopsis.trim().length === 0) {
+      return null;
+    }
+    return candidate.synopsis;
+  } catch (err) {
+    console.warn("Synopsis generation failed:", err);
+    return null;
+  }
+}
+
+/** Titan v2 embedding — mirrors search-sources' approach. */
+async function embedText(text: string): Promise<number[]> {
+  const bedrockClient = new BedrockRuntimeClient({});
+  const response = await bedrockClient.send(
+    new InvokeModelCommand({
+      modelId: BEDROCK_EMBEDDING_MODEL_ID,
+      body: JSON.stringify({ inputText: text }),
+      contentType: "application/json",
+      accept: "application/json",
+    }),
+  );
+  const body = JSON.parse(new TextDecoder().decode(response.body));
+  const embedding = body?.embedding;
+  if (!Array.isArray(embedding) || embedding.length === 0) {
+    throw new Error("Bedrock returned no embedding");
+  }
+  return embedding as number[];
+}
 
 /**
  * Generates and validates DigestMeta from the source content. Returns null on
  * any failure (model error, unparseable JSON, or schema validation failure) —
  * the caller treats that as "no meta this time", not a digest failure.
+ *
+ * @param source - The source material to classify
+ * @param vocabulary - Optional list of displayTags from the tags table, used
+ *   to steer the model toward existing spellings (top ~50-100 tags).
  */
-async function generateMeta(source: { url: string; content: string }): Promise<DigestMeta.DigestMeta | null> {
+async function generateMeta(
+  source: { url: string; content: string },
+  vocabulary?: string[],
+): Promise<DigestMeta.DigestMeta | null> {
   try {
+    const vocabIntro =
+      vocabulary && vocabulary.length > 0
+        ? `\nRelevant existing tags to prefer: ${vocabulary.slice(0, 50).join(", ")}\nWhen choosing tags, prefer reusing one of these over inventing a new spelling for the same concept.`
+        : "";
+
     const systemPrompt = `
 You are classifying source material for a digest system.
 Produce a JSON object with these fields:
@@ -94,18 +179,18 @@ Produce a JSON object with these fields:
 - tone: one of ["${TONE_LIST}"] — how the explanation is framed
 - length: one of ["${LENGTH_LIST}"] — approximate reading length
 - difficulty: one of ["${DIFFICULTY_LIST}"] — target reader level (optional)
+- synopsis: short paragraph (2-3 sentences) describing what the digest covers, written for a human scanning search results
 
 Be decisive — pick the best fit from each list, don't say "other" unless nothing
-else genuinely fits. Tags should be concrete, not broad categories.
+else genuinely fits. Tags should be concrete, not broad categories. Synopsis should be descriptive, not repetitive.${vocabIntro}
 `;
 
-    const provider = await getGoogleProvider();
     const contentSlice = source.content.slice(0, MAX_SOURCE_CHARS_FOR_META);
     const result = await generateText({
-      model: provider(GENERATION_MODEL),
+      model: bedrock(FALLBACK_MODEL),
       system: systemPrompt,
       prompt: `Source URL: ${source.url}\n\nSource content (first ${MAX_SOURCE_CHARS_FOR_META} chars):\n${contentSlice}`,
-      maxOutputTokens: 500,
+      maxOutputTokens: 600,
       temperature: 0.2,
     });
 
@@ -587,17 +672,75 @@ async function runGeneration({ digestId, sourceHashes, digestGoal, multiSource, 
     const spec = parsedSpec;
 
     // Generate DigestMeta (subject, tags, etc.) from the source content.
-    // Multi-source bundles are skipped — classifying "what is this" doesn't
-    // have a single clear answer across N sources, and it's not on the
-    // critical path for Phase-3 (subject/tags are a single-source browse
-    // facet for now). Non-critical either way: a failure here still saves
-    // the digest, just without meta.
+    // Single-source: full meta via `generateMeta` with tag vocabulary.
+    // Multi-source: only synopsis (subject/tags TBD in Step 4). Synopsis is
+    // embedded for semantic search (subject/tags aren't yet for multi-source).
+    // Non-critical: a failure here still saves the digest, just without meta.
+    //
+    // Tag bookkeeping is fire-and-forget: upserts happen after the digest saves,
+    // and any failure is logged but doesn't block the digest.
     let meta: DigestMeta.DigestMeta | null = null;
+    let embedding: number[] | undefined;
+    let tagUpserts: Array<{ normalizedTag: string; displayTag: string }> = [];
+
     if (sourceHashes.length === 1) {
+      // Single-source: full meta with tag vocabulary
       const sourceResult = await sourcesGet(sourceHashes[0]);
       const source = sourceResult?.Item as { url: string; content: string } | undefined;
       if (source?.content) {
-        meta = await generateMeta({ url: source.url, content: source.content });
+        // Scan top tags for vocabulary (up to 100)
+        const allTags = await tagsScan().catch((err) => {
+          console.warn("Tag scan failed, proceeding without vocabulary:", err);
+          return [];
+        });
+        const vocabulary = allTags.slice(0, 100).map((t) => t.displayTag);
+        meta = await generateMeta({ url: source.url, content: source.content }, vocabulary);
+
+        if (meta?.tags) {
+          // Post-process: normalize tags, match against vocabulary (exact + fuzzy), upsert
+          for (const rawTag of meta.tags) {
+            const { canonical, fuzzy } = matchTag(rawTag, allTags);
+            if (fuzzy) {
+              console.debug(`Fuzzy matched "${rawTag}" → "${canonical}"`);
+            }
+            const normalized = normalizeTag(canonical);
+            tagUpserts.push({ normalizedTag: normalized, displayTag: canonical });
+          }
+        }
+
+        // Embed synopsis for semantic search (mirrors multi-source behavior)
+        if (meta?.synopsis) {
+          try {
+            embedding = await embedText(meta.synopsis);
+          } catch (embedErr) {
+            console.warn(`Embedding failed for single-source digest ${digestId}:`, embedErr);
+          }
+        }
+      }
+    } else {
+      // Multi-source: synopsis only, embedded for semantic search
+      const multiSources = sourceResults
+        .filter((r): r is typeof r & { content: string } => Boolean(r.content))
+        .map((r) => ({ url: r.url, content: r.content }));
+      if (multiSources.length > 0) {
+        const synopsis = await generateSynopsis(multiSources);
+        if (synopsis) {
+          // Partial meta — only synopsis for multi-source (subject/tags are per-source).
+          // Required fields get defaults; the real schema is applied on read in fetch-digest.
+          meta = {
+            synopsis,
+            digestType: "article", // placeholder — multi-source doesn't map to single sourceType
+            tone: "conversational",
+            length: "medium",
+            generatedAt: now,
+          };
+          try {
+            embedding = await embedText(synopsis);
+          } catch (embedErr) {
+            console.warn(`Embedding failed for multi-source digest ${digestId}:`, embedErr);
+            // Embedding is non-critical; digest still saves without it
+          }
+        }
       }
     }
 
@@ -620,7 +763,26 @@ async function runGeneration({ digestId, sourceHashes, digestGoal, multiSource, 
       updateAttributes["#meta"] = "meta";
       updateAttributes[":meta"] = meta;
     }
+    if (embedding) {
+      setExpressions.push("#vec = :vector, #ea = :eAt");
+      updateAttributes["#vec"] = "embedding";
+      updateAttributes[":vector"] = embedding;
+      updateAttributes["#ea"] = "embeddingAt";
+      updateAttributes[":eAt"] = now;
+    }
     await digestsUpdate(digestId, `SET ${setExpressions.join(", ")}`, updateAttributes);
+
+    // Upsert tags into the vocabulary table (fire-and-forget, after digest save).
+    // Non-critical: tag bookkeeping must never block or fail the digest save.
+    if (tagUpserts.length > 0) {
+      const upsertResults = await Promise.allSettled(
+        tagUpserts.map((t) => tagsUpsert(t.normalizedTag, t.displayTag)),
+      );
+      const failures = upsertResults.filter((r) => r.status === "rejected");
+      if (failures.length > 0) {
+        console.warn(`${failures.length}/${tagUpserts.length} tag upsert(s) failed for digest ${digestId}`);
+      }
+    }
   } catch (err) {
     console.error(`Generation failed for ${digestId}:`, err);
     await digestsUpdate(digestId, "SET #s = :status, #e = :err, #m = :model, #ca = :at", {

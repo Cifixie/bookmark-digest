@@ -19,9 +19,9 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET,OPTIONS",
 };
 
-/** GET /digests?digestGoal=&status=&q=&from=&to= — full list, lightweight rows. */
+/** GET /digests?digestGoal=&status=&q=&from=&to=&tags= — full list, lightweight rows. */
 async function listAll(params: Record<string, string>) {
-  const { digestGoal, status, q, from, to } = params;
+  const { digestGoal, status, q, from, to, tags } = params;
 
   const filterParts: string[] = [];
   const expressionAttrNames: Record<string, string> = { "#s": "status" };
@@ -45,7 +45,7 @@ async function listAll(params: Record<string, string>) {
 
   const filterExpression = filterParts.length > 0 ? filterParts.join(" AND ") : undefined;
   const projectionFields =
-    "id, sourceHash, sourceHashes, digestGoal, #s, sourceMode, meta, createdAt, completedAt, model";
+    "id, sourceHash, sourceHashes, digestGoal, #s, sourceMode, meta, createdAt, completedAt, model, embedding, embeddingAt";
 
   const result = await digestsScan(
     filterExpression,
@@ -67,8 +67,17 @@ async function listAll(params: Record<string, string>) {
       createdAt: item.createdAt,
       completedAt: item.completedAt ?? null,
       model: item.model ?? null,
+      embedded: Boolean(item.embedding),
+      embeddingModel: item.embeddingModel,
     }))
     .filter((item) => {
+      // Tags filter: match if any meta tag (case-insensitive) is in the filter list
+      if (tags) {
+        const tagFilter = new Set(tags.toLowerCase().split(",").map((t) => t.trim()));
+        const metaTags = item.meta?.tags as string[] | undefined;
+        if (!metaTags || metaTags.length === 0) return false;
+        return metaTags.some((t) => tagFilter.has(t.toLowerCase()));
+      }
       if (!q) return true;
       const qLower = q.toLowerCase();
       return (

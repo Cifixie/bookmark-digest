@@ -137,6 +137,14 @@ export class BookmarkDigest extends cdk.Stack {
       sortKey: { name: "digestGoal", type: dynamodb.AttributeType.STRING },
     });
 
+    // Tags vocabulary — small enough to scan whole table (no GSI needed).
+    // Used for tag normalization + fuzzy matching during meta generation.
+    const tagsTable = new dynamodb.TableV2(this, "TagsTable", {
+      partitionKey: { name: "normalizedTag", type: dynamodb.AttributeType.STRING },
+      billing: dynamodb.Billing.onDemand(),
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
     // =====================================================================
     // Phase-1: Lambda functions
     // =====================================================================
@@ -222,6 +230,7 @@ export class BookmarkDigest extends cdk.Stack {
       environment: {
         SOURCES_TABLE_NAME: sourcesTable.tableName,
         DIGESTS_TABLE_NAME: digestsTable.tableName,
+        TAGS_TABLE_NAME: tagsTable.tableName,
         GEMINI_MODEL: config.GEMINI_MODEL_ID,
         GEMINI_API_KEY_SECRET_ARN: geminiApiKeySecret.secretArn,
         DIGEST_MAX_TOKENS: String(config.DIGEST_MAX_TOKENS),
@@ -232,6 +241,7 @@ export class BookmarkDigest extends cdk.Stack {
 
     sourcesTable.grantReadData(generateDigestWorkerFn);
     digestsTable.grantReadWriteData(generateDigestWorkerFn);
+    tagsTable.grantReadWriteData(generateDigestWorkerFn);
     geminiApiKeySecret.grantRead(generateDigestWorkerFn);
 
     // Bedrock Claude Haiku fallback — used when the Gemini free-tier quota
@@ -245,6 +255,14 @@ export class BookmarkDigest extends cdk.Stack {
           `arn:aws:bedrock:${this.region}:${this.account}:inference-profile/${config.BEDROCK_HAIKU_INFERENCE_PROFILE_ID}`,
           config.BEDROCK_HAIKU_FOUNDATION_MODEL_ARN,
         ],
+      })
+    );
+
+    // Bedrock Titan embedding — used for digest synopsis embedding (multi-source).
+    generateDigestWorkerFn.role?.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        actions: ["bedrock:InvokeModel"],
+        resources: [config.BEDROCK_EMBEDDING_MODEL_ARN],
       })
     );
 
@@ -370,6 +388,28 @@ export class BookmarkDigest extends cdk.Stack {
 
     digestsTable.grantReadData(fetchDigestFn);
 
+    // GET /digests/search — semantic search over the Digests table (Step 2).
+    // Embeds the query via Bedrock Titan, scans for embedded digests (multi-source
+    // with synopsis), ranks by cosine similarity. Purely additive on the existing
+    // structural search.
+    const searchDigestsFn = new lambdaNodejs.NodejsFunction(this, "SearchDigestsFunction", {
+      entry: "lambdas/search-digests/handler.ts",
+      handler: "handler",
+      runtime: cdk.aws_lambda.Runtime.NODEJS_24_X,
+      timeout: cdk.Duration.seconds(30),
+      environment: {
+        DIGESTS_TABLE_NAME: digestsTable.tableName,
+      },
+    });
+
+    digestsTable.grantReadData(searchDigestsFn);
+    searchDigestsFn.role?.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        actions: ["bedrock:InvokeModel"],
+        resources: [config.BEDROCK_EMBEDDING_MODEL_ARN],
+      }),
+    );
+
     // =====================================================================
     // Phase-1: API Gateway routes
     // =====================================================================
@@ -470,6 +510,34 @@ export class BookmarkDigest extends cdk.Stack {
       }
     );
 
+    // GET /tags — tag vocabulary for Browse's tag filter/autocomplete (Step 3).
+    const getTagsFn = new lambdaNodejs.NodejsFunction(this, "GetTagsFunction", {
+      entry: "lambdas/get-tags/handler.ts",
+      handler: "handler",
+      runtime: cdk.aws_lambda.Runtime.NODEJS_24_X,
+      timeout: cdk.Duration.seconds(10),
+      environment: {
+        TAGS_TABLE_NAME: tagsTable.tableName,
+      },
+    });
+    tagsTable.grantReadData(getTagsFn);
+
+    const tagsResource = api.root.addResource("tags", {
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigw.Cors.ALL_ORIGINS,
+        allowMethods: ["GET", "OPTIONS"],
+        allowHeaders: ["Content-Type", "Authorization"],
+      },
+    });
+    tagsResource.addMethod(
+      "GET",
+      new apigw.LambdaIntegration(getTagsFn, { proxy: true }),
+      {
+        authorizer,
+        authorizationType: apigw.AuthorizationType.COGNITO,
+      }
+    );
+
     // POST /digests, GET /digests?sourceHash=... (list digests for a source)
     const digests = api.root.addResource("digests", {
       defaultCorsPreflightOptions: {
@@ -489,6 +557,24 @@ export class BookmarkDigest extends cdk.Stack {
     digests.addMethod(
       "GET",
       new apigw.LambdaIntegration(fetchDigestFn, { proxy: true }),
+      {
+        authorizer,
+        authorizationType: apigw.AuthorizationType.COGNITO,
+      }
+    );
+
+    // GET /digests/search — must be added as a sibling literal resource so
+    // API Gateway resolves it ahead of the {digestId} path param below.
+    const digestsSearch = digests.addResource("search", {
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigw.Cors.ALL_ORIGINS,
+        allowMethods: ["GET", "OPTIONS"],
+        allowHeaders: ["Content-Type", "Authorization"],
+      },
+    });
+    digestsSearch.addMethod(
+      "GET",
+      new apigw.LambdaIntegration(searchDigestsFn, { proxy: true }),
       {
         authorizer,
         authorizationType: apigw.AuthorizationType.COGNITO,
@@ -617,5 +703,6 @@ function handler(event) {
     });
     new cdk.CfnOutput(this, "SourcesTableName", { value: sourcesTable.tableName });
     new cdk.CfnOutput(this, "DigestsTableName", { value: digestsTable.tableName });
+    new cdk.CfnOutput(this, "TagsTableName", { value: tagsTable.tableName });
   }
 }

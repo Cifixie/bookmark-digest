@@ -55,6 +55,9 @@ export * from "./nonCatalog/MyNote.schema";
 // --- Catalog composition (defineCatalog) ---
 export { default as catalog } from "./catalog";
 
+// --- Tag vocabulary helpers ---
+export { normalizeTag, matchTag, levenshtein } from "./lib/tagMatch";
+
 // --- Inline type refs ---
 import type { SourceVariant } from "./sourceVariants";
 import type { DigestMeta } from "./page/DigestMeta.schema";

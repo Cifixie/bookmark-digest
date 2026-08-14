@@ -31,6 +31,12 @@ export const digestMetaSchema = z.object({
    * `subject`.
    */
   tags: z.array(z.string()).min(1).max(6).optional(),
+  /**
+   * Two-sentence summary of what the digest covers — written for a human
+   * scanning search results. Optional for backward compat with existing
+   * digests that were generated before this field existed.
+   */
+  synopsis: z.string().max(500).optional(),
   /** When the digest was generated (ISO string). */
   generatedAt: z.string().optional(),
 });

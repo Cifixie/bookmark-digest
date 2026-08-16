@@ -43,3 +43,27 @@ code pushed `"#meta = :meta"` into the SET clause but never added
 meta successfully failed to save and got marked `status: "failed"` instead of
 `"done"`. When adding a conditional field to an update expression, add the
 name/value pair together in the same `if` block, not just the value.
+
+## Two ways to make `POST /sources` reject a perfectly good link from the phone
+
+Both bit the Android share target (`apps/mobile/android`) and neither surfaces
+as a clear error.
+
+**The `Authorization` header takes a bare JWT, not `Bearer <jwt>`.**
+`apps/web/src/utils/fetchApi.ts` sends `session.tokens.idToken.toString()`
+with no prefix, and the API Gateway Cognito authorizer's default identity
+source is happy with that. Adding the conventional `Bearer ` prefix — the
+obvious thing to write from muscle memory in a new client — gets a bare 401
+with no CloudWatch log line from the ingest Lambda, because the authorizer
+rejects the request before the integration runs. It must also be the **ID**
+token; the access token is a different thing.
+
+**Android share text is usually not a bare URL.** YouTube shares
+`"Video title\nhttps://youtu.be/xyz"`, and plenty of apps append a promo line
+or leave the title in `EXTRA_SUBJECT`. `ingest-url/handler.ts` only checks
+that `body.url` is a non-empty string, then hands it straight to Firecrawl —
+so a title-prefixed string sails past validation and comes back 422 "Failed to
+fetch content", which reads like a Firecrawl problem rather than a client bug.
+`Ingest.extractUrl()` regexes out the first `https?://\S+` and strips trailing
+punctuation for this reason. Any new client posting to `/sources` needs the
+same treatment. See [[decisions]].

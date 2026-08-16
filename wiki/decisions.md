@@ -139,3 +139,41 @@ The tradeoff accepted: response parsing is now ours to maintain (Gemini's
 *third* provider would mean a third hand-written adapter. Worth revisiting
 only if that third provider shows up — two providers × one call shape is
 below the threshold where a provider abstraction pays for itself.
+
+## The Android share target signs in with Cognito rather than getting an API key
+
+`POST /sources` is behind the Cognito User Pool authorizer like every other
+route except `/digest-goals`. The tempting shortcut for a phone app was to add
+`apiKeyRequired` plus a usage plan so the app could send a static `x-api-key`
+and stay under 100 lines. Rejected: an API key baked into an APK is trivially
+extractable (`unzip` + `strings` on the `BuildConfig` class), it is not scoped
+to a user, and rotating it means shipping a new build. It would have punched a
+permanent unauthenticated-ish hole in the API to save one screen.
+
+Instead `apps/mobile/android` depends on Amplify Android (`aws-auth-cognito` +
+`core-kotlin`) and has a one-time email/password `LoginActivity`. This works
+without any stack change because the user pool client is already shaped for a
+public mobile client: `generateSecret: false` and `authFlows: { userSrp: true }`.
+Amplify does the SRP handshake, caches tokens in EncryptedSharedPreferences,
+and refreshes them, so the screen is visited once and the share path is
+non-interactive after that. Doing SRP by hand against the AWS SDK was the third
+option and is ~150 lines of easy-to-get-wrong crypto.
+
+## The share POST runs in WorkManager, not a coroutine in the activity
+
+`ShareActivity` is `Theme.NoDisplay` and calls `finish()` immediately so the
+share sheet closes instantly. That leaves no foreground component, and a
+Firecrawl scrape behind `POST /sources` routinely takes 10-30s (the Lambda is
+given a 5-minute timeout). A plain coroutine in that activity would be racing
+process death on a loaded phone and would drop shares silently.
+
+`IngestWorker` also owns the auth check, not the activity — reading the Cognito
+session hits EncryptedSharedPreferences and may refresh over the network, so it
+cannot be on the main thread, and doing it before `finish()` reintroduces the
+same race. Cost of this choice: an unauthenticated share can only toast "sign
+in to save links" (a background worker cannot launch an activity on Android
+10+), so the user has to open the app from the launcher themselves.
+
+The `NetworkType.CONNECTED` constraint is a bonus: a link shared with the radio
+off is delivered when connectivity returns instead of being lost. See
+[[gotchas]] for the URL-extraction trap that goes with this.

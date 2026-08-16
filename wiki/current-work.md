@@ -1,5 +1,13 @@
 # Current work
 
+- **Android share-target app** (`apps/mobile/android/`, verified end-to-end
+  2026-08-16) — Kotlin/Gradle app, outside the pnpm workspace, that adds
+  bookmark-digest as a share target on Android. Sign-in and share-a-link
+  round-trip against the live API confirmed working on a physical device
+  (Pixel 10). Note: an unauthenticated share can only toast "Sign in to save
+  links" — a background worker can't launch an activity on Android 10+, so
+  the user has to open the app from the launcher to sign in first.
+
 - **Dark theme — color migration** (completed 2026-08-13) — replaced all
   hardcoded hex colors in TSX components with CSS variables. Added 40+ new
   variables to `styles.css`: code block colors, chart palette, callout

@@ -20,6 +20,7 @@ This project uses a shared memory system with Pi (see AGENTS.md).
 apps/
   web/              — Vite SPA (renderer consumer)
   infra/            — AWS CDK infrastructure
+  mobile/android/   — Android share target (Kotlin/Gradle, outside the pnpm workspace)
 packages/
   catalog/          — @bookmark-digest/catalog (two-axis digest schema, React-free)
   schemas/          — @bookmark-digest/schemas (Phase-0 ingestion schemas)

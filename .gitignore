@@ -11,3 +11,10 @@ cdk.out
 apps/infra/outputs.json
 *storybook.log
 storybook-static
+
+# Android (apps/mobile/android)
+local.properties
+.gradle
+apps/mobile/android/build
+apps/mobile/android/app/build
+apps/mobile/android/.idea

@@ -16,9 +16,6 @@
  * Output format: json-render Spec tree (root + keyed elements) instead of flat DigestBlock[].
  */
 
-import { generateText } from "ai";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 import { compileSpecStream, autoFixSpec, type Spec } from "@json-render/core";
@@ -100,9 +97,9 @@ async function generateSynopsis(
       })
       .join("\n\n");
 
-    const result = await generateText({
-      model: bedrock(FALLBACK_MODEL),
-      system: `
+    const result = await callBedrockClaude(
+      FALLBACK_MODEL,
+      `
 You are summarizing a digest that combines multiple sources.
 Produce a JSON object with one field:
 
@@ -112,10 +109,10 @@ Produce a JSON object with one field:
 
 Keep it under 500 characters.
 `,
-      prompt: sourcesSection,
-      maxOutputTokens: 300,
-      temperature: 0.2,
-    });
+      sourcesSection,
+      300,
+      0.2,
+    );
 
     const jsonMatch = result.text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return null;
@@ -131,10 +128,11 @@ Keep it under 500 characters.
   }
 }
 
+const bedrockRuntimeClient = new BedrockRuntimeClient({});
+
 /** Titan v2 embedding — mirrors search-sources' approach. */
 async function embedText(text: string): Promise<number[]> {
-  const bedrockClient = new BedrockRuntimeClient({});
-  const response = await bedrockClient.send(
+  const response = await bedrockRuntimeClient.send(
     new InvokeModelCommand({
       modelId: BEDROCK_EMBEDDING_MODEL_ID,
       body: JSON.stringify({ inputText: text }),
@@ -148,6 +146,133 @@ async function embedText(text: string): Promise<number[]> {
     throw new Error("Bedrock returned no embedding");
   }
   return embedding as number[];
+}
+
+/** Thrown by callGemini when the free-tier quota is exhausted (HTTP 429 / RESOURCE_EXHAUSTED). */
+class GeminiQuotaError extends Error {}
+
+type LlmResult = {
+  text: string;
+  finishReason: string;
+  usage: { inputTokens?: number; outputTokens?: number };
+};
+
+function mapFinishReason(reason: string | undefined, lengthValue: string, stopValue: string): string {
+  if (reason === lengthValue) return "length";
+  if (reason === stopValue) return "stop";
+  return reason ?? "unknown";
+}
+
+/** One retry on network errors / 5xx only — never on 429 (quota is scarce, retrying just burns it). */
+async function withOneRetry<T>(fn: () => Promise<T>, isRetryable: (err: unknown) => boolean): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    if (!isRetryable(err)) throw err;
+    return fn();
+  }
+}
+
+class HttpError extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message);
+  }
+}
+
+/** Calls Gemini's generateContent REST API directly (no SDK — a single JSON POST). */
+async function callGemini(
+  apiKey: string,
+  model: string,
+  system: string,
+  prompt: string,
+  maxOutputTokens: number,
+  temperature: number,
+): Promise<LlmResult> {
+  const call = async () => {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: system }] },
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens, temperature },
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const bodyText = await response.text();
+      let parsedStatus: string | undefined;
+      try {
+        parsedStatus = JSON.parse(bodyText)?.error?.status;
+      } catch {
+        // non-JSON error body — fall through with parsedStatus undefined
+      }
+      if (response.status === 429 || parsedStatus === "RESOURCE_EXHAUSTED") {
+        throw new GeminiQuotaError(`Gemini quota exceeded: ${bodyText}`);
+      }
+      throw new HttpError(`Gemini request failed (${response.status}): ${bodyText}`, response.status);
+    }
+
+    const data = (await response.json()) as any;
+    const candidate = data?.candidates?.[0];
+    const text = (candidate?.content?.parts ?? []).map((p: any) => p.text ?? "").join("");
+    return {
+      text,
+      finishReason: mapFinishReason(candidate?.finishReason, "MAX_TOKENS", "STOP"),
+      usage: {
+        inputTokens: data?.usageMetadata?.promptTokenCount,
+        outputTokens: data?.usageMetadata?.candidatesTokenCount,
+      },
+    };
+  };
+
+  return withOneRetry(call, (err) => err instanceof HttpError && err.status >= 500);
+}
+
+/** Calls Claude on Bedrock via the Anthropic Messages API shape, using the same raw InvokeModelCommand pattern as embedText. */
+async function callBedrockClaude(
+  modelId: string,
+  system: string,
+  prompt: string,
+  maxOutputTokens: number,
+  temperature: number,
+): Promise<LlmResult> {
+  const call = async () => {
+    let response;
+    try {
+      response = await bedrockRuntimeClient.send(
+        new InvokeModelCommand({
+          modelId,
+          body: JSON.stringify({
+            anthropic_version: "bedrock-2023-05-31",
+            max_tokens: maxOutputTokens,
+            temperature,
+            system,
+            messages: [{ role: "user", content: prompt }],
+          }),
+          contentType: "application/json",
+          accept: "application/json",
+        }),
+      );
+    } catch (err) {
+      throw new HttpError(`Bedrock request failed: ${err instanceof Error ? err.message : String(err)}`, 500);
+    }
+    const body = JSON.parse(new TextDecoder().decode(response.body));
+    const text = (body?.content ?? []).map((c: any) => c.text ?? "").join("");
+    return {
+      text,
+      finishReason: mapFinishReason(body?.stop_reason, "max_tokens", "end_turn"),
+      usage: {
+        inputTokens: body?.usage?.input_tokens,
+        outputTokens: body?.usage?.output_tokens,
+      },
+    };
+  };
+
+  return withOneRetry(call, (err) => err instanceof HttpError && err.status >= 500);
 }
 
 /**
@@ -186,13 +311,13 @@ else genuinely fits. Tags should be concrete, not broad categories. Synopsis sho
 `;
 
     const contentSlice = source.content.slice(0, MAX_SOURCE_CHARS_FOR_META);
-    const result = await generateText({
-      model: bedrock(FALLBACK_MODEL),
-      system: systemPrompt,
-      prompt: `Source URL: ${source.url}\n\nSource content (first ${MAX_SOURCE_CHARS_FOR_META} chars):\n${contentSlice}`,
-      maxOutputTokens: 600,
-      temperature: 0.2,
-    });
+    const result = await callBedrockClaude(
+      FALLBACK_MODEL,
+      systemPrompt,
+      `Source URL: ${source.url}\n\nSource content (first ${MAX_SOURCE_CHARS_FOR_META} chars):\n${contentSlice}`,
+      600,
+      0.2,
+    );
 
     const jsonMatch = result.text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return null;
@@ -223,11 +348,10 @@ const MIN_ELEMENTS = 3;
 
 const secretsClient = new SecretsManagerClient({});
 const lambdaClient = new LambdaClient({});
-const bedrock = createAmazonBedrock({});
-let cachedGoogleProvider: ReturnType<typeof createGoogleGenerativeAI> | null = null;
+let cachedGeminiApiKey: string | null = null;
 
-async function getGoogleProvider() {
-  if (cachedGoogleProvider) return cachedGoogleProvider;
+async function getGeminiApiKey(): Promise<string> {
+  if (cachedGeminiApiKey) return cachedGeminiApiKey;
 
   const secretArn = process.env.GEMINI_API_KEY_SECRET_ARN;
   if (!secretArn) throw new Error("GEMINI_API_KEY_SECRET_ARN not set");
@@ -236,24 +360,8 @@ async function getGoogleProvider() {
   const { apiKey } = JSON.parse(secret.SecretString ?? "{}");
   if (!apiKey) throw new Error("Gemini secret missing 'apiKey' field");
 
-  cachedGoogleProvider = createGoogleGenerativeAI({ apiKey });
-  return cachedGoogleProvider;
-}
-
-function isQuotaExceeded(err: unknown): boolean {
-  if (!(err instanceof Error)) return false;
-  // The AI SDK retries transient failures and wraps the underlying cause in
-  // a RetryError, whose top-level .message doesn't include "429" or
-  // "RESOURCE_EXHAUSTED" — those only appear on the nested per-attempt
-  // errors (err.errors[]). Check both levels.
-  const pattern = /RESOURCE_EXHAUSTED|429|quota exceeded/i;
-  if (pattern.test(err.message)) return true;
-  const nested = (err as { errors?: unknown[] }).errors;
-  return Array.isArray(nested) && nested.some((e) => {
-    if (typeof e !== "object" || e === null) return false;
-    const { statusCode, message } = e as { statusCode?: number; message?: string };
-    return statusCode === 429 || (typeof message === "string" && pattern.test(message));
-  });
+  cachedGeminiApiKey = apiKey;
+  return apiKey;
 }
 
 // --- Lambda handler ---
@@ -505,20 +613,14 @@ async function runGeneration({ digestId, sourceHashes, digestGoal, multiSource, 
     // failure is surfaced directly rather than papered over. The one
     // exception is quota exhaustion itself, which falls back to Bedrock
     // Claude Haiku rather than failing the digest outright.
-    const google = await getGoogleProvider();
+    const geminiApiKey = await getGeminiApiKey();
 
-    let result: Awaited<ReturnType<typeof generateText>>;
+    let result: LlmResult;
     let usedModel = GENERATION_MODEL;
     try {
-      result = await generateText({
-        model: google(GENERATION_MODEL),
-        system: systemPrompt,
-        prompt: contentPrompt,
-        maxOutputTokens: MAX_TOKENS,
-        temperature: 0.3,
-      });
+      result = await callGemini(geminiApiKey, GENERATION_MODEL, systemPrompt, contentPrompt, MAX_TOKENS, 0.3);
     } catch (err) {
-      if (!isQuotaExceeded(err)) {
+      if (!(err instanceof GeminiQuotaError)) {
         console.error(`Gemini request failed for ${digestId}:`, err);
         await digestsUpdate(digestId, "SET #s = :status, #e = :err, #m = :model, #ca = :at", {
           ":status": "failed",
@@ -536,13 +638,7 @@ async function runGeneration({ digestId, sourceHashes, digestGoal, multiSource, 
       console.warn(`Gemini quota exceeded for ${digestId}, falling back to Bedrock`);
       usedModel = FALLBACK_MODEL;
       try {
-        result = await generateText({
-          model: bedrock(FALLBACK_MODEL),
-          system: systemPrompt,
-          prompt: contentPrompt,
-          maxOutputTokens: MAX_TOKENS,
-          temperature: 0.3,
-        });
+        result = await callBedrockClaude(FALLBACK_MODEL, systemPrompt, contentPrompt, MAX_TOKENS, 0.3);
       } catch (fallbackErr) {
         console.error(`Bedrock fallback also failed for ${digestId}:`, fallbackErr);
         await digestsUpdate(digestId, "SET #s = :status, #e = :err, #m = :model, #ca = :at", {

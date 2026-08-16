@@ -111,3 +111,31 @@ Rejected: an agentic tool-calling loop for the whole pipeline (no real
 branching exists in the sequence to justify the indirection/cost — the
 repair logic, `autoFixSpec`/null-stripping/dangling-ref pruning, is exactly
 the kind of thing that should stay deterministic code).
+
+## The Vercel AI SDK was dropped for direct provider calls
+
+`generate-digest` used `ai` + `@ai-sdk/google` + `@ai-sdk/amazon-bedrock`
+for two providers and exactly one call shape (system + prompt + maxTokens +
+temperature, text back). The abstraction cost more than it saved:
+
+- **Its retry logic fought the quota fallback.** The SDK retried transient
+  failures itself and wrapped the cause in a `RetryError` whose top-level
+  `.message` had no "429"/"RESOURCE_EXHAUSTED" in it, so `isQuotaExceeded()`
+  had to regex both the outer message *and* the nested `.errors[]`. Worse,
+  those silent retries spent free-tier Gemini quota that the Bedrock fallback
+  exists precisely to conserve.
+- **Bedrock already had a raw path.** `embedText()` called Titan through
+  `InvokeModelCommand` directly, so half the Lambda bypassed the SDK anyway.
+
+Both providers are now one function each — `callGemini()` (a single JSON POST
+to `generativelanguage.googleapis.com`) and `callBedrockClaude()`
+(`InvokeModelCommand` with the Anthropic Messages body) — normalizing to a
+shared `LlmResult`. Quota exhaustion is a real `GeminiQuotaError` thrown on
+HTTP 429 / `RESOURCE_EXHAUSTED` rather than a regex guess, and `withOneRetry`
+retries 5xx only, never 429.
+
+The tradeoff accepted: response parsing is now ours to maintain (Gemini's
+`candidates[0].content.parts`, Bedrock's `stop_reason` naming), and adding a
+*third* provider would mean a third hand-written adapter. Worth revisiting
+only if that third provider shows up — two providers × one call shape is
+below the threshold where a provider abstraction pays for itself.

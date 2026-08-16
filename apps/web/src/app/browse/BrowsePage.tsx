@@ -45,6 +45,17 @@ interface SearchScoredSource {
   score: number;
 }
 
+/** Semantic search result from /digests/search endpoint. */
+interface SearchScoredDigest {
+  id: string;
+  sourceHash: string;
+  digestGoal: string;
+  status: string;
+  meta: Record<string, unknown> | null;
+  createdAt: string;
+  score: number;
+}
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -202,6 +213,19 @@ function FilterBar({
           ✦ Semantic
         </button>
       )}
+      {tab === "digests" && (
+        <button
+          onClick={() => updateParam("semantic", params.semantic ? "" : "1")}
+          style={{
+            ...toggleStyle,
+            background: params.semantic ? "var(--brand)" : "var(--bg-muted)",
+            color: params.semantic ? "white" : "var(--text-muted)",
+          }}
+        >
+          ✦ Semantic
+        </button>
+      )}
+
 
       {tab === "sources" && (
         <select value={params.contentType ?? ""} onChange={(e) => updateParam("contentType", e.target.value)} style={selectStyle}>
@@ -445,6 +469,36 @@ export default function BrowsePage() {
         return;
       }
 
+      // Semantic search (digests): hit the dedicated search endpoint.
+      if (tab === "digests" && params.semantic && params.q) {
+        const searchQs = new URLSearchParams({ q: params.q });
+        if (params.from) searchQs.set("from", params.from);
+        if (params.to) searchQs.set("to", params.to);
+        const res = await fetchWithAuth("GET", `/digests/search?${searchQs}`);
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error ?? `Semantic search failed: ${res.status}`);
+        }
+        const data = await res.json();
+        const scored: SearchScoredDigest[] = data.items ?? [];
+        setItems(
+          scored.map((s) => ({
+            id: s.id,
+            sourceHash: s.sourceHash,
+            sourceHashes: null,
+            digestGoal: s.digestGoal,
+            sourceMode: null,
+            status: s.status,
+            multiSourceCount: 0,
+            meta: s.meta,
+            createdAt: s.createdAt,
+            completedAt: null,
+            model: null,
+          })),
+        );
+        return;
+      }
+
       const path = tab === "sources" ? `/sources?${qs}` : `/digests?${qs}`;
       const res = await fetchWithAuth("GET", path);
       if (!res.ok) {
@@ -510,7 +564,7 @@ export default function BrowsePage() {
             : (items as BrowseDigestItem[]).map((item) => <DigestRow key={item.id} item={item} />)}
           {items.length === 0 && (
             <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>
-              {tab === "sources" && params.semantic ? "No semantic matches" : `No ${tab} found`} matching the current filters.
+              {params.semantic ? "No semantic matches" : `No ${tab} found`} matching the current filters.
             </p>
           )}
         </>

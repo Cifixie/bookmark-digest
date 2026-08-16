@@ -42,7 +42,7 @@ picture. The old phase-N docs are archived at `plans/archive/`; durable
 architectural reasoning pulled out of them lives in [[decisions]] and
 [[gotchas]]. Queue, in order:
 
-1. `plans/digest-metadata-completeness.md` — **Step 2 & 3 partially done** (see summary below). Remaining: Browse UI semantic toggle for Digests tab, Step 4 multi-source `DigestMeta`. Fixed: single-source embedding bug, fuzzy match wiring, `tagsQueryByNames` projection bug, `get-tags` limit-before-filter bug.
+1. `plans/digest-metadata-completeness.md` — **Step 2 remainder done** (Browse UI semantic toggle for Digests tab). Step 4 (multi-source `DigestMeta`) still open. Fixed: single-source embedding bug, fuzzy match wiring, `tagsQueryByNames` projection bug, `get-tags` limit-before-filter bug.
 2. `plans/suggested-bundles.md` — unblocked, unstarted.
 3. `plans/source-quality-and-upload.md` — thin-fetch detection + HTML/PDF
    upload recovery.

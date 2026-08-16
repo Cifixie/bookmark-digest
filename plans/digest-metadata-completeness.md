@@ -139,17 +139,8 @@ CDK construct and route wiring stay with Claude/Pi.
 
 ### Step 4 — Multi-source `DigestMeta`
 
-Once Steps 1-3 land, decide whether `subject`/`tags` (not just `synopsis`,
-which Step 2 already covers for multi-source) are worth attempting for
-multi-source digests. This wasn't decided one way or the other in the
-original plans — it was explicitly called out as "a separate, not-yet-
-decided question" from the synopsis change. Now that synopsis generation
-already has a working multi-source content-summary path (built in Step 2),
-reuse it: feed the same summarized multi-source content into the
-`subject`/`tags` prompt and see whether a single coherent subject/tag set
-makes sense across N sources, or whether it needs its own multi-value
-design (e.g. `subjects: Subject[]` instead of one `subject`). Don't assume
-the single-source shape transfers — check real multi-source output first.
+**Done 2026-08-16.** Subject/tags now generated for multi-source digests via `generateMultiSourceMeta` (same Haiku call, combined content prompt, subject validated against catalog enum, tags filtered/capped/vocab-matched).
+
 
 ## Open questions to settle before/while building
 

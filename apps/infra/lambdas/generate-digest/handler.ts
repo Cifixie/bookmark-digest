@@ -19,7 +19,7 @@
 import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 import { compileSpecStream, autoFixSpec, type Spec } from "@json-render/core";
-import { validateDigestSpec, catalog, DigestMeta, matchTag } from "@bookmark-digest/catalog";
+import { validateDigestSpec, catalog, DigestMeta, matchTag, subject } from "@bookmark-digest/catalog";
 import { randomUUID } from "crypto";
 import { normalizeTag } from "@bookmark-digest/catalog";
 import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
@@ -124,6 +124,80 @@ Keep it under 500 characters.
     return candidate.synopsis;
   } catch (err) {
     console.warn("Synopsis generation failed:", err);
+    return null;
+  }
+}
+
+/**
+ * Generates subject, tags, and synopsis for a multi-source digest.
+ * Reuses the same Bedrock Haiku call as single-source `generateMeta` but
+ * asks only for fields that make sense across N sources (subject, tags,
+ * synopsis) — digestType/tone/length are explanation-style fields that
+ * depend on the generated Spec, not the raw sources.
+ */
+async function generateMultiSourceMeta(
+  sources: Array<{ url: string; content: string }>,
+  vocabulary?: string[],
+): Promise<{ subject?: DigestMeta.DigestMeta["subject"]; tags?: string[]; synopsis: string } | null> {
+  try {
+    const vocabIntro =
+      vocabulary && vocabulary.length > 0
+        ? `\nRelevant existing tags to prefer: ${vocabulary.slice(0, 50).join(", ")}\nWhen choosing tags, prefer reusing one of these over inventing a new spelling for the same concept.`
+        : "";
+
+    const sourcesSection = sources
+      .slice(0, 3) // Cap at 3 sources (keeps prompt small, same as generateSynopsis)
+      .map((s, i) => {
+        const clipped = s.content.slice(0, MAX_SOURCE_CHARS_FOR_SYNOPSIS);
+        return `--- Source ${i + 1} ---\nURL: ${s.url}\nContent:\n${clipped}`;
+      })
+      .join("\n\n");
+
+    const result = await callBedrockClaude(
+      FALLBACK_MODEL,
+      `
+You are classifying a digest that combines multiple sources.
+Produce a JSON object with these fields:
+
+- subject: one of ["${SUBJECT_LIST}"] — the broad topic domain that ties these sources together
+- tags: array of 1-6 strings describing specific topics covered across the sources
+- synopsis: short paragraph (2-3 sentences) describing what the combined digest covers,
+  written for a human scanning search results. Do NOT list the sources — describe the
+  combined topic. Keep it under 500 characters.
+
+Be decisive — pick the best fit for subject. Tags should be concrete and cover the
+combined content, not just one source.${vocabIntro}
+`,
+      sourcesSection,
+      600,
+      0.2,
+    );
+
+    const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+
+    const candidate = JSON.parse(jsonMatch[0]);
+    const synopsis = typeof candidate.synopsis === "string" && candidate.synopsis.trim().length > 0
+      ? candidate.synopsis
+      : undefined;
+
+    if (!synopsis) return null;
+
+    // Validate subject against catalog enum (rejects model hallucinations like "tech" or "programming")
+    const parsedSubject = typeof candidate.subject === "string" && candidate.subject.trim().length > 0
+      ? subject.safeParse(candidate.subject)
+      : null;
+    const validatedSubject = parsedSubject && parsedSubject.success ? parsedSubject.data : undefined;
+
+    const tags = Array.isArray(candidate.tags)
+      ? candidate.tags.filter((t: unknown) => typeof t === "string" && t.trim().length > 0).slice(0, 6)
+      : undefined;
+
+    if (!validatedSubject && !tags) return null;
+
+    return { subject: validatedSubject, tags: tags ?? [], synopsis };
+  } catch (err) {
+    console.warn("Multi-source meta generation failed:", err);
     return null;
   }
 }
@@ -767,11 +841,11 @@ async function runGeneration({ digestId, sourceHashes, digestGoal, multiSource, 
 
     const spec = parsedSpec;
 
-    // Generate DigestMeta (subject, tags, etc.) from the source content.
+    // Generate DigestMeta (subject, tags, synopsis) from source content.
     // Single-source: full meta via `generateMeta` with tag vocabulary.
-    // Multi-source: only synopsis (subject/tags TBD in Step 4). Synopsis is
-    // embedded for semantic search (subject/tags aren't yet for multi-source).
-    // Non-critical: a failure here still saves the digest, just without meta.
+    // Multi-source: subject/tags/synopsis via `generateMultiSourceMeta` from
+    // combined content, with tag vocabulary matching. Both paths embed synopsis
+    // for semantic search. Non-critical: a failure still saves the digest.
     //
     // Tag bookkeeping is fire-and-forget: upserts happen after the digest saves,
     // and any failure is logged but doesn't block the digest.
@@ -814,27 +888,47 @@ async function runGeneration({ digestId, sourceHashes, digestGoal, multiSource, 
         }
       }
     } else {
-      // Multi-source: synopsis only, embedded for semantic search
+      // Multi-source: subject/tags/synopsis from combined content, embedded for semantic search.
+      // Tag vocabulary helps deduplicate across the multi-source corpus.
+      const allTags = await tagsScan().catch((err) => {
+        console.warn("Tag scan failed, proceeding without vocabulary:", err);
+        return [];
+      });
+      const vocabulary = allTags.slice(0, 100).map((t) => t.displayTag);
+
       const multiSources = sourceResults
         .filter((r): r is typeof r & { content: string } => Boolean(r.content))
         .map((r) => ({ url: r.url, content: r.content }));
       if (multiSources.length > 0) {
-        const synopsis = await generateSynopsis(multiSources);
-        if (synopsis) {
-          // Partial meta — only synopsis for multi-source (subject/tags are per-source).
-          // Required fields get defaults; the real schema is applied on read in fetch-digest.
+        const multiMeta = await generateMultiSourceMeta(multiSources, vocabulary);
+        if (multiMeta) {
           meta = {
-            synopsis,
+            subject: multiMeta.subject,
+            tags: multiMeta.tags,
+            synopsis: multiMeta.synopsis,
             digestType: "article", // placeholder — multi-source doesn't map to single sourceType
             tone: "conversational",
             length: "medium",
             generatedAt: now,
           };
+
+          // Process tags through vocabulary matching (same as single-source)
+          if (multiMeta.tags) {
+            for (const rawTag of multiMeta.tags) {
+              const { canonical, fuzzy } = matchTag(rawTag, allTags);
+              if (fuzzy) {
+                console.debug(`Fuzzy matched "${rawTag}" → "${canonical}"`);
+              }
+              const normalized = normalizeTag(canonical);
+              tagUpserts.push({ normalizedTag: normalized, displayTag: canonical });
+            }
+          }
+
+          // Embed synopsis for semantic search
           try {
-            embedding = await embedText(synopsis);
+            embedding = await embedText(multiMeta.synopsis);
           } catch (embedErr) {
             console.warn(`Embedding failed for multi-source digest ${digestId}:`, embedErr);
-            // Embedding is non-critical; digest still saves without it
           }
         }
       }

@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { fetchWithAuth } from "@/utils/fetchApi";
 import { useParams } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -15,6 +17,10 @@ interface SourceResponse {
   fetchedAt: string;
   fetchedBy: string | null;
   status: string;
+  title: string | null;
+  description: string | null;
+  ogImage: string | null;
+  siteName: string | null;
 }
 
 interface DigestRow {
@@ -114,6 +120,78 @@ function ContentViewer({ content }: { content: string }) {
   );
 }
 
+const contentBoxStyle: CSSProperties = {
+  fontSize: 13,
+  lineHeight: 1.6,
+  color: "var(--text-primary)",
+  margin: 0,
+  padding: "16px 20px",
+  background: "var(--bg-muted)",
+  borderRadius: 8,
+  border: "1px solid var(--border-primary)",
+  maxHeight: 480,
+  overflowY: "auto",
+};
+
+function MarkdownViewer({ content }: { content: string }) {
+  return (
+    <div style={contentBoxStyle}>
+      <ReactMarkdown
+        rehypePlugins={[rehypeSanitize]}
+        components={{
+          img: ({ style, ...props }) => (
+            <img {...props} style={{ ...style, maxWidth: "100%", height: "auto" }} />
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
+function SourceMetaCard({ source }: { source: SourceResponse }) {
+  if (!source.description && !source.ogImage && !source.siteName) return null;
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 12,
+        marginBottom: 16,
+        padding: 12,
+        background: "var(--bg-muted)",
+        borderRadius: 8,
+        border: "1px solid var(--border-primary)",
+      }}
+    >
+      {source.ogImage && (
+        <img
+          src={source.ogImage}
+          alt=""
+          style={{
+            width: 120,
+            height: 90,
+            objectFit: "cover",
+            borderRadius: 6,
+            flexShrink: 0,
+          }}
+        />
+      )}
+      <div style={{ minWidth: 0 }}>
+        {source.siteName && (
+          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 4 }}>
+            {source.siteName}
+          </div>
+        )}
+        {source.description && (
+          <p style={{ fontSize: 13, color: "var(--text-primary)", margin: 0 }}>{source.description}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DigestLinkRow({ digest }: { digest: DigestRow }) {
   const colorMap: Record<string, string> = {
     done: "var(--badge-done)",
@@ -191,6 +269,8 @@ export default function SourcePageClient() {
   const [source, setSource] = useState<SourceResponse | null>(null);
   const [digests, setDigests] = useState<DigestRow[]>([]);
   const [relatedSources, setRelatedSources] = useState<RelatedSourceRow[]>([]);
+  const [generating, setGenerating] = useState(false);
+  const [viewMode, setViewMode] = useState<"markdown" | "raw">("markdown");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -244,7 +324,7 @@ export default function SourcePageClient() {
       </Link>
 
       <h1 style={{ fontSize: 18, marginBottom: 4, wordBreak: "break-word" }}>
-        {fallbackTitle(source?.url ?? "")}
+        {source?.title || fallbackTitle(source?.url ?? "")}
       </h1>
 
       <div
@@ -297,15 +377,51 @@ export default function SourcePageClient() {
         </p>
       )}
 
+      {source && <SourceMetaCard source={source} />}
+
       {loading && <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>Loading…</p>}
       {error && <p style={{ color: "var(--badge-error)", fontSize: 13, margin: "8px 0" }}>{error}</p>}
 
       {source && (
         <>
-          <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--text-muted)", margin: "20px 0 8px" }}>
-            Content ({source.content.length.toLocaleString()} chars)
-          </h2>
-          <ContentViewer content={source.content} />
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              margin: "20px 0 8px",
+            }}
+          >
+            <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--text-muted)", margin: 0 }}>
+              Content ({source.content.length.toLocaleString()} chars)
+            </h2>
+            <div style={{ display: "flex", gap: 4 }}>
+              {(["markdown", "raw"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    textTransform: "capitalize",
+                    padding: "3px 10px",
+                    borderRadius: 6,
+                    border: "1px solid var(--border-primary)",
+                    background: viewMode === mode ? "var(--brand)" : "transparent",
+                    color: viewMode === mode ? "white" : "var(--text-secondary)",
+                    cursor: "pointer",
+                  }}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+          </div>
+          {viewMode === "markdown" ? (
+            <MarkdownViewer content={source.content} />
+          ) : (
+            <ContentViewer content={source.content} />
+          )}
         </>
       )}
 
@@ -338,6 +454,52 @@ export default function SourcePageClient() {
               <RelatedSourceLinkRow key={item.contentHash} item={item} />
             ))}
           </div>
+          {relatedSources.length >= 3 && (
+            <button
+              onClick={async () => {
+                setGenerating(true);
+                try {
+                  // Infer sourceMode from date spread
+                  const dates = relatedSources.slice(0, 3).map((s) => s.fetchedAt);
+                  const [min, max] = [Math.min(...dates.map((d) => new Date(d).getTime())), Math.max(...dates.map((d) => new Date(d).getTime()))];
+                  const spread = max - min;
+                  const sourceMode = spread <= 30 * 24 * 60 * 60 * 1000 ? "compare" : "evolution";
+
+                  const res = await fetchWithAuth("POST", "/digests", {
+                    sourceHashes: relatedSources.slice(0, 3).map((s) => s.contentHash),
+                    digestGoal: "tl_dr",
+                    sourceMode,
+                  });
+                  if (res.ok) {
+                    const data = await res.json();
+                    window.location.href = `/digests/${data.id}`;
+                  } else {
+                    const errData = await res.json().catch(() => ({}));
+                    setError(errData.error ?? `Generation failed: ${res.status}`);
+                  }
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : "Unknown error");
+                } finally {
+                  setGenerating(false);
+                }
+              }}
+              disabled={generating}
+              style={{
+                marginTop: 12,
+                padding: "6px 14px",
+                borderRadius: 6,
+                border: "1px solid var(--brand)",
+                background: "var(--brand)",
+                color: "white",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: generating ? "not-allowed" : "pointer",
+                opacity: generating ? 0.6 : 1,
+              }}
+            >
+              {generating ? "Generating…" : "Generate digest from these related sources"}
+            </button>
+          )}
         </>
       )}
     </>

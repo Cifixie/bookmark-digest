@@ -63,6 +63,9 @@ export async function sourcesPut(item: {
   fetchedBy: string | null;
   status: string;
   title?: string;
+  description?: string;
+  ogImage?: string;
+  siteName?: string;
   embedding?: number[];
   embeddingModel?: string;
   embeddingAt?: string;

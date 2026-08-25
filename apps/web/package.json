@@ -26,7 +26,9 @@
     "aws-amplify": "^6.20.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.9.0",
+    "rehype-sanitize": "^6.0.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

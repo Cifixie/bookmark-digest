@@ -17,6 +17,7 @@
 import { createHash } from "crypto";
 import { sourcesPut, sourcesQueryByUrl } from "../../lib/dynamo";
 import { FIRECRAWL_API_URL } from "../../lib/config";
+import { resolveUrl } from "../../lib/resolve-url";
 
 /** What a fetcher returns, ready to store. */
 interface FetchedSource {
@@ -27,13 +28,25 @@ interface FetchedSource {
   fetchedBy: string;
   /** Page title from Firecrawl metadata; null for pasted/manual content. */
   title: string | null;
+  /** Page description from Firecrawl metadata; null for pasted/manual content. */
+  description: string | null;
+  /** og:image URL from Firecrawl metadata; null for pasted/manual content. */
+  ogImage: string | null;
+  /** og:site_name from Firecrawl metadata; null for pasted/manual content. */
+  siteName: string | null;
 }
 
 const VALID_CONTENT_TYPES = new Set(["article", "video", "unknown"]);
 
 // --- Firecrawl fetch ---
 
-async function fetchWithFirecrawl(url: string): Promise<{ markdown: string; title: string | null } | null> {
+async function fetchWithFirecrawl(url: string): Promise<{
+  markdown: string;
+  title: string | null;
+  description: string | null;
+  ogImage: string | null;
+  siteName: string | null;
+} | null> {
   const apiKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey) {
     console.warn("FIRECRAWL_API_KEY not set");
@@ -54,7 +67,13 @@ async function fetchWithFirecrawl(url: string): Promise<{ markdown: string; titl
 
     const data: any = await res.json();
     if (data.success && data.data?.markdown) {
-      return { markdown: data.data.markdown, title: data.data.metadata?.title ?? null };
+      return {
+        markdown: data.data.markdown,
+        title: data.data.metadata?.title ?? null,
+        description: data.data.metadata?.description ?? null,
+        ogImage: data.data.metadata?.ogImage ?? null,
+        siteName: data.data.metadata?.ogSiteName ?? null,
+      };
     }
     return null;
   } catch (err) {
@@ -79,12 +98,28 @@ async function fetchSource(
       pasted.contentType && VALID_CONTENT_TYPES.has(pasted.contentType)
         ? (pasted.contentType as FetchedSource["contentType"])
         : "unknown";
-    return { content: pasted.content, contentType, fetchedBy: "manual", title: null };
+    return {
+      content: pasted.content,
+      contentType,
+      fetchedBy: "manual",
+      title: null,
+      description: null,
+      ogImage: null,
+      siteName: null,
+    };
   }
 
   const scraped = await fetchWithFirecrawl(url);
   return scraped
-    ? { content: scraped.markdown, contentType: "article", fetchedBy: "firecrawl", title: scraped.title }
+    ? {
+        content: scraped.markdown,
+        contentType: "article",
+        fetchedBy: "firecrawl",
+        title: scraped.title,
+        description: scraped.description,
+        ogImage: scraped.ogImage,
+        siteName: scraped.siteName,
+      }
     : null;
 }
 
@@ -126,10 +161,15 @@ export async function handler(event: { body?: string }): Promise<{
     return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: "Invalid JSON" }) };
   }
 
-  const url = body.url;
-  if (!url || typeof url !== "string") {
+  const submittedUrl = body.url;
+  if (!submittedUrl || typeof submittedUrl !== "string") {
     return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: "URL is required" }) };
   }
+
+  // Resolve wrapper/shortener links (Google Search redirects, tinyurl, etc.)
+  // to their actual target so dedup and the stored `url` reflect the real
+  // page, not the wrapper. Fails open to the submitted URL on error.
+  const url = await resolveUrl(submittedUrl);
 
   // Pasted content is an explicit opt-out of fetching: a non-empty string
   // means the caller already has the material (e.g. a transcript copied by
@@ -178,6 +218,9 @@ export async function handler(event: { body?: string }): Promise<{
           fetchedBy: fetched.fetchedBy,
           status: "embedding",
           title: displayTitle(url, fetched.title),
+          description: fetched.description ?? undefined,
+          ogImage: fetched.ogImage ?? undefined,
+          siteName: fetched.siteName ?? undefined,
         },
         "attribute_not_exists(contentHash)"
       );

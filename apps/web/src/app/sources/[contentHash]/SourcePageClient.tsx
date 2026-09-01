@@ -66,6 +66,18 @@ function truncateUrl(url: string, maxLen = 80): string {
   return url.slice(0, maxLen - 3) + "…";
 }
 
+/**
+ * Single-source digest goals. Values and labels mirror `DIGEST_GOALS` in
+ * apps/infra/lib/digest-goals.ts (the server validates the value on
+ * POST /digests); hardcoded the same way the browse filter dropdown is, so
+ * this page doesn't need the /digest-goals endpoint just for labels.
+ */
+const DIGEST_GOAL_OPTIONS = [
+  { goal: "tl_dr", label: "TL;DR" },
+  { goal: "summary", label: "Summary" },
+  { goal: "understand", label: "Understand" },
+];
+
 // ---------------------------------------------------------------------------
 // Components
 // ---------------------------------------------------------------------------
@@ -270,6 +282,8 @@ export default function SourcePageClient() {
   const [digests, setDigests] = useState<DigestRow[]>([]);
   const [relatedSources, setRelatedSources] = useState<RelatedSourceRow[]>([]);
   const [generating, setGenerating] = useState(false);
+  const [selectedGoal, setSelectedGoal] = useState("tl_dr");
+  const [generatingSingle, setGeneratingSingle] = useState(false);
   const [viewMode, setViewMode] = useState<"markdown" | "raw">("markdown");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -307,6 +321,29 @@ export default function SourcePageClient() {
       }
     })();
   }, [contentHash]);
+
+  async function handleGenerate() {
+    if (!contentHash) return;
+    setGeneratingSingle(true);
+    try {
+      const res = await fetchWithAuth("POST", "/digests", {
+        sourceHash: contentHash,
+        digestGoal: selectedGoal,
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error ?? `Generation failed: ${res.status}`);
+      }
+      // Both the 202 (new digest) and 200 (dedup) responses carry the id as
+      // `digestId`, not `id`.
+      const data = await res.json();
+      window.location.href = `/digests/${data.digestId}`;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setGeneratingSingle(false);
+    }
+  }
 
   return (
     <>
@@ -425,23 +462,73 @@ export default function SourcePageClient() {
         </>
       )}
 
-      {source && digests.length > 0 && (
+      {source && (
         <>
-          <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--text-muted)", margin: "24px 0 8px" }}>
-            Generated from this source ({digests.length})
-          </h2>
-          <div style={{ padding: "0 4px" }}>
-            {digests.map((d) => (
-              <DigestLinkRow key={d.id} digest={d} />
-            ))}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              margin: "24px 0 8px",
+            }}
+          >
+            <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--text-muted)", margin: 0 }}>
+              Generated from this source ({digests.length})
+            </h2>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <select
+                value={selectedGoal}
+                onChange={(e) => setSelectedGoal(e.target.value)}
+                aria-label="Digest goal"
+                style={{
+                  fontSize: 12,
+                  padding: "5px 8px",
+                  borderRadius: 6,
+                  border: "1px solid var(--border-primary)",
+                  background: "var(--bg-card)",
+                  cursor: "pointer",
+                }}
+              >
+                {DIGEST_GOAL_OPTIONS.map((g) => (
+                  <option key={g.goal} value={g.goal}>
+                    {g.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleGenerate}
+                disabled={generatingSingle}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 6,
+                  border: "1px solid var(--brand)",
+                  background: "var(--brand)",
+                  color: "white",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: generatingSingle ? "not-allowed" : "pointer",
+                  opacity: generatingSingle ? 0.6 : 1,
+                }}
+              >
+                {generatingSingle ? "Generating…" : "Generate digest"}
+              </button>
+            </div>
           </div>
+          {digests.length > 0 ? (
+            <div style={{ padding: "0 4px" }}>
+              {digests.map((d) => (
+                <DigestLinkRow key={d.id} digest={d} />
+              ))}
+            </div>
+          ) : (
+            !loading && (
+              <p style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 8 }}>
+                No digests generated from this source yet.
+              </p>
+            )
+          )}
         </>
-      )}
-
-      {source && digests.length === 0 && !loading && (
-        <p style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 16 }}>
-          No digests generated from this source yet.
-        </p>
       )}
 
       {source && relatedSources.length > 0 && (
@@ -472,7 +559,7 @@ export default function SourcePageClient() {
                   });
                   if (res.ok) {
                     const data = await res.json();
-                    window.location.href = `/digests/${data.id}`;
+                    window.location.href = `/digests/${data.digestId}`;
                   } else {
                     const errData = await res.json().catch(() => ({}));
                     setError(errData.error ?? `Generation failed: ${res.status}`);

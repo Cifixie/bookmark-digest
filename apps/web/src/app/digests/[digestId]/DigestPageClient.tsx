@@ -29,6 +29,15 @@ interface DigestResponse {
   completedAt: string | null;
 }
 
+interface RelatedSourceRow {
+  contentHash: string;
+  url: string;
+  contentType: string;
+  fetchedAt: string;
+  title: string | null;
+  score: number;
+}
+
 // ---------------------------------------------------------------------------
 // Components
 // ---------------------------------------------------------------------------
@@ -72,8 +81,8 @@ function StatusBadge({ status }: { status: string }) {
       {status}
     </span>
   );
-}
 
+}
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -82,7 +91,9 @@ export default function DigestPageClient() {
   const { digestId } = useParams<{ digestId: string }>();
   const [digest, setDigest] = useState<DigestResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [relatedSources, setRelatedSources] = useState<RelatedSourceRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     if (!digestId) return;
@@ -102,6 +113,18 @@ export default function DigestPageClient() {
       }
     })();
   }, [digestId]);
+
+  // Fetch related sources when digest has a sourceHash
+  useEffect(() => {
+    if (!digest?.sourceHash) return;
+    (async () => {
+      const res = await fetchWithAuth("GET", `/sources/${digest.sourceHash}/related?count=3`);
+      if (res.ok) {
+        const data = await res.json();
+        setRelatedSources((data.items ?? []) as RelatedSourceRow[]);
+      }
+    })();
+  }, [digest?.sourceHash]);
 
   return (
     <>
@@ -147,6 +170,84 @@ export default function DigestPageClient() {
 
       {digest?.status === "done" && digest?.output && (
         <DigestSpecRenderer spec={digest.output} />
+      )}
+
+      {relatedSources.length > 0 && (
+        <>
+          <h2 style={{ fontSize: 14, fontWeight: 600, color: "var(--text-muted)", margin: "24px 0 8px" }}>
+            Related from your bookmarks
+          </h2>
+          <div style={{ padding: "0 4px" }}>
+            {relatedSources.map((item) => (
+              <Link
+                key={item.contentHash}
+                to={`/sources/${item.contentHash}`}
+                style={{
+                  display: "block",
+                  padding: "8px 12px",
+                  borderRadius: 6,
+                  background: "var(--bg-muted)",
+                  marginBottom: 6,
+                  textDecoration: "none",
+                  color: "inherit",
+                  fontSize: 13,
+                }}
+              >
+                <div style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {item.title ?? item.url}
+                </div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>
+                  {item.contentType} · {new Date(item.fetchedAt).toLocaleDateString()}
+                </div>
+              </Link>
+            ))}
+          </div>
+          <button
+            onClick={async () => {
+              setGenerating(true);
+              try {
+                // Infer sourceMode from date spread
+                const dates = relatedSources.map((s) => new Date(s.fetchedAt).getTime());
+                const min = Math.min(...dates);
+                const max = Math.max(...dates);
+                const spread = max - min;
+                const sourceMode = spread <= 30 * 24 * 60 * 60 * 1000 ? "compare" : "evolution";
+
+                const res = await fetchWithAuth("POST", "/digests", {
+                  sourceHashes: relatedSources.map((s) => s.contentHash),
+                  digestGoal: "tl_dr",
+                  sourceMode,
+                });
+                if (res.ok) {
+                  const data = await res.json();
+                  window.location.href = `/digests/${data.digestId}`;
+                } else {
+                  const errData = await res.json().catch(() => ({}));
+                  setError(errData.error ?? `Generation failed: ${res.status}`);
+                }
+              } catch (err) {
+                setError(err instanceof Error ? err.message : "Unknown error");
+              } finally {
+                setGenerating(false);
+              }
+            }}
+            disabled={generating}
+            style={{
+              marginTop: 12,
+              padding: "6px 14px",
+              borderRadius: 6,
+              border: "1px solid var(--brand)",
+              background: "var(--brand)",
+              color: "white",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: generating ? "not-allowed" : "pointer",
+              opacity: generating ? 0.6 : 1,
+            }}
+          >
+            {generating ? "Generating…" : "Generate digest from related sources"}
+          </button>
+        </>
       )}
 
       {digest?.status === "failed" && digest?.error && (

@@ -1,7 +1,6 @@
 # Suggested-bundle UX
 
-**Status:** proposed — not started, verified 2026-08-12. Item 2 in
-`plans/ROADMAP.md`'s queue.
+**Status:** **done 2026-08-16.** Implemented: `inferSourceMode` heuristic in `similarity.ts`, "Generate digest from related sources" button on both Source and Digest detail pages, auto-fetches top-3 related sources via `/sources/{hash}/related`, infers `sourceMode` from date spread (≤30 days → `compare`, otherwise `evolution`), POSTs to `/digests` with `sourceHashes` + `sourceMode` + `digestGoal: tl_dr`.
 
 **Formerly:** `phase-2d-suggested-bundles.md` (renamed — the phase-N naming
 is retired, see `plans/ROADMAP.md`). No content change beyond dropping the

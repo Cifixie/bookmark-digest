@@ -5,21 +5,67 @@ import { SourceMeta } from "./SourceMeta";
 import { DigestFooter } from "./DigestFooter";
 import { registry } from "../../lib/registry";
 
-// Placeholder renderers for non-catalog sections
-const RelatedFromYourBookmarks = () => (
-  <div
-    style={{
-      borderTop: "1px solid var(--border-light)",
-      paddingTop: 20,
-      marginTop: 24,
-    }}
-  >
-    <h3 style={{ margin: "0 0 12px", color: "var(--text-heading)" }}>
-      Related from your bookmarks
-    </h3>
-    <p style={{ color: "var(--text-muted)" }}>— (placeholder for pgvector retrieval) —</p>
-  </div>
-);
+import { Link } from "react-router-dom";
+
+// Real RelatedFromYourBookmarks renderer — powered by the /sources/{sourceHash}/related endpoint
+interface RelatedSourceRow {
+  contentHash: string;
+  url: string;
+  contentType: string;
+  fetchedAt: string;
+  title: string | null;
+  score: number;
+}
+
+const RelatedFromYourBookmarks = ({ items }: { items: RelatedSourceRow[] }) => {
+  const fallbackTitle = (url: string) => {
+    try {
+      const u = new URL(url);
+      return decodeURIComponent(u.pathname.split("/").pop() ?? url).slice(0, 80);
+    } catch {
+      return url.slice(0, 80);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        borderTop: "1px solid var(--border-light)",
+        marginTop: 24,
+        paddingTop: 16,
+        padding: "0 8px",
+      }}
+    >
+      <h3 style={{ margin: "0 0 12px", color: "var(--text-heading)", fontSize: 14 }}>
+        Related from your bookmarks
+      </h3>
+      {items.map((item) => (
+        <Link
+          key={item.contentHash}
+          to={`/sources/${item.contentHash}`}
+          style={{
+            display: "block",
+            padding: "8px 12px",
+            borderRadius: 6,
+            background: "var(--bg-muted)",
+            marginBottom: 6,
+            textDecoration: "none",
+            color: "inherit",
+            fontSize: 13,
+          }}
+        >
+          <div style={{ fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {item.title ?? fallbackTitle(item.url)}
+          </div>
+          <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>
+            {item.contentType} · {new Date(item.fetchedAt).toLocaleDateString()}
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+};
+
 
 const MyNote = ({ text }: { text: string }) => (
   <div
@@ -46,7 +92,7 @@ export const DigestPage = ({
   relatedBookmarks,
 }: DigestPageType & {
   myNote?: { text: string; createdAt: string };
-  relatedBookmarks?: { count: number };
+  relatedBookmarks?: RelatedSourceRow[];
 }) => (
   <article
     style={{
@@ -95,7 +141,7 @@ export const DigestPage = ({
         <Renderer spec={section.spec} registry={registry as any} />
       </section>
     ))}
-    {relatedBookmarks && <RelatedFromYourBookmarks />}
+    {relatedBookmarks && <RelatedFromYourBookmarks items={relatedBookmarks} />}
     {myNote && <MyNote text={myNote.text} />}
     <DigestFooter />
   </article>

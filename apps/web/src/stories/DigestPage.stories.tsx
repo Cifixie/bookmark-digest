@@ -31,9 +31,18 @@ function buildSpec(blocks: Array<{ type: string; props: Record<string, unknown> 
   return { root: rootKey, elements };
 }
 
+interface RelatedSourceRow {
+  contentHash: string;
+  url: string;
+  contentType: string;
+  fetchedAt: string;
+  title: string | null;
+  score: number;
+}
+
 const sampleWrittenPage: DigestPageType & {
   myNote?: { text: string; createdAt: string };
-  relatedBookmarks?: { count: number };
+  relatedBookmarks?: RelatedSourceRow[];
 } = {
   source: {
     kind: "written",
@@ -69,6 +78,10 @@ const sampleWrittenPage: DigestPageType & {
       ]),
     },
   ],
+  relatedBookmarks: [
+    { contentHash: "abc123", url: "https://example.com/related-1", contentType: "article", fetchedAt: "2025-01-10T00:00:00Z", title: "Related Article 1", score: 0.95 },
+    { contentHash: "def456", url: "https://example.com/related-2", contentType: "article", fetchedAt: "2025-01-12T00:00:00Z", title: "Related Article 2", score: 0.87 },
+  ],
 };
 
 export const WrittenArticle: Story = {
@@ -79,7 +92,7 @@ export const WrittenArticle: Story = {
 
 const sampleTemporalPage: DigestPageType & {
   myNote?: { text: string; createdAt: string };
-  relatedBookmarks?: { count: number };
+  relatedBookmarks?: RelatedSourceRow[];
 } = {
   source: {
     kind: "temporal",

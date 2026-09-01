@@ -54,3 +54,37 @@ export function rankBySimilarity(
     .sort((a, b) => b.score - a.score)
     .slice(0, count);
 }
+
+// ---------------------------------------------------------------------------
+// Source mode inference
+// ---------------------------------------------------------------------------
+
+/**
+ * Infers the appropriate sourceMode (compare | evolution | synthesize) from
+ * a set of scored candidate sources using their fetched dates.
+ *
+ * Heuristic: if all sources are within COMPARE_WINDOW of each other (tight
+ * temporal clustering), infer "compare" (they cover the same moment in time).
+ * If the spread is wider, infer "evolution" (they trace a topic over time).
+ * Otherwise default to "synthesize" (complementary sources without a strong
+ * temporal pattern).
+ */
+export const COMPARE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+export function inferSourceMode(
+  fetchedAts: string[],
+): "compare" | "evolution" | "synthesize" {
+  if (fetchedAts.length < 2) return "synthesize";
+
+  const dates = fetchedAts.map((d) => new Date(d).getTime()).filter(Boolean);
+  if (dates.length < 2) return "synthesize";
+
+  const min = Math.min(...dates);
+  const max = Math.max(...dates);
+  const spread = max - min;
+
+  if (spread <= COMPARE_WINDOW_MS) return "compare";
+  if (spread > 365 * 24 * 60 * 60 * 1000) return "evolution"; // >1 year
+
+  return "synthesize";
+}

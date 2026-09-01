@@ -1,13 +1,9 @@
 package com.bookmarkdigest.share
 
 import android.content.Context
-import android.os.Handler
-import android.os.Looper
-import android.widget.Toast
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.ListenableWorker.Result as WorkResult
-
 /**
  * Does the actual POST, outside the share activity's lifetime.
  *
@@ -16,6 +12,10 @@ import androidx.work.ListenableWorker.Result as WorkResult
  * returns. WorkManager outlives it, and its network constraint means a link
  * shared with the radio off is delivered when connectivity returns instead of
  * being dropped.
+ *
+ * Feedback goes through [IngestNotifications], not toasts: once the share
+ * sheet closes this worker is a background component, and the OS silently
+ * swallows background toasts (Android 10+).
  */
 class IngestWorker(
     context: Context,
@@ -25,30 +25,32 @@ class IngestWorker(
     override suspend fun doWork(): WorkResult {
         val url = inputData.getString(KEY_URL) ?: return WorkResult.failure()
 
+        // Owns the auth check, not the activity: reading the Cognito session
+        // hits EncryptedSharedPreferences and may refresh over the network.
         val token = Ingest.idToken()
         if (token == null) {
-            toast(R.string.toast_sign_in_required)
+            IngestNotifications.showResult(applicationContext, url, Ingest.Result.Unauthorized)
             return WorkResult.failure()
         }
 
-        return when (Ingest.postSource(url, token)) {
+        return when (val result = Ingest.postSource(url, token)) {
             Ingest.Result.Saved -> {
-                toast(R.string.toast_saved)
+                IngestNotifications.showResult(applicationContext, url, result)
                 WorkResult.success()
             }
 
             Ingest.Result.AlreadySaved -> {
-                toast(R.string.toast_already_saved)
+                IngestNotifications.showResult(applicationContext, url, result)
                 WorkResult.success()
             }
 
             Ingest.Result.Unauthorized -> {
-                toast(R.string.toast_sign_in_required)
+                IngestNotifications.showResult(applicationContext, url, result)
                 WorkResult.failure()
             }
 
             Ingest.Result.FetchFailed -> {
-                toast(R.string.toast_fetch_failed)
+                IngestNotifications.showResult(applicationContext, url, result)
                 WorkResult.failure()
             }
 
@@ -58,20 +60,15 @@ class IngestWorker(
                 if (runAttemptCount < MAX_ATTEMPTS) {
                     WorkResult.retry()
                 } else {
-                    toast(R.string.toast_failed)
+                    IngestNotifications.showResult(applicationContext, url, result)
                     WorkResult.failure()
                 }
         }
     }
 
-    private fun toast(messageRes: Int) {
-        Handler(Looper.getMainLooper()).post {
-            Toast.makeText(applicationContext, messageRes, Toast.LENGTH_SHORT).show()
-        }
-    }
-
     companion object {
         const val KEY_URL = "url"
+
         private const val MAX_ATTEMPTS = 3
     }
 }

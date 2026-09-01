@@ -170,9 +170,16 @@ process death on a loaded phone and would drop shares silently.
 `IngestWorker` also owns the auth check, not the activity — reading the Cognito
 session hits EncryptedSharedPreferences and may refresh over the network, so it
 cannot be on the main thread, and doing it before `finish()` reintroduces the
-same race. Cost of this choice: an unauthenticated share can only toast "sign
-in to save links" (a background worker cannot launch an activity on Android
-10+), so the user has to open the app from the launcher themselves.
+same race.
+
+Originally this meant an unauthenticated share could only toast "sign in to
+save links," leaving the user to open the app from the launcher themselves —
+but that cost turned out to be avoidable, not fundamental: a *notification*
+(unlike a toast) can carry a `PendingIntent` and launch an activity from the
+background even though the worker posting it cannot launch one directly. See
+[[gotchas]] for why toasts had to go entirely (they're silently swallowed
+once the activity is gone, not just for the sign-in case), and
+`IngestNotifications` in [[current-work]] for the fix.
 
 The `NetworkType.CONNECTED` constraint is a bonus: a link shared with the radio
 off is delivered when connectivity returns instead of being lost. See

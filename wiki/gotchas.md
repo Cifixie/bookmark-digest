@@ -67,3 +67,19 @@ fetch content", which reads like a Firecrawl problem rather than a client bug.
 `Ingest.extractUrl()` regexes out the first `https?://\S+` and strips trailing
 punctuation for this reason. Any new client posting to `/sources` needs the
 same treatment. See [[decisions]].
+
+## Background toasts are silently swallowed on Android 10+
+
+`IngestWorker` originally reported share results (Saved / failed / sign-in
+required) via `Toast`, but Android 10+ drops toasts posted from a component
+that isn't in the foreground — and by the time the 10-30s Firecrawl POST
+returns, `ShareActivity` has long since finished and the share sheet is
+closed. Only the immediate "Saving…"/"No link found" toasts posted while
+`ShareActivity` was still on screen were ever visible; every terminal
+outcome (the thing the user actually needs to see) was silently dropped.
+Fixed by moving all terminal-state feedback to a notification
+(`IngestNotifications`), which is the only surface a background worker is
+guaranteed to be allowed to draw on. Any future background work in this app
+that needs to tell the user something must use a notification, not a toast,
+the moment it can outlive the foreground activity. See [[decisions]] and
+[[current-work]].

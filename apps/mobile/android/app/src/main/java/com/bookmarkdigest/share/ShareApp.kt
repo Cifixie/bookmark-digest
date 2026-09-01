@@ -17,6 +17,7 @@ class ShareApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        IngestNotifications.ensureChannel(this)
         try {
             Amplify.addPlugin(AWSCognitoAuthPlugin())
             Amplify.configure(applicationContext)

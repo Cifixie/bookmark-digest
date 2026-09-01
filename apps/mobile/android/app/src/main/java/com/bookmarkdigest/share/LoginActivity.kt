@@ -1,5 +1,7 @@
 package com.bookmarkdigest.share
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
@@ -35,6 +37,17 @@ class LoginActivity : AppCompatActivity() {
         email = findViewById(R.id.email)
         password = findViewById(R.id.password)
         submit = findViewById(R.id.submit)
+
+        // Notifications are the only feedback channel for a share, so ask
+        // for the Android 13+ permission whenever this screen is open without
+        // it. ShareActivity cannot ask — it is NoDisplay and finishes
+        // instantly. The system re-prompts on the next open until granted or
+        // permanently denied; no result callback needed.
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
+        }
 
         render()
     }

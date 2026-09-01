@@ -11,11 +11,15 @@
     <string name="signed_out">Signed out</string>
     <string name="sign_in_hint">Sign in once. Then share any link to \"bookmark-digest\".</string>
 
+    <string name="channel_share">Share</string>
+
     <string name="toast_saving">Saving…</string>
-    <string name="toast_saved">Saved</string>
-    <string name="toast_already_saved">Already saved</string>
     <string name="toast_no_link">No link found</string>
-    <string name="toast_sign_in_required">Sign in to save links</string>
-    <string name="toast_fetch_failed">Couldn\'t fetch that page</string>
-    <string name="toast_failed">Failed to save</string>
+
+    <string name="state_saving">Saving…</string>
+    <string name="state_saved">Saved</string>
+    <string name="state_already_saved">Already saved</string>
+    <string name="state_sign_in_required">Sign in to save links</string>
+    <string name="state_fetch_failed">Couldn\'t fetch that page</string>
+    <string name="state_failed">Failed to save</string>
 </resources>

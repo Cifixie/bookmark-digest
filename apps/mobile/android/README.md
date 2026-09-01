@@ -2,7 +2,8 @@
 
 A one-tap way to get a link into the sources table: share any URL from Chrome,
 YouTube, or anything else that emits `text/plain`, and this app POSTs it to
-`POST /sources` on the existing API. No UI beyond a toast.
+`POST /sources` on the existing API. No UI beyond a notification tracking the
+share through to Saved/failed.
 
 Not part of the pnpm workspace — it has no `package.json`, so pnpm's `apps/*`
 glob skips it. Build it with Gradle, not `pnpm`.
@@ -44,18 +45,33 @@ root).
 ## How it works
 
 - `ShareActivity` — `Theme.NoDisplay`, so the share sheet closes instantly.
-  Extracts the URL, enqueues `IngestWorker`, toasts, finishes. No network, no
-  auth, nothing that can outlive the activity.
+  Extracts the URL, enqueues `IngestWorker`, finishes. Falls back to a
+  "Saving…" toast only if notifications aren't permitted (Android 13+, no
+  `POST_NOTIFICATIONS`) — otherwise `IngestNotifications` owns all user-visible
+  feedback. No network, no auth, nothing that can outlive the activity.
 - `IngestWorker` — the POST, in WorkManager so it survives the activity and
-  retries when the phone is offline. Also owns the auth check.
+  retries when the phone is offline (bounded at 3 attempts). Also owns the
+  auth check. Reports progress and outcome via `IngestNotifications`, not
+  toasts — background toasts are silently swallowed on Android 10+.
+- `IngestNotifications` — the share state machine the user can actually see:
+  one notification per URL (keyed by `url.hashCode()`), posted as "Saving…" at
+  enqueue and replaced in place with the terminal state (Saved / Already saved
+  / Couldn't fetch that page / Failed to save / Sign in to save links). The
+  sign-in notification carries a `PendingIntent` into `LoginActivity` — a
+  notification can launch an activity from the background even though a
+  worker cannot.
 - `LoginActivity` — the launcher entry. One-time Cognito email/password sign-in
-  via Amplify, plus a sign-out button to switch accounts.
+  via Amplify, plus a sign-out button to switch accounts. Requests
+  `POST_NOTIFICATIONS` (Android 13+) while open so the share-result
+  notifications above have permission to post.
 - `Ingest` — URL extraction and the raw `HttpURLConnection` POST.
 
-Two non-obvious constraints are written up in `wiki/gotchas.md`: the
-`Authorization` header takes a **bare** ID token (no `Bearer ` prefix), and
-shared text is usually *not* a bare URL. The rationale for Cognito-over-API-key
-and WorkManager-over-coroutine is in `wiki/decisions.md`.
+Two non-obvious constraints are written up in `wiki/gotchas.md`: background
+toasts are silently swallowed (Android 10+), so share-result feedback has to
+be a notification; the `Authorization` header takes a **bare** ID token (no
+`Bearer ` prefix), and shared text is usually *not* a bare URL. The rationale
+for Cognito-over-API-key and WorkManager-over-coroutine is in
+`wiki/decisions.md`.
 
 ## Config
 

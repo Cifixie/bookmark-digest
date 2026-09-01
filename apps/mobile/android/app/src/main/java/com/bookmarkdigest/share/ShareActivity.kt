@@ -29,7 +29,13 @@ class ShareActivity : Activity() {
             toast(R.string.toast_no_link)
         } else {
             enqueue(url)
-            toast(R.string.toast_saving)
+            IngestNotifications.showSaving(applicationContext, url)
+            // The notification is the share's ongoing state; a toast is only
+            // the immediate ack when that permission has not been granted
+            // (in which case the notification above would be dropped).
+            if (!IngestNotifications.canNotify(applicationContext)) {
+                toast(R.string.toast_saving)
+            }
         }
 
         finish()

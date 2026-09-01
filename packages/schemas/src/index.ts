@@ -68,7 +68,7 @@ export type SubmitUrlResponse = z.infer<typeof submitUrlResponseSchema>;
 // ---------------------------------------------------------------------------
 
 /** Source status: lifecycle of a fetched URL through the pipeline. */
-export const sourceStatus = z.enum(["fetched", "embedding", "ready", "failed"]);
+export const sourceStatus = z.enum(["fetched", "embedding", "ready", "thin", "failed"]);
 export type SourceStatus = z.infer<typeof sourceStatus>;
 
 /** Content type of the fetched source. */

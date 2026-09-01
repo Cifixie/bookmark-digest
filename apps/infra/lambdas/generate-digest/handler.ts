@@ -37,10 +37,12 @@ import {
   digestsQueryBySourceHash,
   digestsUpdate,
   sourcesGet,
+  sourcesUpdate,
   tagsScan,
   tagsUpsert,
 } from "../../lib/dynamo";
 import { getDigestGoal, getSourceMode, DEFAULT_SOURCE_MODE, GROUNDING_RULES } from "../../lib/digest-goals";
+import { detectThinFetch } from "../../lib/thin-fetch";
 
 // Recursively deletes `null` values from objects/arrays in place. Every
 // optional field in the catalog's Zod schemas is `.optional()`, not
@@ -608,6 +610,56 @@ async function runGeneration({ digestId, sourceHashes, digestGoal, multiSource, 
       await digestsUpdate(digestId, "SET #s = :status, #e = :err, #m = :model, #ca = :at", {
         ":status": "failed",
         ":err": `${missing.length} of ${sourceHashes.length} sources missing content`,
+        ":model": GENERATION_MODEL,
+        ":at": now,
+        "#s": "status",
+        "#e": "error",
+        "#m": "model",
+        "#ca": "completedAt",
+      });
+      return;
+    }
+
+    // Thin-fetch detection (Part A of source-quality-and-upload): a Firecrawl
+    // scrape sometimes returns page chrome instead of content — a YouTube
+    // watch page with no transcript, an auth gate, an error page. The source
+    // is what's broken, not the request, so we mark it re-fetchable
+    // (status: "thin") and fail this digest with a specific error rather than
+    // burning a Gemini quota call on material with no substance. The
+    // MIN_ELEMENTS/isThin check further down stays separate and unchanged: thin
+    // output from rich material is a model problem, thin output from thin
+    // material is an ingestion problem — conflating them hides which occurred.
+    const thinSources: Array<{ hash: string; url: string; content: string | null }> = [];
+    for (const result of sourceResults) {
+      const finding = detectThinFetch(result.content ?? "");
+      if (finding) {
+        // Log the marker hit plus a couple of cheap metrics; they seed the
+        // labelled corpus Part B (signal-density threshold) will fit against.
+        console.info(
+          `Thin fetch for ${result.url}: ${finding.reason}; contentLength=${result.content?.length}`,
+          { url: result.url, markers: [...finding.markers], contentLength: result.content?.length },
+        );
+        thinSources.push(result);
+      }
+    }
+    if (thinSources.length > 0) {
+      // Mark each thin source so the ingest dedup treats it as re-fetchable
+      // (only "ready"/"embedding" are treated as already-ingested). A MODIFY
+      // stream event fires, but embed-source only embeds when status is
+      // "embedding", so the chrome is never re-embedded.
+      await Promise.all(
+        thinSources.map((result) =>
+          sourcesUpdate(result.hash, "SET #s = :status", {
+            ":status": "thin",
+            "#s": "status",
+          }),
+        ),
+      );
+      const urls = thinSources.map((r) => r.url).filter(Boolean);
+      const detail = urls.length ? ` (${urls.join("; ")})` : "";
+      await digestsUpdate(digestId, "SET #s = :status, #e = :err, #m = :model, #ca = :at", {
+        ":status": "failed",
+        ":err": `Thin fetch detected${detail}: one or more sources were scraped as page chrome rather than content. Re-ingest the affected source(s) (paste text or upload the page) and regenerate.`,
         ":model": GENERATION_MODEL,
         ":at": now,
         "#s": "status",

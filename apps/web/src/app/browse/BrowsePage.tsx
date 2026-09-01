@@ -61,7 +61,7 @@ interface SearchScoredDigest {
 // ---------------------------------------------------------------------------
 
 const SOURCE_TYPES = ["article", "video", "unknown"] as const;
-const SOURCE_STATUSES = ["fetched", "embedding", "ready", "failed"] as const;
+const SOURCE_STATUSES = ["fetched", "embedding", "ready", "thin", "failed"] as const;
 const DIGEST_STATUSES = ["pending", "generating", "done", "failed"] as const;
 
 const SUBJECT_COLORS: Record<string, string> = {
@@ -82,6 +82,7 @@ function getSourceBadgeColor(status: string): string {
     ready: "var(--badge-ready)",
     fetched: "var(--badge-fetched)",
     embedding: "var(--badge-embedding)",
+    thin: "var(--badge-thin)",
     failed: "var(--badge-failed)",
   };
   return map[status] ?? "var(--badge-pending)";
@@ -92,6 +93,7 @@ function getSourceBadgeBg(status: string): string {
     ready: "var(--badge-ready-bg)",
     fetched: "var(--badge-fetched-bg)",
     embedding: "var(--badge-embedding-bg)",
+    thin: "var(--badge-thin-bg)",
     failed: "var(--badge-failed-bg)",
   };
   return map[status] ?? "var(--badge-pending-bg)";

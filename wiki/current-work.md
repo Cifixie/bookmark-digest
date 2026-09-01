@@ -1,5 +1,24 @@
 # Current work
 
+- **Source quality — thin-fetch detection (Part A)** (completed 2026-09-01) —
+   detects sources whose Firecrawl fetch returned page chrome rather than
+   content. New pure function `detectThinFetch()` in `apps/infra/lib/thin-fetch.ts`
+   (first ~1,000 chars only; `That's an error` alone, or 2+ of `Skip navigation`/
+   `Show transcript`/`Sign in`, after normalizing curly apostrophes to ASCII).
+   Wired into `runGeneration` (`generate-digest/handler.ts`): after the
+   `missing.length` check and **before** `status: "generating"` — the last point
+   before quota is spent — each thin source is marked `status: "thin"` (a new
+   `sourcesUpdate` import) so the ingest dedup treats it as re-fetchable, the
+   digest fails with a specific, user-facing error naming the source (not the
+   generic "Internal error during generation"), and the trigger metrics are
+   logged to seed Part B's labelled corpus. `thin` added to the `sourceStatus`
+   schema enum and the Browse source filter + badge colors (`--badge-thin`
+   tokens already existed); embed-source skips non-`embedding` stream events, so
+   the chrome is never re-embedded. `thin-fetch.test.ts` (vitest) covers the
+   fixture, the error page, the weak-marker threshold, and the 1,000-char
+   boundary. Part B (a statistical signal-density threshold) stays gated on
+   ~50 sources / ~10 known-bad before it's worth fitting. See the merged
+   `plans/source-quality-and-upload.md` and [[decisions]].
 - **Ingest — resolve redirect/shortener URLs** (completed 2026-08-25) —
   `ingest-url` now resolves the submitted URL before dedup and Firecrawl
   fetch, via new `apps/infra/lib/resolve-url.ts`. Two steps: unwrap

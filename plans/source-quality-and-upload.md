@@ -1,7 +1,13 @@
 # Source quality: detect thin fetches, recover via upload
 
-**Status:** partially started (one detection layer shipped as a prompt
-change), rest proposed. Item 3 in `plans/ROADMAP.md`'s queue.
+**Status:** Part A (fetch-failure markers) **shipped 2026-09-01** — pure
+`detectThinFetch()` in `apps/infra/lib/thin-fetch.ts`, wired into
+`runGeneration` to mark thin sources `status: "thin"` and fail the digest with
+a specific, user-facing error before any quota is spent; `thin` added to the
+`sourceStatus` schema enum and the Browse source filter + badge colors, with a
+vitest suite (`thin-fetch.test.ts`). Part B (signal-density threshold) stays
+gated on a labelled corpus; the YouTube-scrape finding (`GROUNDING_RULES`
+only) remains as background. Item 3 in `plans/ROADMAP.md`'s queue.
 
 **Supersedes:** `thin-source-detection.md` and `file-upload-ingestion.md`
 (merged — see "Why merged"). If looking for either by name, this is where

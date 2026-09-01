@@ -1,12 +1,58 @@
 # Current work
 
-- **Android share-target app** (`apps/mobile/android/`, verified end-to-end
-  2026-08-16) — Kotlin/Gradle app, outside the pnpm workspace, that adds
-  bookmark-digest as a share target on Android. Sign-in and share-a-link
-  round-trip against the live API confirmed working on a physical device
-  (Pixel 10). Note: an unauthenticated share can only toast "Sign in to save
-  links" — a background worker can't launch an activity on Android 10+, so
-  the user has to open the app from the launcher to sign in first.
+- **Ingest — resolve redirect/shortener URLs** (completed 2026-08-25) —
+  `ingest-url` now resolves the submitted URL before dedup and Firecrawl
+  fetch, via new `apps/infra/lib/resolve-url.ts`. Two steps: unwrap
+  `google.com/url?q=...` (query-param wrapper, not a real HTTP redirect),
+  then follow real HTTP redirect chains (`fetch` with `redirect: "follow"`,
+  HEAD falling back to GET) — this second step alone also fully resolves
+  `share.google/<id>` links, confirmed by hand (`share.google/<id>` → 302 →
+  `google.com/share.google?q=<id>` → 302 → target; every hop is a real
+  3xx). Fails open to the original URL on any error/timeout. `apps/infra`
+  had no test suite at all before this (`test` script was a placeholder
+  `echo`); added vitest (matches `packages/catalog`'s setup) with
+  `lib/resolve-url.test.ts` covering plain/redirect/google-wrapper/
+  HEAD-fails-GET-succeeds/fail-open cases. No schema or DynamoDB item
+  shape changes — the original as-submitted URL is discarded, not stored.
+
+- **Android share target — share-result feedback** (completed 2026-08-25) —
+  Bug: after sharing a link, the user got no feedback when the save finished
+  or failed. Root cause: `IngestWorker` reported results via `Toast`, but
+  Android 10+ silently swallows background toasts, and the app is in the
+  background by the time the POST returns (10-30s Firecrawl scrape). Only
+  `ShareActivity`'s foreground toasts ("Saving…", "No link found") were ever
+  visible.
+
+  Fix: share state is now a notification. New `IngestNotifications` object
+  posts an ongoing "Saving…" notification when the share is enqueued
+  (notification id = `url.hashCode()`) and replaces it in place with the
+  terminal state (Saved / Already saved / Couldn't fetch that page / Failed
+  to save / Sign in to save links). The Unauthorized notification carries a
+  `PendingIntent` that opens `LoginActivity` — a notification can launch an
+  activity from the background (a worker cannot), which removes the
+  documented "user has to open the app from the launcher themselves" cost.
+  `IngestWorker`: toasts → notifications; `Retryable` is now bounded at 3
+  attempts and posts "Failed to save" when they exhaust. `LoginActivity`
+  requests `POST_NOTIFICATIONS` (Android 13+) while open; `ShareActivity`
+  falls back to its "Saving…" toast when that permission is not granted
+  (otherwise the notification is dropped and the share would be silent).
+  Touched: `apps/mobile/android/app/src/main/java/com/bookmarkdigest/share/`
+  (`IngestNotifications.kt` new, `IngestWorker.kt`, `ShareActivity.kt`,
+  `ShareApp.kt` channel creation, `LoginActivity.kt`), `AndroidManifest.xml`
+  (POST_NOTIFICATIONS), `res/values/strings.xml` (new `state_*` +
+  `channel_share` strings; `toast_saved`/`toast_already_saved`/
+  `toast_sign_in_required`/`toast_fetch_failed`/`toast_failed` removed),
+  `res/drawable/ic_notification.xml` (new bookmark icon).
+
+  Two missing imports (`android.Manifest`/`android.content.pm.PackageManager`
+  in `IngestNotifications.kt`, `android.os.Bundle` in `LoginActivity.kt`)
+  failed the first build; fixed, then built, installed on the Pixel 10, and
+  verified on-device across all three terminal states (Saved, fetch failure,
+  sign-in-required tapping through to `LoginActivity`). Wiki updated:
+  [[gotchas]] (background toasts silently swallowed on Android 10+),
+  [[decisions]] (the sign-in "user has to open the app themselves" cost is
+  gone — notifications can launch activities), app README (notification is
+  now the UI, not a toast).
 
 - **Dark theme — color migration** (completed 2026-08-13) — replaced all
   hardcoded hex colors in TSX components with CSS variables. Added 40+ new
@@ -42,8 +88,8 @@ picture. The old phase-N docs are archived at `plans/archive/`; durable
 architectural reasoning pulled out of them lives in [[decisions]] and
 [[gotchas]]. Queue, in order:
 
-1. `plans/digest-metadata-completeness.md` — **Steps 1–4 done** (multi-source `DigestMeta` with subject/tags/synopsis). Fixed: single-source embedding bug, fuzzy match wiring, `tagsQueryByNames` projection bug, `get-tags` limit-before-filter bug.
-2. `plans/suggested-bundles.md` — unblocked, unstarted.
+1. `plans/digest-metadata-completeness.md` — **Steps 1–4 done** (multi-source `DigestMeta` with subject/tags/synopsis).
+2. `plans/suggested-bundles.md` — done (shared `inferSourceMode` heuristic, related sources fetch + "Generate digest from related sources" button on both Source and Digest detail pages).
 3. `plans/source-quality-and-upload.md` — thin-fetch detection + HTML/PDF
    upload recovery.
 4. ~~`plans/source-detail-page.md`~~ — done 2026-08-13.

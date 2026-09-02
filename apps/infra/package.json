@@ -16,10 +16,12 @@
     "test": "vitest run",
     "clean": "rm -rf dist cdk.out *.tsbuildinfo",
     "cdk": "cdk",
-    "youtube-transcript": "tsx scripts/youtube-transcript.ts"
+    "youtube-transcript": "tsx scripts/youtube-transcript.ts",
+    "push-source": "tsx scripts/push-source.ts"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.850.0",
+    "@aws-sdk/client-cognito-identity-provider": "^3.850.0",
     "@aws-sdk/client-dynamodb": "^3.850.0",
     "@aws-sdk/client-lambda": "^3.1106.0",
     "@aws-sdk/client-secrets-manager": "^3.1106.0",

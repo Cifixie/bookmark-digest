@@ -95,6 +95,19 @@ export class BookmarkDigest extends cdk.Stack {
       authFlows: { userSrp: true },
       generateSecret: false,
     });
+    // Dedicated client for the ingestion CLI (`scripts/push-source.ts`).
+    // The web/mobile clients are SRP-only (`userSrp: true`); enabling password
+    // auth on one of *those* would force a userPoolClientId replacement and
+    // break their baked-in env. A separate client keeps them untouched and
+    // scopes a leaked CLI credential to nothing else. USER_PASSWORD_AUTH needs
+    // this flow explicitly enabled on the client.
+    const cliClient = new cognito.UserPoolClient(this, "CliClient", {
+      userPool,
+      authFlows: { userSrp: true, userPassword: true },
+      generateSecret: false,
+      // Don't reveal whether an email is registered to the pool.
+      preventUserExistenceErrors: true,
+    });
 
     const authorizer = new apigw.CognitoUserPoolsAuthorizer(this, "ApiAuthorizer", {
       cognitoUserPools: [userPool],
@@ -701,6 +714,7 @@ function handler(event) {
     new cdk.CfnOutput(this, "UserPoolClientId", {
       value: userPoolClient.userPoolClientId,
     });
+    new cdk.CfnOutput(this, "CliUserPoolClientId", { value: cliClient.userPoolClientId });
     new cdk.CfnOutput(this, "SourcesTableName", { value: sourcesTable.tableName });
     new cdk.CfnOutput(this, "DigestsTableName", { value: digestsTable.tableName });
     new cdk.CfnOutput(this, "TagsTableName", { value: tagsTable.tableName });

@@ -1,4 +1,27 @@
 # Current work
+- **Ingestion — push-source CLI** (2026-09-02, in progress) — a CLI to push
+  sources without the web app: `apps/infra/scripts/push-source.ts`
+  (`npm run push-source`), four subcommands. `extract <url> [--out <file>]`
+  fetches a YouTube transcript into a .md (default: a timestamped file in the
+  cwd, absolute path printed to stdout). `create <file> --url <url> [--content-type
+  <type>]` POSTs the file's contents to `POST /sources`. `login` forces a fresh
+  Cognito login; `logout` clears the cached token. The YouTube logic was pulled
+  out of `scripts/youtube-transcript.ts` into `lib/youtube.ts` — an `any`-free,
+  nested-guarded `isInnerTubePlayer` narrows the untrusted InnerTube JSON, and
+  the standalone script now imports it — so `extract` and the script share one
+  code path. Auth lives in `lib/cognito-auth.ts` and uses the dedicated CLI
+  Cognito client (`bookmark-digest-stack.ts` `CliClient`, `password: true`,
+  `CfnOutput` `CliUserPoolClientId`): email/password login, token cached at
+  `~/.config/bookmark-digest/cognito-token.json` (0600, written after a
+  `mkdir -p`), refreshed silently via the refresh token and only re-prompting
+  for the password. `create` sends the **bare** idToken in `Authorization` (no
+  `Bearer ` prefix — see [[gotchas]]) plus `{ url, content, contentType }` and
+  prints the `{ sourceHash, status }` response. `main()` wraps the dispatch in
+  try/catch and `await`s the async handlers so a missing `BKDG_CLIENT_ID`/
+  `BKDG_API_URL` (env, from `cdk outputs`) prints a one-line error rather than a
+  Node stack trace. `pnpm typecheck` clean and arg/validation paths
+  smoke-tested. **Remaining:** `cdk deploy` to provision `CliClient` (needs AWS
+  creds), then end-to-end `login` → `extract` → `create` → `POST /sources`.
 
 - **Source quality — thin-fetch detection (Part A)** (completed 2026-09-01) —
    detects sources whose Firecrawl fetch returned page chrome rather than

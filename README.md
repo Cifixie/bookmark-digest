@@ -3,6 +3,17 @@
 A two-phase system that ingests web content (URLs, pasted text, videos) and generates structured,
 AI-powered digest pages using LLMs — stored in DynamoDB and served via a React SPA on AWS.
 
+> **Direction (2026-09-03):** the project is pivoting to a two-fork
+> architecture. What's described below is **Fork B** — kept and maintained, no
+> longer the primary direction. The new primary is **Fork A ("Sediment")**: an
+> accumulation substrate where the act of saving is the signal and the output
+> is what emerges across saves, not a digest of any one item. The two share
+> ingestion, retrieval, and LLM plumbing, bridged by a Source-level TL;DR and
+> extraction structure computed once per source.
+>
+> Read `docs/two-fork-architecture.md` before starting work; the queue is in
+> `plans/ROADMAP.md`.
+
 ## Architecture
 
 ```
@@ -106,12 +117,12 @@ All LLM-authored content blocks are schema-validated at ingest time:
 | TimelineEvent | Chart | PullQuote |
 | ComparisonNarrative | | |
 
-23 blocks are used by models to convey content. `SectionContainer` is structural (layout wrapper for sections). `DecisionItem` was cut before implementation (see `plans/phase-2-scope.md`).
+23 blocks are used by models to convey content. `SectionContainer` is structural (layout wrapper for sections). `DecisionItem` was cut before implementation (see `plans/archive/phase-2-scope.md`).
 
 ### Non-Catalog Sections
 
 - `RelatedFromYourBookmarks` — vector-similarity retrieval (brute-force cosine
-  similarity over DynamoDB embeddings, see `plans/dynamodb-migration.md`)
+  similarity over DynamoDB embeddings, see `plans/archive/dynamodb-migration.md`)
 - `MyNote` — user-authored annotations
 
 ## AWS Infrastructure
@@ -183,23 +194,35 @@ source:     fetched → embedding → ready / failed
 | `wiki/decisions.md` | Architecture decision log |
 | `wiki/gotchas.md` | Known pitfalls and workarounds |
 | `wiki/current-work.md` | Active work items |
-| `plans/phase-0-checklist.md` | Phase-0 migration checklist |
-| `plans/phase-1-catalog.md` | Catalog schema design |
-| `plans/phase-1-execution.md` | Phase-1 implementation steps |
-| `plans/phase-2-scope.md` | Phase-2 multi-source features |
-| `plans/phase-3-browse-search.md` | Phase-3 exploration |
-| `plans/dynamodb-migration.md` | DynamoDB schema decisions |
-| `plans/thin-source-detection.md` | Input-side hallucination guard |
-| `plans/add-s3-glacier.md` | Content archival plan |
-| `plans/multi-catalog-gating.md` | Multi-catalog gating |
-| `plans/commit-to-render-json.md` | Commit to render JSON |
-| `plans/phase-2-handoff.md` | Phase-2 handoff |
-| `plans/phase-2b-catalog-expansion.md` | Catalog expansion |
-| `plans/phase-2c-comparison-narrative.md` | Comparison narrative |
-| `plans/phase-2d-suggested-bundles.md` | Suggested bundles |
-| `plans/phase-1-fixes.md` | Phase-1 fixes |
-| `plans/future-progressive-digest-streaming.md` | Future: progressive digest streaming |
-| `plans/embed-error-handling.md` | Embed error handling |
+| `docs/two-fork-architecture.md` | **Start here** — Fork A / Fork B / the bridge; where new work goes |
+| `docs/rules.md` | Standing generation/tone/scope rules |
+| `plans/ROADMAP.md` | The queue, in order |
+
+### Fork A plans (Sediment — primary, none built yet)
+
+| File | Content |
+|------|---------|
+| `plans/s3-source-of-truth.md` | S3 canonical for raw + extracted content (queue item 1) |
+| `plans/extraction-and-tldr.md` | Source-level TL;DR + extraction structure — the fork bridge (item 2) |
+| `plans/source-health.md` | SourceHealth v1: recheck, paywall flag, overrides, file upload (item 3) |
+| `plans/substrate-tagging-and-dedup.md` | Auto-tagging + near-duplicate collapsing — **hard gate** (item 4) |
+| `plans/emergence-feed.md` | First Sediment surface: TL;DR + relational reactions (item 5) |
+| `plans/interest-profile.md` | Derived interest profile; user-scoping requirement (item 7) |
+| `plans/paper-entity.md` | Paper entity (Track 3) — parked, schema decided in advance |
+| `plans/prior-art.md` | Repo evaluations and what each contributed |
+
+### Fork B plans (rendered digests — kept, secondary)
+
+| File | Content |
+|------|---------|
+| `plans/explore-agent.md` | "Explore this" topic-driven agent — still unbuilt |
+| `plans/multi-catalog-gating.md` | `allowedBlockTypes` — deferred with a trigger |
+| `plans/digest-metadata-completeness.md` | Multi-source `DigestMeta` — shipped |
+| `plans/suggested-bundles.md` | `inferSourceMode` + related sources — shipped |
+| `plans/source-detail-page.md` | `/sources/:contentHash` — shipped |
+| `plans/source-quality-and-upload.md` | Thin-fetch detection Part A — shipped; forward half → `source-health.md` |
+| `plans/PARKED.md` | Ideas parked without a trigger |
+| `plans/archive/` | Iteration-1 phase-N plans, kept for historical record |
 
 ## Directory Reference
 

@@ -1,5 +1,29 @@
 # Sediment (née bookmark-digest) — Full Handoff: Phase 2/3
 
+> **Written 2026-09-03. Processed 2026-09-03. Historical input — kept, not
+> maintained.**
+>
+> Generated from `raw/STATUS.md` (same date). Both are kept as the provenance
+> trail for the two-fork pivot; neither is updated going forward.
+>
+> This doc has been processed into the repo's doc system — do not work off it
+> directly, and do not treat its §8/§9 sequencing as the live queue.
+> **Read instead:** `docs/two-fork-architecture.md` (structure),
+> `plans/ROADMAP.md` (queue), `wiki/decisions.md` "Phase 2/3 pivot" (the
+> decisions and their reasoning), and the eight plans under `plans/`.
+>
+> **Two claims here did not survive contact with the repo:**
+> 1. **§5.1 / §9 step 4 — the Next.js → Vite migration does not exist.**
+>    `apps/web` was already a Vite SPA on this date. Inherited from
+>    `raw/STATUS.md`; that queue item was dropped rather than scheduled.
+> 2. **§8 — file upload was never volume-gated.** Only the statistical
+>    signal-density thin-fetch layer is. It has been pulled forward into
+>    SourceHealth v1 (`plans/source-health.md`).
+>
+> **Its two open questions (§10) are resolved** in the plans: the S3
+> transition runs alongside inline content behind one accessor, then
+> backfills, then drops the inline copy; and file upload is pulled forward.
+
 **Status:** v3 — restructured around the two-fork architecture decided in
 this handoff conversation. This supersedes v1 (which assumed the rendered
 digest pipeline would be retired) and v2 (which corrected v1 against the

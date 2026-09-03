@@ -4,6 +4,11 @@ Durable architectural calls, extracted from `plans/archive/` so the reasoning
 survives even though the plan docs themselves are done. See
 [[current-work]] and [[gotchas]] for what's live and what's bitten us.
 
+**2026-09-03:** the project pivoted to a two-fork architecture. The decisions
+below still hold — most of them are now Fork B's, or shared substrate. The
+pivot's own decisions are grouped at the end of this file under "Phase 2/3
+pivot". Structural reference: `docs/two-fork-architecture.md`.
+
 ## Storage: DynamoDB, not Aurora/pgvector
 
 Target AWS account is on the Free Plan, which can't provision Aurora via CDK
@@ -84,7 +89,7 @@ silently drops link targets (a citation list rendered as plain text, no
 problem — "the source is fine, the remote fetch isn't":
 - **Manual paste** (shipped) — `POST /sources` accepts `content` directly,
   `fetchedBy: "manual"`.
-- **File upload** (planned, `plans/file-upload-ingestion.md`) — same idea,
+- **File upload** (planned, now `plans/source-health.md`) — same idea,
   HTML/PDF instead of pasted text, so real link targets survive.
 
 YouTube-specific transcript fetching (InnerTube caption endpoint) was tried
@@ -184,3 +189,212 @@ once the activity is gone, not just for the sign-in case), and
 The `NetworkType.CONNECTED` constraint is a bonus: a link shared with the radio
 off is delivered when connectivity returns instead of being lost. See
 [[gotchas]] for the URL-extraction trap that goes with this.
+
+---
+
+# Phase 2/3 pivot (2026-09-03)
+
+Decided in the handoff conversation captured at `raw/HANDOFF.md`, processed
+into `docs/two-fork-architecture.md` and the plans under `plans/`. The raw
+handoff is not maintained.
+
+## Two forks, not a replacement — the rendered digest pipeline is kept
+
+The new direction (Sediment: accumulation, emergence, recall) does **not**
+retire the rendered-digest product. Two earlier drafts of the pivot assumed it
+did — that `packages/catalog`, `registry.tsx`, the json-render Spec tree, and
+RFC-6902 patches would be deleted. That framing is superseded.
+
+- **Fork A** (Sediment substrate) is primary and gets engineering priority
+  when the two compete for time. New work defaults here.
+- **Fork B** (the rendered digest pipeline) is secondary and kept
+  deliberately — framed as a good proto and proof-of-concept, worth
+  preserving rather than deleting. It gets the maintenance it genuinely needs
+  and not priority.
+
+Consequences that are easy to get wrong: `registry.tsx`'s missing-renderer
+guard has **permanent** value, not value-until-retirement. And
+`plans/multi-catalog-gating.md` is *un-cancelled* — an earlier draft called
+`allowedBlockTypes` moot once rendering was retired; since rendering isn't
+being retired, it's legitimately still just deferred-with-a-trigger.
+
+The thing that makes this workable rather than "run two products" is the
+bridge below. Without it, keeping Fork B alive would mean maintaining two
+independent content pipelines, which is the version of this decision that
+would have been wrong.
+
+## The fork bridge: TL;DR and extraction structure live once, on the Source
+
+The Source-level TL;DR and the deterministic extraction structure
+(`KeyPoints`, `Statistics`, `QuoteBlocks`, `Themes`) are **Source-level
+artifacts computed once at ingestion**, not re-derived per Digest and not
+owned by either fork.
+
+Fork B's generation should read from that shared structure rather than raw
+source content, which turns digest-type/tone/length variants into templated
+transforms over one extraction instead of independent generation calls.
+
+The real reason isn't cost, it's resilience: it's the mechanism by which Fork
+B **degrades gracefully**. If Fork A absorbs sustained engineering attention,
+Fork B can keep producing rendered digests from already-made TL;DR/summary
+segments without independent raw-content access. Fork B stops rotting when
+nobody's looking at it.
+
+Independently arrived at three times — this project's own "2 model calls, not
+1 or 3" instinct (above), plus the `docling-graph` and `book-to-skill`
+evaluations (`plans/prior-art.md`). Plan: `plans/extraction-and-tldr.md`.
+
+## `Source.tldr` and `DigestMeta` stay separate fields
+
+Considered and rejected: merging them.
+
+- `Source.tldr` — one per Source, generated once at ingestion, Fork A's.
+- `DigestMeta` — type/tone/length/date per *generation*, one per Digest,
+  Fork B's. Digests are cheap, disposable, and regenerable; Sources are not.
+
+Different fork, different owner, different lifecycle. Merging them would tie a
+permanent artifact's schema to a disposable one's.
+
+Related naming trap, worth its own warning: `digestGoal: "tl_dr"` (a shipped
+`packages/schemas` enum value meaning "make this digest shallow") predates and
+is unrelated to `Source.tldr`. Same word, different artifact. Don't share a
+type, helper, or prompt template between them.
+
+## Citation provenance is structural, not a post-hoc verification pass
+
+Provenance is built into the extraction call via structured output — each
+extracted item carries where in the source it came from — rather than added
+afterward by a separate verifier. This **supersedes** the originally-scoped
+standalone claim-verification pass (adapted from the `AutoResearchClaw`
+evaluation, now ruled out).
+
+Two reasons: a post-hoc verifier is a second thing that can be wrong about the
+same content, and the structural version *is* the citation model the `Paper`
+entity needs later. Building it in the extraction call does Paper's hardest
+part early and cheaply.
+
+## Data model: S3 as source of truth, three fork-scoped tables
+
+This closes the single-table-vs-two-table debate that ran through earlier
+drafts of the pivot, and closes it more simply than either option being
+debated.
+
+- **S3**, keyed by `contentHash` — canonical raw + extracted content. A
+  permanent archive that survives the origin URL dying.
+- **Sources** (DynamoDB) — Fork A's *index*: metadata, SourceHealth, tags,
+  embeddings, TL;DR, pointer into S3.
+- **Digests** (DynamoDB) — Fork B's output store, unchanged.
+- **Papers** (DynamoDB, future) — same pattern, own table, join items back to
+  Source.
+
+No single-table migration. Three pressures pointed at this independently:
+SourceHealth's periodic recheck needs a durable original to compare against;
+the extraction structure needs a stable, re-computable input; and `content`
+sitting inline next to a multi-hundred-float `embedding` is already why
+`lib/dynamo.ts`'s scan helper warns to always pass a `projectionExpression`.
+
+Note this is **not** the parked S3 Glacier item — that's a cost policy layered
+on storage that would have to already be in S3. Plan:
+`plans/s3-source-of-truth.md`.
+
+## Transition: run S3 alongside inline content, then backfill, then drop
+
+Not a cutover. Add the S3 write while still writing `content` inline → one
+`getSourceContent()` accessor that prefers S3 and falls back to inline →
+backfill script → separate later deploy that removes the inline copy.
+
+The fallback costs about four lines and makes each step independently
+shippable. A cutover would require the backfill to finish before any reader
+deploys — which is precisely the "no way to wait for backfill to finish"
+failure that got the native DynamoDB vector index reverted (see [[gotchas]]).
+Don't rebuild that sequencing trap in a different service.
+
+## Accumulation before AI (governing sequencing constraint for Fork A)
+
+Substrate infrastructure — topic auto-tagging, near-duplicate collapsing,
+embeddings — must be complete **before** AI capability features — tension
+detection, Paper clustering — are layered on top.
+
+AI run against a messy, untagged, duplicate-heavy pile produces unreliable
+results, and the failure is insidious rather than loud: the feed doesn't
+crash, it surfaces junk connections and trust erodes quietly. This is the
+single most important sequencing constraint for Fork A, and why
+`plans/substrate-tagging-and-dedup.md` is a hard gate rather than a queue
+position.
+
+Corollary: the tag-vocabulary anti-fragmentation table designed but never
+built for Fork B (`plans/digest-metadata-completeness.md`) becomes mandatory
+for Fork A. A fragmented tag is a mildly worse browse filter for Fork B; for
+Fork A it's two clusters where there should be one.
+
+## Paywall bypass infrastructure rejected; flag + manual override adopted
+
+Custom scrapers / auth-bypass across paywalled sites was evaluated and
+rejected: per-site maintenance burden, and it competes for time with the
+substrate work that everything else is gated on. SourceHealth detects and
+*flags* paywalls; remediation is the already-approved manual-paste path, plus
+file upload, plus an optional per-source authenticated cookie for the
+legitimate-subscriber case.
+
+Governing rule, from the `DeepPaperNote` evaluation: **stop and ask for better
+material rather than fake completeness.** SourceHealth's job is to make
+"ask for better material" actionable rather than a dead end — which is also
+why file upload gets pulled forward into SourceHealth v1 rather than staying
+queued behind it (`plans/source-health.md`).
+
+## Save-time reactions must be relational, never evaluative
+
+Rejected: save-time "this looks interesting" popups. The signal came from the
+user's own save; echoing it back is noise.
+
+A reaction is only worth surfacing if it's *relational* — "connects to 4
+things you saved", "contradicts something from March", "third thing on this
+topic in two weeks". `inferSourceMode` (shipped) is already a narrow,
+Fork-B-scoped version of this instinct; generalize it into Fork A rather than
+writing a fresh heuristic.
+
+Caveat carried over from that heuristic's own history: asserting a
+relationship that isn't there produces wrong output. v1 should claim only what
+cosine similarity plus tags actually support ("connects to", "same cluster").
+"Contradicts" is the most compelling row type and the easiest to be
+embarrassingly wrong about — it waits for `Statistics` disagreement or a real
+tension pass.
+
+## The name is Sediment; the repo stays bookmark-digest
+
+The product direction and Fork A are called Sediment. The repo, pnpm packages
+(`@bookmark-digest/*`), CDK stack (`BookmarkDigest`), and physical resource
+names stay as they are — renaming the stack would mean replacing retained,
+deletion-protected tables for a cosmetic gain. "Sediment" is a name, not a
+rename task.
+
+## User scoping goes into key design now, multi-user is not built
+
+Multi-user / company-wide cross-referencing is explicitly design-for-don't-
+build. The one thing that lands now: any new GSI, scan, or endpoint added for
+tagging, clustering, or the feed carries an owner dimension in its key even
+while there's exactly one owner, and reads the owner from the Cognito claim
+rather than treating the corpus as global.
+
+Cheap now, expensive to retrofit. The honest open tension:
+`contentHash`-as-PK means one item per piece of content, which is right for
+dedup and wrong for per-user ownership. Resolving that is a key-design change,
+deliberately not made now — but it should be made deliberately rather than
+discovered. See `plans/interest-profile.md`.
+
+## Not decisions — two handoff claims corrected against the repo
+
+Recorded here because both were stated as settled decisions in
+`raw/HANDOFF.md` and neither is real:
+
+1. **There is no pending Next.js → Vite migration.** `apps/web` is already a
+   Vite SPA: `"dev": "vite"`, `react-router-dom` with `src/app/router.tsx`,
+   `src/main.tsx` calling `createRoot`, and no `next` dependency in any
+   `package.json`. The Next-style `page.tsx` / folder-per-route naming under
+   `src/app/` is a cosmetic leftover convention and is presumably what caused
+   the confusion.
+2. **File upload was never gated on source volume.** Only the *statistical*
+   signal-density thin-fetch layer is corpus-gated.
+   `plans/source-quality-and-upload.md` uses "Part B" for two different things
+   — signal-density scoring and file upload — which is where the conflation
+   came from.

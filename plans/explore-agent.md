@@ -1,8 +1,17 @@
 # "Explore this" — agent-driven topic exploration
 
-**Status:** vision/stub — deliberately the least specified plan in the
-queue. Item 5 (capstone) in `plans/ROADMAP.md`'s queue. Do not start until
-items 1-4 have shipped and been dogfooded.
+**Status:** vision/stub — deliberately the least specified plan here, and
+still unbuilt. Fork B's capstone.
+
+**Unchanged by the 2026-09-03 two-fork pivot**, and worth being explicit about
+why: since the rendered-digest pipeline is kept rather than retired, there is
+no pressure to retarget this agent's output format. It can keep producing
+rendered digests indefinitely, or later read from the shared extraction
+structure (`plans/extraction-and-tldr.md`) like any other Fork B generation
+path. What *did* change is priority — Fork A work
+(`plans/ROADMAP.md`) comes first, and this is no longer next in line behind a
+four-item queue. Do not start it until the Fork A substrate has shipped and
+been dogfooded. See `docs/two-fork-architecture.md`.
 
 ## The idea
 

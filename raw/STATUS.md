@@ -1,5 +1,22 @@
 # bookmark-digest — current state (standalone summary)
 
+> **Written 2026-09-03. Historical input — kept, not maintained.**
+>
+> This is the ground-truth summary that `raw/HANDOFF.md` (also 2026-09-03) was
+> generated from. Both are kept as the provenance trail for the two-fork
+> pivot; neither is updated going forward.
+>
+> **For current state, read instead:** `docs/two-fork-architecture.md`,
+> `plans/ROADMAP.md`, `wiki/current-work.md`, `wiki/decisions.md`.
+>
+> **Known inaccuracy in this file:** it describes `apps/web` as a Next.js
+> frontend. It is not — `apps/web` was already a Vite SPA on this date
+> (`"dev": "vite"`, `react-router-dom`, `src/main.tsx`, no `next` dependency
+> in any `package.json`). That claim propagated into the handoff as a
+> "decided and pending" Next.js → Vite migration that never existed. Likely
+> cause: `src/app/` uses Next-style `page.tsx` folder-per-route naming, which
+> is a cosmetic convention. See `wiki/decisions.md`.
+
 A personal bookmark tool. Save a URL (or paste/upload content directly) and it
 generates an AI-written, visually rich digest rendered as a nested content tree
 rather than plain markdown. This document is self-contained — it does not point

@@ -7,7 +7,17 @@ a specific, user-facing error before any quota is spent; `thin` added to the
 `sourceStatus` schema enum and the Browse source filter + badge colors, with a
 vitest suite (`thin-fetch.test.ts`). Part B (signal-density threshold) stays
 gated on a labelled corpus; the YouTube-scrape finding (`GROUNDING_RULES`
-only) remains as background. Item 3 in `plans/ROADMAP.md`'s queue.
+only) remains as background.
+
+**⚠️ Superseded going forward (2026-09-03).** This doc is now the historical
+record of how thin-fetch detection was built and why. The unbuilt half
+continues in **`plans/source-health.md`** (Fork A), which generalizes
+`detectThinFetch()` into an ongoing `health` field with periodic recheck,
+paywall flagging, and override paths — and which **pulls file upload
+forward** rather than leaving it queued. Note the naming confusion this doc
+caused: it labels *two* different sections "Part B" (signal-density scoring,
+which is corpus-gated, and file-upload ingestion, which never was). See
+[[gotchas]]. For where this fits now, see `plans/ROADMAP.md` item 3.
 
 **Supersedes:** `thin-source-detection.md` and `file-upload-ingestion.md`
 (merged — see "Why merged"). If looking for either by name, this is where

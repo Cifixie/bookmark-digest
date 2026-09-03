@@ -6,6 +6,13 @@ shipped (Milestone 1, `plans/ROADMAP.md`). Not queued — kept as its own file
 because it has an explicit trigger below, not a scheduled slot. See
 `plans/PARKED.md` for ideas parked without a trigger.
 
+**Un-cancelled by the 2026-09-03 pivot.** An earlier draft of the two-fork
+handoff called this moot on the assumption that the rendering layer would be
+retired. It isn't — Fork B is kept deliberately
+(`docs/two-fork-architecture.md`), so this is legitimately still just
+*deferred with a trigger*, exactly as it was. Re-read it only if the model
+actually reaches for the wrong block in practice.
+
 **Goal:** stop offering the model blocks that don't fit the current
 `digestGoal`/`sourceMode` (e.g. `Chart` for `tl_dr`, `PullQuote` for
 `compare`/`evolution` where attribution matters more) by constructing

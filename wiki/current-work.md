@@ -1,4 +1,45 @@
 # Current work
+
+- **Phase 2/3 pivot — two-fork architecture** (2026-09-03, planning complete,
+  no code yet) — the project pivoted from "the rendered digest pipeline is the
+  product" to a two-fork architecture. **Fork A** (Sediment: ingestion
+  substrate, SourceHealth, tagging, embeddings, Source-level TL;DR, emergence,
+  recall) is primary and gets engineering priority. **Fork B** (everything
+  shipped: the two-axis block catalog, `registry.tsx`, the json-render Spec
+  tree, `digestGoal`/`sourceMode`, `DigestMeta`, Explore-agent) is secondary
+  and **kept, not retired** — two earlier drafts of the pivot assumed
+  retirement and are superseded. The two are joined by one deliberate bridge:
+  the Source-level TL;DR and the deterministic extraction structure
+  (`KeyPoints`/`Statistics`/`QuoteBlocks`/`Themes`) are computed **once, on the
+  Source** and read by both forks, which is what lets Fork B degrade
+  gracefully instead of rotting while Fork A has the attention. Data model
+  settled: **S3 as source of truth** for raw + extracted content keyed by
+  `contentHash`, three fork-scoped DynamoDB tables (Sources = Fork A index,
+  Digests = Fork B output, future Papers), no single-table migration.
+
+  Raw input was `raw/HANDOFF.md` (unmaintained — processed, don't work off it).
+  Produced: `docs/two-fork-architecture.md` (structural reference — read this
+  first), a rewritten `plans/ROADMAP.md`, six new plans
+  (`s3-source-of-truth`, `extraction-and-tldr`, `source-health`,
+  `substrate-tagging-and-dedup`, `emergence-feed`, `interest-profile`),
+  `plans/paper-entity.md` (parked, schema decided in advance),
+  `plans/prior-art.md`, and the "Phase 2/3 pivot" section of [[decisions]].
+
+  Two questions the handoff left open were resolved in the plans: the S3
+  transition **runs alongside inline content** behind one accessor, then
+  backfills, then drops the inline copy (a cutover would rebuild the
+  "can't wait for backfill" trap that killed the native vector index); and
+  file upload is **pulled forward** into SourceHealth v1, since it's the
+  recovery arm of the detection SourceHealth adds.
+
+  Two handoff claims were corrected against the repo: there is **no pending
+  Next.js → Vite migration** (`apps/web` is already Vite + react-router; the
+  Next-style `page.tsx` naming under `src/app/` is a cosmetic leftover), and
+  file upload was **never volume-gated** (only the statistical thin-fetch
+  layer is). See [[decisions]].
+
+  **Next:** queue item 1, `plans/s3-source-of-truth.md`.
+
 - **Ingestion — push-source CLI** (2026-09-02, in progress) — a CLI to push
   sources without the web app: `apps/infra/scripts/push-source.ts`
   (`npm run push-source`), four subcommands. `extract <url> [--out <file>]`
@@ -127,18 +168,36 @@
 
 ## What remains
 
-Planning was restructured 2026-08-12 — see `plans/ROADMAP.md` for the full
-picture. The old phase-N docs are archived at `plans/archive/`; durable
-architectural reasoning pulled out of them lives in [[decisions]] and
-[[gotchas]]. Queue, in order:
+Planning was restructured again 2026-09-03 for the two-fork pivot — see
+`docs/two-fork-architecture.md` for where work goes and `plans/ROADMAP.md` for
+the queue. Old phase-N docs are archived at `plans/archive/`; durable
+reasoning lives in [[decisions]] and [[gotchas]].
 
-1. `plans/digest-metadata-completeness.md` — **Steps 1–4 done** (multi-source `DigestMeta` with subject/tags/synopsis).
-2. `plans/suggested-bundles.md` — done (shared `inferSourceMode` heuristic, related sources fetch + "Generate digest from related sources" button on both Source and Digest detail pages).
-3. `plans/source-quality-and-upload.md` — thin-fetch detection + HTML/PDF
-   upload recovery.
-4. ~~`plans/source-detail-page.md`~~ — done 2026-08-13.
-5. `plans/explore-agent.md` — capstone, deliberately last and
-   underspecified.
+**Fork A queue, in order:**
 
-Deferred-with-a-trigger: `plans/multi-catalog-gating.md`. Parked without a
-trigger: `plans/PARKED.md`.
+1. `plans/s3-source-of-truth.md` — S3 canonical for raw + extracted content.
+2. `plans/extraction-and-tldr.md` — the fork bridge. Get it right once.
+3. `plans/source-health.md` — generalize `detectThinFetch()`; includes file
+   upload, pulled forward.
+4. `plans/substrate-tagging-and-dedup.md` — **hard gate.** Nothing below
+   starts before this backfills.
+5. `plans/emergence-feed.md` — first genuinely Sediment surface.
+6. `plans/extraction-and-tldr.md` Phase 3 — point Fork B at the bridge.
+7. `plans/interest-profile.md` — derived view; its key-scoping requirement
+   lands during items 1 and 3, not at item 7.
+
+In parallel whenever convenient: finish the push-source CLI end-to-end (top
+of this file); share-sheet PWA if wanted, re-scoped as a third client on the
+proven `POST /sources` contract.
+
+**Fork B, unchanged and unretired:** `plans/explore-agent.md` (still the
+unbuilt capstone, no retargeting needed) and the historical record in
+`plans/digest-metadata-completeness.md` ✅, `plans/suggested-bundles.md` ✅,
+`plans/source-detail-page.md` ✅, `plans/source-quality-and-upload.md`
+(Part A ✅, forward half now `plans/source-health.md`).
+
+Deferred-with-a-trigger: `plans/multi-catalog-gating.md` (un-cancelled by the
+pivot — rendering isn't being retired), the statistical thin-fetch threshold,
+and `webclaw` (`plans/prior-art.md`). Parked without a trigger:
+`plans/PARKED.md`. Parked with an unblock condition:
+`plans/paper-entity.md`.

@@ -6,6 +6,36 @@ This project uses a shared memory system with Pi (see AGENTS.md).
 - Add anything worth remembering to the right file when you finish
 - Use [[links]] between related notes
 
+## Two forks — read this before deciding where code goes
+
+As of 2026-09-03 the project is one codebase with two products in it.
+**`docs/two-fork-architecture.md` is the structural reference; read it before
+starting new work.** The short version:
+
+- **Fork A (Sediment) — primary.** Ingestion substrate, SourceHealth, topic
+  tagging, near-duplicate collapsing, Source-level TL;DR, emergence, recall,
+  and eventually `Paper`. New work defaults here. Not built yet — all of it is
+  in `plans/`.
+- **Fork B — secondary, kept, NOT retired.** Everything described in the rest
+  of this file: the two-axis catalog, `registry.tsx`, the json-render Spec
+  tree, `digestGoal`/`sourceMode`, `DigestMeta`, Explore-agent. Gets
+  maintenance, not priority. Do not delete it, and do not remove its
+  invariants — `registry.tsx`'s missing-renderer guard has permanent value.
+- **The bridge.** Source-level TL;DR and the deterministic extraction
+  structure (`KeyPoints`, `Statistics`, `QuoteBlocks`, `Themes`) are computed
+  **once, on the Source**, and read by both forks. Fork B's generation will
+  eventually read from that instead of raw content.
+- **Governing sequencing rule for Fork A:** accumulation before AI. Tagging,
+  dedup, and embeddings must be complete and backfilled before tension
+  detection or clustering is layered on. `plans/substrate-tagging-and-dedup.md`
+  is a hard gate.
+
+Naming trap: `digestGoal: "tl_dr"` (Fork B, shipped) is unrelated to the new
+`Source.tldr` field (Fork A). Same word, different artifact, different owner.
+
+The product direction is called **Sediment**; the repo, packages, and CDK
+stack stay `bookmark-digest` — that's deliberate, not a pending rename.
+
 ## Stack
 
 - MacBook Pro M5 Pro, 64GB
@@ -49,11 +79,11 @@ model reaches for to convey information.
 
 ### Non-catalog sections (standalone schemas, NOT in defineCatalog)
 
-`RelatedFromYourBookmarks` (vector-similarity retrieval — brute-force cosine similarity over DynamoDB, see `plans/dynamodb-migration.md`), `MyNote` (user-authored) — embedded into the page separately by the renderer.
+`RelatedFromYourBookmarks` (vector-similarity retrieval — brute-force cosine similarity over DynamoDB, see `plans/archive/dynamodb-migration.md`), `MyNote` (user-authored) — embedded into the page separately by the renderer.
 
 ### Cut
 
-`DecisionItem` — no concrete use case surfaced; not built (see `plans/phase-2-scope.md`).
+`DecisionItem` — no concrete use case surfaced; not built (see `plans/archive/phase-2-scope.md`).
 
 ## Component Naming
 
@@ -86,8 +116,11 @@ instructions, or the two fight.
 last so it outranks both templates. It exists because validation checks that
 props fit their schema, never that content came from the source: given thin
 material, a model asked for thoroughness will invent content that validates
-cleanly. See `plans/thin-source-detection.md` for the input-side counterpart,
-still unbuilt.
+cleanly. The input-side counterpart is `detectThinFetch()`
+(`apps/infra/lib/thin-fetch.ts`, shipped — see
+`plans/source-quality-and-upload.md` Part A) and its Fork-A generalization,
+`plans/source-health.md` (not built). The same `GROUNDING_RULES` exposure
+applies to the new extraction call — see `plans/extraction-and-tldr.md`.
 
 Source count does **not** imply shape. Two articles by one author on one subject
 want `synthesize` (merge, don't attribute per source, no ComparisonTable across
@@ -100,9 +133,22 @@ Asserting comparison for all bundles produces contests that aren't there.
 ingestion submitted → received → processing → done/failed
 ```
 
-Phase-0 checks in `plans/phase-0-checklist.md` are **superseded** by Phase-1 work (this catalog).
+Phase-0 checks in `plans/archive/phase-0-checklist.md` are **superseded** by Phase-1 work (this catalog).
+
+Fork A adds a separate content-quality dimension on the Source: a `health`
+field (`ok`/`thin`/`paywalled`/`gone`/`unchecked`) rather than more ingestion
+states. Today's `status: "thin"` is the shipped stopgap that overloads this
+state machine with a quality judgment; `plans/source-health.md` unwinds it.
 
 ## Data Storage (DynamoDB)
+
+**Planned change (not built):** S3 becomes the source of truth for raw +
+extracted content, keyed by `contentHash`, and `Sources` becomes an index with
+a pointer (`contentS3Key`). Three fork-scoped tables — Sources (Fork A),
+Digests (Fork B), future Papers — no single-table migration. Content reads go
+through one `getSourceContent()` accessor that prefers S3 and falls back to
+the inline `content` attribute during the transition. See
+`plans/s3-source-of-truth.md` before touching content storage.
 
 Defined in `apps/infra/lib/bookmark-digest-stack.ts` (both `TableV2`, on-demand
 billing, `RemovalPolicy.RETAIN`). Deploys to stack `BookmarkDigest`, account

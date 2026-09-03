@@ -1,146 +1,189 @@
-# Roadmap — bookmark-digest
+# Roadmap — bookmark-digest / Sediment
 
-This is the second iteration of planning for this project. The first
-iteration (`plans/archive/`) got the tool from a Phase-0 skeleton to a
-working two-axis digest catalog, multi-source generation, and a browse/search
-UI — all shipped, all archived there for historical record. This doc replaces
-the scattered phase-N docs with one linear path and a small set of
-consolidated forward-looking plans.
+**Third iteration of planning, restructured 2026-09-03.** Iteration 1
+(`plans/archive/`) took the project from a Phase-0 skeleton to a working
+two-axis digest catalog. Iteration 2 (the previous version of this file) ran
+that to a browse/search UI, multi-source generation, thin-fetch detection, and
+a source detail page. Iteration 3 — this file — is a **pivot in direction, not
+a replacement of the product.**
 
-**How to read this file:** two milestones bracket everything. Milestone 1 is
-where the project actually is today (verified against the live repo, not
-assumed from old plan docs — several archived plans claimed "complete" for
-things that turned out to still be missing a piece; this doc is written from
-what's actually in the code). Milestone 2 is the target end-state. Everything
-between is the linear queue to get there — do them roughly in order, since
-later items either depend on earlier ones or share code/context with them.
+**Read `docs/two-fork-architecture.md` first.** It defines Fork A / Fork B /
+the bridge, and answers "where does this piece of work go." This file is only
+the queue.
+
+**How to read this:** the shipped rendered-digest product is now **Fork B**,
+secondary. The new primary direction is **Fork A** (Sediment) — accumulation,
+emergence, recall. The queue below is Fork A work plus the one bridge item
+that keeps Fork B healthy. Do them roughly in order; item 4 is a hard gate,
+not a suggestion.
 
 ---
 
-## Milestone 1 — HISTORY (shipped, verified 2026-08-12)
+## Where things stand
+
+### Fork B — shipped (this is the whole of Milestones 1 and 2)
 
 - **Two-axis catalog** — `source-variant` (written/temporal) ×
-  `digest-block` (25 content blocks, all registered, all rendered — the
-  registry throws at load if one isn't). React-free `packages/catalog`,
-  renderers in `apps/web`.
-- **Storage** — DynamoDB (`Sources`, `Digests`), not Aurora. Streams-triggered
+  `digest-block` (25 blocks, all registered, all rendered — `registry.tsx`
+  throws at load if one isn't). React-free `packages/catalog`, renderers in
+  `apps/web`.
+- **Storage** — DynamoDB `Sources` + `Digests`, not Aurora. Streams-triggered
   embedding, on-demand billing, no VPC.
-- **Content model** — json-render's native `Spec` tree, not a flat block
-  array. Per-type props validated on top (`validateDigestSpec`).
-- **Single-source generation** — `tl_dr` / `summary` / `understand` goals,
-  Gemini primary + Bedrock Haiku fallback on quota exhaustion.
-- **Multi-source generation** — `sourceHashes[]` in, one digest out, deduped
-  and order-normalized. Independent `sourceMode` axis (`synthesize` default /
-  `compare` / `evolution`) so shape doesn't get asserted from source count.
-  `ComparisonTable`, `AuthorCard`, `TimelineEvent`, `ComparisonNarrative`
-  blocks cover comparison/evolution/entity-profile shapes.
-- **Visual blocks** — `Chart` (bar/sparkline), `PullQuote`, on top of the
-  original 19 (`Grid`, `Card`, `StatCard`, etc.).
-- **Related-bookmarks retrieval** — brute-force cosine similarity over a
-  paginated `Sources` scan. A native DynamoDB vector index was tried and
-  reverted (see [[decisions]]) — this is a settled choice, not a stopgap.
-- **Embedding failure handling** — status transitions to `failed` with a
-  stored reason, retry-with-backoff for throttling, a DLQ, stale-status
-  guards.
-- **Browse + search** — `/browse` page (Sources/Digests toggle), structural
-  filters (contentType/status/date/digestGoal), substring search, semantic
-  search (embed the query, rank by cosine), `title` capture on ingest,
-  `DigestMeta` generation (`subject`/`tags`/`digestType`/`tone`/etc.) for
-  **single-source** digests only.
+- **Content model** — json-render's native `Spec` tree, per-type props
+  validated on top via `validateDigestSpec`.
+- **Generation** — single-source (`tl_dr`/`summary`/`understand`) and
+  multi-source, with the independent `sourceMode` axis. Gemini primary,
+  Bedrock Haiku fallback on quota exhaustion.
+- **Retrieval** — brute-force cosine over a paginated `Sources` scan. Settled,
+  not a stopgap (six documented failure modes behind the reverted native
+  vector index — `wiki/decisions.md`).
+- **Browse + search + source detail** — `/browse`, structural filters,
+  substring and semantic search, `/sources/:contentHash` with a "Related from
+  your bookmarks" panel.
+- **Milestone 2 queue, as delivered:** digest metadata completeness ✅ ·
+  suggested bundles / `inferSourceMode` ✅ · thin-fetch detection Part A ✅ ·
+  source detail page ✅ · **Explore-agent ⬜ (still unbuilt)**.
+- **Clients** — web, Android share target, and the push-source CLI
+  (end-to-end wiring unfinished — see [[current-work]]).
 
-Full detail and the mistakes made along the way (six DynamoDB vector-search
-failure modes, the API-Gateway single-integration gotcha, the
-`digestGoal`/`digestType` naming collision that almost happened) are in
-`plans/archive/` and [[decisions]] / [[gotchas]]. Don't re-derive any of that
-from memory — read those before touching adjacent code.
+Nothing here changes architecturally under the pivot. It just stops being the
+whole product.
 
----
+### Fork A — not built
 
-## Milestone 2 — TODO (target end-state)
-
-A personal bookmark tool where: every digest (single- or multi-source) is
-browsable, filterable, and semantically searchable; tag/category metadata is
-consistent instead of fragmenting; source ingestion degrades gracefully
-instead of silently generating from page chrome; the system can proactively
-suggest related-bookmark digests instead of requiring manual multi-select;
-and — the largest, most speculative piece — an "Explore this" agent that
-takes a topic instead of a URL and closes the loop by driving its own
-ingestion + multi-source generation.
-
-Getting there is the queue below, in order.
+Every item in the queue below.
 
 ---
 
 ## The queue
 
-### 1. `plans/digest-metadata-completeness.md`
-Closes the biggest gap left by Milestone 1: `DigestMeta` (subject/tags/
-synopsis) only exists for single-source digests, tags have no anti-
-fragmentation mechanism, and the metadata call burns the same scarce Gemini
-quota as the real generation call. One plan because all three edit the same
-call site (`generateMeta()` in `generate-digest/handler.ts`) — sequencing
-them independently risks each PR clobbering the others' prompt changes.
+### 1. `plans/s3-source-of-truth.md`
+S3 becomes canonical for raw + extracted content, keyed by `contentHash`.
+Sources becomes an index with a pointer. First because everything downstream
+wants a durable place to point: SourceHealth's recheck needs an archive to
+compare against, extraction needs a stable re-computable input, and moving
+`content` out of the DynamoDB item is what makes Sources scannable at feed
+volume. Includes the resolution of "replace or run alongside" — alongside,
+behind one accessor, then backfill, then drop.
 
-### 2. `plans/suggested-bundles.md`
-The one piece explicitly split out of the old phase-2 scope because it was
-unblocked-but-unstarted. Its dependency (a working similarity signal) has
-been satisfied since Milestone 1. No reason to wait — do this once metadata
-work isn't mid-flight in the same prompt-adjacent files.
+### 2. `plans/extraction-and-tldr.md` — **the fork bridge**
+Source-level TL;DR and extraction structure (`KeyPoints`, `Statistics`,
+`QuoteBlocks`, `Themes`), computed once at ingestion, read by both forks. Get
+it right once; both forks depend on it. Also where citation provenance becomes
+structural rather than a post-hoc verification pass — which is Paper's hardest
+part, done early and cheaply.
 
-### 3. `plans/source-quality-and-upload.md`
-Merges what were two separate plans (`thin-source-detection`,
-`file-upload-ingestion`) because they're the same underlying problem — a
-remote fetch losing fidelity — approached from two ends: *detect* that a
-fetch got chrome instead of content, and *recover* by letting the user hand
-over the page directly. Detection's cheap first layer (fetch-failure
-markers) ships now; the statistical layer stays data-gated exactly as
-before.
+Watch the naming trap: `digestGoal: "tl_dr"` is Fork B's shipped enum value
+and has nothing to do with the new `Source.tldr` field.
 
-### 4. `plans/source-detail-page.md` — DONE (2026-08-13)
-Small, standalone, no dependencies. Browse now links source rows to an
-in-app `/sources/:contentHash` detail view instead of the original URL,
-with metadata, extracted content, generated digests, and a "Related from
-your bookmarks" panel (via `GET /sources/{sourceHash}/related`, not the
-dead `DigestPage` placeholder — see the plan doc's note).
+### 3. `plans/source-health.md`
+Generalize `detectThinFetch()` from a one-time ingestion check into an ongoing
+property: `health` as a field rather than an overloaded `status`, periodic
+recheck (rot and paywalls emerge *after* saving), paywall detection as a flag
+not a bypass, and real override paths. Includes the resolution of the
+file-upload question — **pull it forward**, it's the recovery arm of the
+detection this adds, and it was never actually volume-gated.
 
-### 5. `plans/explore-agent.md`
-"Explore this" — given a topic/query instead of a URL, an agent plans →
-searches → fetches sources → hands off to the existing multi-source
-generation path. This is Milestone 2's capstone: everything above exists to
-make the ingestion/generation/browse loop solid enough that an agent driving
-it autonomously is safe to build. Deliberately last, and deliberately the
-least specified plan in this queue — the shape of "search the web for
-sources" isn't decided yet, and shouldn't be until the rest of the queue has
-shipped and been dogfooded.
+### 4. `plans/substrate-tagging-and-dedup.md` — **hard gate**
+Topic auto-tagging with a managed vocabulary, near-duplicate collapsing into
+clusters. **Nothing below this line may start before this finishes and
+backfills.** Accumulation before AI: capability features run against an
+untagged, duplicate-heavy pile don't fail loudly, they just quietly produce
+junk until you stop trusting them.
 
-### Deferred, not queued — `plans/multi-catalog-gating.md`
-Kept as its own file rather than folded into the queue because it's not
-scheduled — it has an explicit trigger ("the model actually reaches for the
-wrong block in practice") that hasn't fired. Re-read it and reassess only if
-that happens; don't build it speculatively in the meantime.
+### 5. `plans/emergence-feed.md`
+The first surface that is Sediment rather than bookmark-digest. TL;DR plus
+*relational* reactions ("connects to 4 things you saved", "same topic again"),
+built on retrieval that already exists and a generalized `inferSourceMode`.
+No new clustering infra. "Contradicts" waits for a real tension pass.
 
-### Parked — `plans/PARKED.md`
-Ideas that are real but not worth even a queue slot right now: progressive
-digest streaming (needs an infra shape change — Function URL or WebSocket —
-not justified until generation latency is actually measured as a problem),
-S3 Glacier lifecycle policies for raw source content (no current cost
-pressure to act on), image/OCR ingestion (a fourth ingestion path with its
-own design questions, noted but not scoped).
+### 6. `plans/extraction-and-tldr.md` Phase 3 — point Fork B at the bridge
+Swap `generate-digest`'s input from raw content to the Source-level extraction
+structure. Not urgent day one — Fork B keeps working from raw content — but do
+it **before** Fork A absorbs sustained engineering attention, so Fork B
+degrades gracefully instead of rotting. Mandatory regression check: same
+source at all three goals, before and after, diffed. Validation passing is not
+evidence the digests are still good.
+
+### 7. `plans/interest-profile.md`
+Cluster centroids + tag weights + recency, materialized to rank the emergence
+feed. Nearly free once 4 and 5 exist — a derived view, not new infra.
+
+**Its one immediate requirement, though:** keep user-scoping clean and
+explicit in key design *now*, while items 1 and 3 are touching these items
+anyway. Cheap now, expensive to retrofit.
+
+### In parallel, whenever convenient
+- Finish the push-source CLI end-to-end (`login` → `extract` → `create` →
+  `POST /sources`). Fork-A-relevant ingestion client, independent of the
+  pivot.
+- Share-sheet PWA, if it becomes wanted — re-scoped as a *third client on an
+  already-proven `POST /sources` contract* (web, Android, and CLI all do this
+  already), not a from-scratch design. Not urgent.
+
+### Only after 1–7 are solid
+Tension detection and topic clustering as their own pass, then
+`plans/paper-entity.md` (schema already decided, table + join-item GSI when it
+unblocks).
+
+---
+
+## Not queued
+
+### Deferred, with a trigger
+- **`plans/multi-catalog-gating.md`** (`allowedBlockTypes`, Fork B) — an
+  earlier draft of the pivot called this moot on the assumption rendering
+  would be retired. Rendering is **not** being retired, so it's back to
+  genuinely deferred: re-read only if the model actually reaches for the wrong
+  block in practice.
+- **Statistical signal-density thin-fetch threshold** (`source-quality-and-upload.md`
+  Part B) — gate is ~50 sources / ~10 known-bad labelled examples, still
+  unmet. SourceHealth's recheck loop is what will generate that corpus.
+- **`webclaw`** — revisit only if Firecrawl cost or rate limits become a
+  measured problem (`plans/prior-art.md`).
+
+### Parked
+`plans/PARKED.md` — progressive digest streaming, S3 Glacier *lifecycle
+policy* (distinct from item 1: that's storage architecture, this is a cost
+policy on top of it), image/OCR ingestion.
+
+### Explicitly still alive, unchanged
+**`plans/explore-agent.md`** (Fork B's capstone). No retargeting needed —
+under the two-fork model there's no pressure to change its output format. It
+can keep producing rendered digests indefinitely, or later read from the
+shared extraction structure like any other Fork B generation path.
+
+---
+
+## Corrections to the incoming handoff
+
+`raw/HANDOFF.md` is the raw input this iteration was written from. Two of its
+claims didn't survive contact with the repo, and the queue above reflects the
+repo:
+
+1. **There is no Next.js → Vite migration.** `apps/web` is already a Vite SPA
+   (`"dev": "vite"`, `react-router-dom`, `src/main.tsx`, no `next` dependency
+   anywhere). The handoff's §9 step 4 has been dropped from this queue
+   entirely rather than folded into item 5. The Next-style `page.tsx` naming
+   under `src/app/` is a cosmetic leftover convention.
+2. **File upload was never volume-gated** — only the statistical thin-fetch
+   layer is. It's pulled forward into item 3. Details in
+   `plans/source-health.md`.
 
 ---
 
 ## Running this on a budget — using the local model
 
-Per CLAUDE.md, Qwen3.6-35B (via oMLX) is available locally alongside Claude/Pi.
-Each plan in the queue above is tagged with which of its steps are good fits
-to hand to the local model instead of spending Claude Code tokens on them.
-The pattern: **local model for pure-function/local-file work that doesn't
-need live AWS state or cross-file architectural judgment; Claude/Pi for CDK,
-deployment verification, and anything touching the two-axis system's
-invariants** (registry exhaustiveness, GSI-key normalization, prompt-axis
-composition order). Concretely, good local-model candidates across the
-queue: the tag normalization/edit-distance pure function, the fetch-failure
-marker substring matcher, the HTML/PDF extraction adapters (`extract-html.ts`
-/ `extract-pdf.ts`), and writing renderer components + CSS for new blocks.
-Keep CDK diffs, IAM grants, and route wiring on Claude/Pi — those are exactly
-where the gotchas log shows silent failures slipping through.
+Per CLAUDE.md, Qwen3.6-35B (via oMLX) is available locally alongside
+Claude/Pi. Each plan above carries a "Local-model fit" section. The pattern is
+unchanged: **local model for pure-function/local-file work that doesn't need
+live AWS state or cross-file architectural judgment; Claude/Pi for CDK,
+deployment verification, key/GSI design, and anything touching the two-axis
+system's invariants** (registry exhaustiveness, prompt-axis composition
+order, GSI-key normalization).
+
+The pivot shifts the balance toward the local model, not away from it: the
+substrate work in items 2 and 4 is unusually heavy on pure functions (tag
+normalization, edit distance, cosine thresholding, anchor resolution, zod
+schemas). Keep CDK diffs, IAM grants, and route wiring on Claude/Pi — per
+`wiki/gotchas.md` that's exactly where silent failures have slipped through.

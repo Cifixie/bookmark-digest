@@ -33,31 +33,42 @@ consume that live, rendering blocks as they arrive instead of the current
 WebSocket tradeoffs (auth, CORS, cost, CDK complexity); whether
 `useUIStream` can point at a Function URL directly or needs an adapter.
 
-## S3 Glacier lifecycle for raw source content
+## S3 Glacier *lifecycle policy* for raw source content
 
-Rough shape, never fully scoped: push raw fetched content to S3, run the
-actual digest workflow off derived/processed data, keep the raw format
-around for re-evaluation, then lifecycle it to Glacier Instant Retrieval (or
-delete) after some interval since it's rarely needed after the first burst.
+**Split in two by the 2026-09-03 pivot — read this before assuming it's still
+one item.** The half that was an architecture change is now queued; only the
+cost policy stays parked.
 
-**Why parked:** no current cost or storage pressure to act on — raw content
-today lives inline in the `Sources` DynamoDB item, and at personal-bookmark
-scale that's not a problem yet. This would also be a real architecture
-change (content moves out of DynamoDB into S3, `Sources` items become
-pointers) — not scoped enough to queue, and not motivated by any current
-pain.
+- **Queued (item 1):** moving content out of DynamoDB into S3 and turning
+  `Sources` items into pointers. That's `plans/s3-source-of-truth.md`, and
+  it's motivated now — not by cost, but by SourceHealth's periodic recheck
+  needing a durable archive, the extraction structure needing a stable
+  re-computable input, and unprojected `Sources` scans returning a handful of
+  rows per page ([[gotchas]]).
+- **Still parked (this entry):** the lifecycle rule that transitions those S3
+  objects to Glacier Instant Retrieval (or deletes them) after some interval.
+  `plans/s3-source-of-truth.md` deliberately ships the bucket with **no**
+  lifecycle rules.
 
-**If picked up:** needs actual scoping — what triggers the move to S3 in
-the first place (this isn't just a lifecycle policy on data that's already
-there), what reads raw content today and how those reads change, whether
-"rarely needed after first burst" is even true for this project's actual
-access pattern (unverified assumption).
+**Why still parked:** no cost or storage pressure at personal-bookmark scale,
+and the premise is unverified. "Rarely needed after the first burst" is now
+actively in doubt — the whole point of the archive is that SourceHealth
+rechecks and future re-extraction (better prompt, better parser) read `raw`
+long after ingestion. A Glacier transition would put a retrieval delay in
+front of exactly those paths.
+
+**If picked up:** measure the real access pattern on the S3 objects first —
+that data doesn't exist until item 1 has been running for a while. Then decide
+whether `raw` and `extracted.md` want different rules (`extracted.md` is read
+constantly, `raw` may genuinely be cold), and account for the bucket's
+versioning: noncurrent versions are the cheapest thing to transition and the
+obvious place to start.
 
 ## Image/OCR ingestion
 
 A fourth ingestion path alongside URL fetch, manual paste, and file upload
-(`plans/source-quality-and-upload.md`) — screenshots or photographed pages
-with no extractable text layer.
+(now `plans/source-health.md`, pulled forward into SourceHealth v1) —
+screenshots or photographed pages with no extractable text layer.
 
 **Why parked:** explicitly out of scope when file-upload-ingestion was
 designed — no link targets to preserve (the main motivation for HTML/PDF

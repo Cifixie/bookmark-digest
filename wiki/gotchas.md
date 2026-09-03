@@ -68,6 +68,31 @@ fetch content", which reads like a Firecrawl problem rather than a client bug.
 punctuation for this reason. Any new client posting to `/sources` needs the
 same treatment. See [[decisions]].
 
+## An unprojected `Sources` scan returns a handful of rows per page
+
+`lib/dynamo.ts`'s scan helper carries an explicit warning for a reason: a
+source item holds the full fetched `content` *plus* a multi-hundred-float
+`embedding`, so a 1 MB DynamoDB scan page holds only a few sources. Code that
+scans without a `projectionExpression` doesn't error — it silently answers
+"how many bookmarks are there" with a fraction of them, and the bug looks like
+missing data rather than a paging problem. Always pass
+`projectionExpression`.
+
+This is one of the three pressures behind moving content to S3
+(`plans/s3-source-of-truth.md`). Note that even after content moves out,
+`embedding` still doesn't belong in a feed or list projection — and the
+emergence feed will be the highest-volume read in the product. See
+[[decisions]].
+
+## `plans/source-quality-and-upload.md` uses "Part B" for two different things
+
+That plan has both a "Part B — signal-density scoring (deferred, needs data)"
+and a "Part B (of the merged plan) — File-upload ingestion (HTML/PDF)". Only
+the first is gated on a labelled corpus; upload was never volume-gated. The
+Phase 2/3 handoff read the two as one item and recorded file upload as blocked
+when it wasn't. If you're citing that plan's gating, name the section, not the
+letter. See [[decisions]] and `plans/source-health.md`.
+
 ## Background toasts are silently swallowed on Android 10+
 
 `IngestWorker` originally reported share results (Saved / failed / sign-in

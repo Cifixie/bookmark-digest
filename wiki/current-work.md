@@ -15,13 +15,15 @@
   `~/.config/bookmark-digest/cognito-token.json` (0600, written after a
   `mkdir -p`), refreshed silently via the refresh token and only re-prompting
   for the password. `create` sends the **bare** idToken in `Authorization` (no
-  `Bearer ` prefix — see [[gotchas]]) plus `{ url, content, contentType }` and
-  prints the `{ sourceHash, status }` response. `main()` wraps the dispatch in
-  try/catch and `await`s the async handlers so a missing `BKDG_CLIENT_ID`/
-  `BKDG_API_URL` (env, from `cdk outputs`) prints a one-line error rather than a
-  Node stack trace. `pnpm typecheck` clean and arg/validation paths
-  smoke-tested. **Remaining:** `cdk deploy` to provision `CliClient` (needs AWS
-  creds), then end-to-end `login` → `extract` → `create` → `POST /sources`.
+  `Bearer ` prefix — see [[gotchas]]) plus `{ url, content, contentType }`, prints
+  the `{ sourceHash, status }` response. `main()` wraps the dispatch in try/catch and `await`s the async handlers so
+  a missing field prints a one-line error rather than a Node stack trace. The
+  API base URL and CLI client id are read from `apps/infra/outputs.json` via
+  `lib/stack-outputs.ts` (`pnpm outputs` regenerates it after each deploy);
+  `BKDG_CLIENT_ID`/`BKDG_REGION` env vars are optional overrides, so nothing is
+  injected by hand. `pnpm typecheck` clean and config-resolves-from-outputs.json
+  smoke-tested. **Remaining:** end-to-end `login` → `extract` → `create` →
+  `POST /sources`.
 
 - **Source quality — thin-fetch detection (Part A)** (completed 2026-09-01) —
    detects sources whose Firecrawl fetch returned page chrome rather than

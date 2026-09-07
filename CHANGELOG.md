@@ -3,15 +3,11 @@
 ## Unreleased
 
 ### Added
-
-### Changed
-
-### Fixed
+- None yet
 
 ## [1.0.0] - 2026-09-03
 
 ### Added
-
 - Two-axis content catalog with 25 LLM-authored block types and 1 structural block (`SectionContainer`) in `@bookmark-digest/catalog` (`packages/catalog/src/index.ts`)
 - json-render native Spec tree output (root + keyed elements, RFC-6902 patch-compiled) replacing flat `DigestBlock[]` array (`packages/catalog/src/page/`)
 - Phase-1 data schemas (`@bookmark-digest/schemas`, `packages/schemas/src/index.ts`): `sourceSchema`, `digestSchema`, `sourceStatus`, `digestGoalSchema`, `digestStatus`
@@ -31,14 +27,12 @@
 - EventBridge daily 06:00 UTC cron for `check-embed-failures`
 
 ### Changed
-
 - Pivoted to two-fork architecture (Fork A "Sediment" primary, Fork B "rendered digests" secondary, kept) — `docs/two-fork-architecture.md`, `plans/ROADMAP.md` (restructured 2026-09-03)
 - Switched from Vercel AI SDK (`@ai-sdk/google`, `@ai-sdk/amazon-bedrock`) to direct provider calls: `callGemini()` (JSON POST to `generativelanguage.googleapis.com`) and `callBedrockClaude()` (`InvokeModelCommand` with Anthropic Messages body) — per `wiki/decisions.md` "The Vercel AI SDK was dropped"
 - Content model changed from flat `DigestBlock[]` to nested json-render `Spec` tree (`root` + `elements`) — resolved schema-minimum output bug — per `wiki/decisions.md` "Content model: json-render's native Spec tree, not a flat block array"
 - Moved from hardcoded hex colors to CSS variables in `apps/web/src/app/styles.css` — 40+ new variables for code blocks, charts, callout variants, utility borders, semantic accents
 
 ### Fixed
-
 - Registry guard: `apps/web/src/lib/registry.tsx` throws at module load on missing catalog block renderer (prevented `ComparisonTable`/`AuthorCard`/`TimelineEvent` from shipping unrendered) — per `wiki/decisions.md` "Registry throws on a missing renderer"
 - `ingest-url` URL resolution: added `apps/infra/lib/resolve-url.ts` to unwrap `google.com/url?q=...` wrappers and follow HTTP 3xx redirect chains — previously shortener URLs were passed directly to Firecrawl, causing fetch failures
 - Share-result feedback: replaced `Toast` with `IngestNotifications` notification (`IngestNotifications.kt`) — Android 10+ silently swallows background toasts posted after `ShareActivity.finish()` — per `wiki/gotchas.md` "Background toasts are silently swallowed on Android 10+"
@@ -47,7 +41,6 @@
 - `getSourceContent()` scan projection: always passes `projectionExpression` to avoid returning only a handful of rows per page due to inline `content` + multi-hundred-float `embedding` — per `wiki/gotchas.md` "An unprojected `Sources` scan returns a handful of rows per page"
 
 ### Removed
-
 - `matchTag` unused import and zero-width-space artifact in `generate-digest` console.warn (P1 audit fix, `wiki/current-work.md`)
 - Reverted DynamoDB native `SearchVectors` vector index — brute-force cosine similarity scan retained instead (per `wiki/decisions.md` "Semantic search: brute-force cosine, not a vector index")
 - `DecisionItem` catalog block — cut before implementation, referenced in `plans/archive/phase-2-scope.md`

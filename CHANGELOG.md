@@ -3,7 +3,11 @@
 ## Unreleased
 
 ### Added
-- None yet
+- `push-source` CLI for offline ingestion of bookmarked sources without Android device
+- `@bookmark-digest/catalog` extension system: plugin-renderer registry with missing-renderer guard
+
+### Changed
+- Refactored Lambda event sources: DynamoDB Stream now triggers `embed-source` directly, no longer co-located with `ingest-url` handler
 
 ## [1.0.0] - 2026-09-03
 

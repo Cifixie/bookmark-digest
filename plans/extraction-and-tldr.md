@@ -21,19 +21,13 @@ projected scan without an S3 round-trip per row.
 
 ## Why it's the bridge, not just a feature
 
-Fork B's spec generation today works from raw source content. The migration
-path is to have it read from this structure instead — which makes every
-digest-type/tone/length variant a templated transform over one extraction
-rather than an independent LLM generation call per variant.
+**Phase 3** — pointing Fork B at the extraction structure — is a separate plan
+(`plans/extraction-to-fork-b.md`). The actual reason this structure exists as
+a shared concern is resilience: it's the mechanism behind "Fork B can build
+rendered digests from already-made TL;DR/summary segments." If Fork A takes
+all the engineering attention for a stretch, Fork B keeps working instead of
+silently degrading.
 
-That is worth doing for cost and consistency, but the actual reason is
-resilience: it's the mechanism behind "Fork B can build rendered digests from
-already-made TL;DR/summary segments." If Fork A takes all the engineering
-attention for a stretch, Fork B keeps working instead of silently degrading.
-
-Validated by three independent inputs: this project's own "2 model calls, not
-1 or 3" instinct (`wiki/decisions.md`), and the prior-art evaluations of
-`docling-graph` and `book-to-skill` (`plans/prior-art.md`).
 
 ## Naming trap — read this before writing any code
 
@@ -129,24 +123,17 @@ the item. Nothing reads it yet. Backfill script for existing sources.
 **Phase 2 — Fork A reads it.** `plans/emergence-feed.md` and recall consume
 TL;DR and `Themes`.
 
-**Phase 3 — Fork B reads it.** Swap `generate-digest`'s prompt input from raw
-content to the extraction structure. This is queue item 6, deliberately
-*after* Fork A work has started, and deliberately not urgent day one — Fork B
-keeps working from raw content in the meantime. Do it before Fork A absorbs
-sustained attention, so Fork B never silently degrades. Expect prompt-axis
-work: the goal/mode templates in `digest-goals.ts` are written to describe
-source material, and the composition order (goal → mode → `GROUNDING_RULES` →
-`catalog.prompt()`) must not change while the input to it does.
+## Fork B migration (queue 6)
 
-Phase 3 is also the point where a regression check is mandatory, not
-optional: generate the same source at all three `digestGoal` values before
-and after, and diff. "The output still validates" is not evidence the digests
-are as good — `validateDigestSpec` has never checked quality.
+Fork B's migration to reading the extraction structure — prompt-axis work on
+`digest-goals.ts` — is tracked in `plans/extraction-to-fork-b.md`. See there
+for the regression check and the guardrails.
 
 ## Local-model fit
 
 Good: the zod schemas in `packages/schemas`, the anchor/offset resolution
 helper and its tests, the `extraction.json` read/write helpers. Keep on
 Claude/Pi: prompt authoring for all three calls, the Gemini-vs-Bedrock quota
-allocation, and all of Phase 3 — that one touches the two-axis system's
+allocation, and the prompt-axis work in
+`plans/extraction-to-fork-b.md` — that touches the two-axis system's
 composition invariants, which is the documented danger zone.

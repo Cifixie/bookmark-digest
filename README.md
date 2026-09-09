@@ -207,6 +207,7 @@ source:     fetched → embedding → ready / failed
 | `plans/source-health.md` | SourceHealth v1: recheck, paywall flag, overrides, file upload (item 3) |
 | `plans/substrate-tagging-and-dedup.md` | Auto-tagging + near-duplicate collapsing — **hard gate** (item 4) |
 | `plans/emergence-feed.md` | First Sediment surface: TL;DR + relational reactions (item 5) |
+| `plans/fork-b-reads-extraction.md` | Point Fork B's generation at the extraction structure (item 6) |
 | `plans/interest-profile.md` | Derived interest profile; user-scoping requirement (item 7) |
 | `plans/paper-entity.md` | Paper entity (Track 3) — parked, schema decided in advance |
 | `plans/prior-art.md` | Repo evaluations and what each contributed |

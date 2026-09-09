@@ -182,7 +182,7 @@ reasoning lives in [[decisions]] and [[gotchas]].
 4. `plans/substrate-tagging-and-dedup.md` — **hard gate.** Nothing below
    starts before this backfills.
 5. `plans/emergence-feed.md` — first genuinely Sediment surface.
-6. `plans/extraction-and-tldr.md` Phase 3 — point Fork B at the bridge.
+6. `plans/fork-b-reads-extraction.md` — point Fork B at the bridge.
 7. `plans/interest-profile.md` — derived view; its key-scoping requirement
    lands during items 1 and 3, not at item 7.
 

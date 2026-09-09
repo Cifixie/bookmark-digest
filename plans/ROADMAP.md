@@ -97,13 +97,14 @@ The first surface that is Sediment rather than bookmark-digest. TL;DR plus
 built on retrieval that already exists and a generalized `inferSourceMode`.
 No new clustering infra. "Contradicts" waits for a real tension pass.
 
-### 6. `plans/extraction-and-tldr.md` Phase 3 — point Fork B at the bridge
+### 6. `plans/fork-b-reads-extraction.md` — point Fork B at the bridge
 Swap `generate-digest`'s input from raw content to the Source-level extraction
-structure. Not urgent day one — Fork B keeps working from raw content — but do
-it **before** Fork A absorbs sustained engineering attention, so Fork B
-degrades gracefully instead of rotting. Mandatory regression check: same
-source at all three goals, before and after, diffed. Validation passing is not
-evidence the digests are still good.
+structure written by `plans/extraction-and-tldr.md`. Not urgent day one — Fork
+B keeps working from raw content — but do it **before** Fork A absorbs
+sustained engineering attention, so Fork B degrades gracefully instead of
+rotting. Mandatory regression check: same source at all three goals, before
+and after, diffed. Validation passing is not evidence the digests are still
+good.
 
 ### 7. `plans/interest-profile.md`
 Cluster centroids + tag weights + recency, materialized to rank the emergence

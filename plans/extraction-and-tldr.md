@@ -4,6 +4,10 @@
 **Queue position:** second, immediately after `plans/s3-source-of-truth.md`.
 **Status:** not started. This is the single most load-bearing new piece in
 Phase 2/3 — both forks depend on getting it right once.
+**Scope:** this plan covers Phase 1 (write) and Phase 2 (Fork A reads). Fork
+B's read side is `plans/fork-b-reads-extraction.md` (queue item 6) — split out
+because it's a separate, later, higher-risk step, not because the bridge
+itself is split.
 
 ## What this builds
 
@@ -129,24 +133,17 @@ the item. Nothing reads it yet. Backfill script for existing sources.
 **Phase 2 — Fork A reads it.** `plans/emergence-feed.md` and recall consume
 TL;DR and `Themes`.
 
-**Phase 3 — Fork B reads it.** Swap `generate-digest`'s prompt input from raw
-content to the extraction structure. This is queue item 6, deliberately
-*after* Fork A work has started, and deliberately not urgent day one — Fork B
-keeps working from raw content in the meantime. Do it before Fork A absorbs
-sustained attention, so Fork B never silently degrades. Expect prompt-axis
-work: the goal/mode templates in `digest-goals.ts` are written to describe
-source material, and the composition order (goal → mode → `GROUNDING_RULES` →
-`catalog.prompt()`) must not change while the input to it does.
-
-Phase 3 is also the point where a regression check is mandatory, not
-optional: generate the same source at all three `digestGoal` values before
-and after, and diff. "The output still validates" is not evidence the digests
-are as good — `validateDigestSpec` has never checked quality.
+Fork B reading this structure is a separate plan, deliberately split out:
+`plans/fork-b-reads-extraction.md` (queue item 6). It's scoped separately
+because it touches the two-axis system's prompt-composition invariants — a
+different risk profile from writing this structure in the first place — and
+because it's deliberately not urgent day one: Fork B keeps working from raw
+content until that plan lands.
 
 ## Local-model fit
 
 Good: the zod schemas in `packages/schemas`, the anchor/offset resolution
 helper and its tests, the `extraction.json` read/write helpers. Keep on
-Claude/Pi: prompt authoring for all three calls, the Gemini-vs-Bedrock quota
-allocation, and all of Phase 3 — that one touches the two-axis system's
-composition invariants, which is the documented danger zone.
+Claude/Pi: prompt authoring for all three calls and the Gemini-vs-Bedrock
+quota allocation. (Fork B's read side has its own local-model guidance — see
+`plans/fork-b-reads-extraction.md`.)
